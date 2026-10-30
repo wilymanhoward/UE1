@@ -104,7 +104,7 @@ Each frame it adds drag against the velocity, plus upward buoyancy that grows wi
 8. **The `bCollected` guard.** `Destroy` doesn't remove the actor immediately, so the guard prevents collecting twice.
 9. **Why pickups have no overlap code of their own.** The ball is the only class listening for overlaps, which keeps the logic in one place.
 10. **Why plates, ice and hazards check every frame.** Switching form changes mass and abilities with no new overlap event. An overlap-only plate would miss Stone transforming while already on it.
-11. **Why the block needs no push code.** A rolling ball can only push as hard as its grip, which is friction x its weight. Seed's grip is smaller than the friction holding a 150 kg block, and Stone's is larger.
+11. **Why the block needs no push code.** A rolling ball pushes with the smaller of its grip (friction x weight) and its rolling force (0.4 x mass x radius x `TorqueStrength`). On ice, Seed has almost no grip, while `PM_Stone` keeps Stone's grip high, so only Stone moves the block.
 12. **How the ball rides a platform.** Moving a kinematic body without teleporting gives it a real velocity in the physics engine, and friction carries the ball.
 13. **Forms are never named in hazard, ice or wind code.** They compare `MassKg`, `bFragile`, `WindResponse` and `bBuoyancyEnabled`, so tuning a form changes how the whole world treats it. `ACrackedWall` is the one exception: the brief says only Stone breaks it.
 14. **Why the wind pulse has no timer.** `Fmod(time, on + off) < on` works out the current state from world time, so there is no state to keep in sync.

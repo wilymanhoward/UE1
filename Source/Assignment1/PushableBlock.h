@@ -1,9 +1,10 @@
 // Last Seed - a heavy physics block.
 //
 // Purpose: only Stone pushes it meaningfully, and its mass can hold down a pressure plate. No push code is
-// needed: the mass makes the physics engine produce this result. The ball can only push as hard as its own
-// grip, which is friction x its weight, so 20 kg Seed can't overcome the friction of a 150 kg block, while
-// 80 kg Stone with high-friction PM_Stone can.
+// needed: the mass makes the physics engine produce this result. A ball pushes with the smaller of its grip
+// (friction x weight) and its rolling force (0.4 x mass x radius x TorqueStrength). On PM_Ice floors Seed
+// has almost no grip, while PM_Stone gives Stone about 40000 units of push against the 150 kg block's 7350.
+// On a normal floor the block's friction is about 103000, so Stone only nudges it. Use about 52 kg there.
 // Design pattern: none.
 // Connections: APressurePlate counts its mass. Nothing else references it.
 

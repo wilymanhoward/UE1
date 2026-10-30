@@ -81,6 +81,8 @@ Create `PM_Ice` in `Content/Physics`: **Friction** 0.05 and **Friction Combine**
 - **Scaling:** resize volumes with **Box Extent**, or by scaling the actor.
 
 ### Level design rules
+- **Pressure plate:** set the plate's Z to 10 below the floor surface, so its top is level with the floor. A block can't slide up onto a raised plate.
+- **Pushable block:** the default 150 kg is meant for `PM_Ice` floors. On a normal floor, set **Mass Kg** to about 52 or Stone will only nudge it.
 - **Thin ice:** the actor's origin is 50 cm above the ice surface. Put a kill volume or water below it.
 - **Water:** floating forms can't jump, so give every pool a gentle ramp out.
 - **Sinking pad:** put the top of the pad level with the water surface.
