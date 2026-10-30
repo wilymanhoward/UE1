@@ -108,7 +108,7 @@ Create `MF_WitherBlend` in `Content/Materials` (right-click, **Materials > Mater
 
 1. Add a **Function Input** named `Color` with **Input Type** set to **Function Input Vector 3**.
 2. Add a **Collection Parameter** node for each of the three parameters, each with **Collection** set to `MPC_Restoration`.
-3. Add a **Distance** node. Connect **Absolute World Position** to A, and the RGB output of `LastNoteLocation` to B.
+3. Add a **Distance** node. Connect **Absolute World Position** to A. Pass `LastNoteLocation` through a **Component Mask** with only R, G and B ticked, then connect that to B. The parameter has four values and the position has three, so Distance gives an error without the mask.
 4. Add a **Max** node with `LocalBloomRadius` in A and the constant `1` in B. This prevents dividing by zero.
 5. Add a **Divide** node with Distance in A and Max in B.
 6. Add a **OneMinus** after it, then a **Saturate**. This is the local bloom: 1 at the note, fading to 0 at the radius.
