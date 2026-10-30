@@ -13,6 +13,7 @@
 #include "WitherBlob.generated.h"
 
 class ASeedBall;
+class USoundBase;
 class USphereComponent;
 class UStaticMeshComponent;
 
@@ -37,7 +38,7 @@ public:
 protected:
 	virtual void BeginPlay() override;
 
-	/** Add a hit sound or dark splash here. Fires when the blob hurts the ball. */
+	/** Add a dark splash here. Fires when the blob hurts the ball. */
 	UFUNCTION(BlueprintImplementableEvent, Category = "Wither Blob|Effects")
 	void PlayContactEffect();
 
@@ -56,6 +57,14 @@ protected:
 	/** Route, relative to the blob. Drag the diamond widgets in the viewport. Empty means it guards its start point. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Wither Blob", meta = (MakeEditWidget = "true"))
 	TArray<FVector> PatrolPoints;
+
+	/** Plays when the blob hurts the ball. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Wither Blob")
+	TObjectPtr<USoundBase> ContactSound;
+
+	/** Plays when a slam kills the blob. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Wither Blob")
+	TObjectPtr<USoundBase> DeathSound;
 
 	/** Speed while patrolling, in cm/s. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tuning", meta = (ClampMin = "0"))

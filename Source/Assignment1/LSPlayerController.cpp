@@ -11,6 +11,7 @@
 #include "InputMappingContext.h"
 #include "InputModifiers.h"
 #include "LSGameInstance.h"
+#include "LSGameMode.h"
 #include "RestorationSubsystem.h"
 #include "SeedBall.h"
 
@@ -266,5 +267,13 @@ void ALSPlayerController::LSKillBall()
 	if (ASeedBall* Ball = GetBall())
 	{
 		Ball->Die();
+	}
+}
+
+void ALSPlayerController::LSCompleteLevel()
+{
+	if (ALSGameMode* GameMode = GetWorld()->GetAuthGameMode<ALSGameMode>())
+	{
+		GameMode->CompleteLevel();
 	}
 }

@@ -49,6 +49,10 @@ public:
 	UFUNCTION(Exec)
 	void LSKillBall();
 
+	/** Console test command: completes the level, which starts the finale music. */
+	UFUNCTION(Exec)
+	void LSCompleteLevel();
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void SetupInputComponent() override;

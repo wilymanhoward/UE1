@@ -13,6 +13,7 @@
 
 class UMaterialInterface;
 class UPhysicalMaterial;
+class USoundBase;
 class UStaticMesh;
 
 /** The three forms of the seed. Seed is always unlocked; the others unlock through pickups. */
@@ -41,6 +42,10 @@ struct FSeedFormData
 	/** Surface friction and bounciness of this form, for example high friction for Stone on ice. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Assets")
 	TObjectPtr<UPhysicalMaterial> PhysicalMaterial = nullptr;
+
+	/** Looping sound while this form rolls. Its volume and pitch follow speed. Leave empty for no rolling sound. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Assets")
+	TObjectPtr<USoundBase> RollSound = nullptr;
 
 	/** Mass in kg. Pressure plates and pushable blocks react to this value. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tuning", meta = (ClampMin = "0.1"))

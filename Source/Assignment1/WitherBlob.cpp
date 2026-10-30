@@ -10,6 +10,7 @@
 #include "LSPlayerController.h"
 #include "RestorationSubsystem.h"
 #include "SeedBall.h"
+#include "Sound/SoundBase.h"
 
 AWitherBlob::AWitherBlob()
 {
@@ -145,6 +146,7 @@ void AWitherBlob::HandleBallContact(ASeedBall* Ball)
 
 	if (bSlammedFromAbove)
 	{
+		UGameplayStatics::PlaySoundAtLocation(this, DeathSound, GetActorLocation());
 		PlayDeathEffect();
 		Destroy();
 		return;
@@ -165,6 +167,7 @@ void AWitherBlob::HandleBallContact(ASeedBall* Ball)
 	}
 	Ball->Knockback(Away, KnockbackSpeed, KnockbackUpSpeed);
 
+	UGameplayStatics::PlaySoundAtLocation(this, ContactSound, GetActorLocation());
 	PlayContactEffect();
 
 	if (ALSPlayerController* PlayerController = Ball->GetController<ALSPlayerController>())

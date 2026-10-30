@@ -8,7 +8,8 @@
 //     knowing they exist.
 // Connections: ALSPlayerController calls the input functions below. ULSGameInstance says which forms are
 // unlocked. Everything the ball touches is told through ILSInteractable. Hazards, water and wind read
-// GetCurrentFormData() and push the ball through AddExternalAcceleration and Knockback.
+// GetCurrentFormData() and push the ball through AddExternalAcceleration and Knockback. It plays its own
+// sounds, including a rolling loop chosen by the active form's data.
 
 #pragma once
 
@@ -17,7 +18,9 @@
 #include "SeedFormTypes.h"
 #include "SeedBall.generated.h"
 
+class UAudioComponent;
 class UCameraComponent;
+class USoundBase;
 class USpringArmComponent;
 class UStaticMeshComponent;
 
@@ -145,6 +148,28 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	TObjectPtr<UCameraComponent> Camera;
 
+	/** Plays the active form's Roll Sound. Assign an attenuation here if you want one. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	TObjectPtr<UAudioComponent> RollAudio;
+
+	// --- Sounds ---
+
+	/** Plays on every jump. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio")
+	TObjectPtr<USoundBase> JumpSound;
+
+	/** Plays on landing. Harder landings are louder. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio")
+	TObjectPtr<USoundBase> LandSound;
+
+	/** Plays on every form switch. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio")
+	TObjectPtr<USoundBase> FormSwitchSound;
+
+	/** Plays when the ball dies. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio")
+	TObjectPtr<USoundBase> DeathSound;
+
 	// --- Forms ---
 
 	/** Data for each form. The constructor fills in defaults; edit them on the Blueprint child. */
@@ -211,6 +236,28 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tuning|Death", meta = (ClampMin = "0"))
 	float RespawnDelay = 1.f;
 
+	// --- Audio ---
+
+	/** Roll sound pitch when the ball is almost still. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tuning|Audio", meta = (ClampMin = "0.4", ClampMax = "2"))
+	float RollMinPitch = 0.8f;
+
+	/** Roll sound pitch at the form's top rolling speed. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tuning|Audio", meta = (ClampMin = "0.4", ClampMax = "2"))
+	float RollMaxPitch = 1.3f;
+
+	/** How quickly the roll volume changes. Higher is faster. Low values smooth out small bumps. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tuning|Audio", meta = (ClampMin = "0.1"))
+	float RollFadeSpeed = 8.f;
+
+	/** Falling speed in cm/s below which a landing makes no sound. This keeps small bumps quiet. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tuning|Audio", meta = (ClampMin = "0"))
+	float LandMinSpeed = 200.f;
+
+	/** Falling speed in cm/s at which the landing sound reaches full volume. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tuning|Audio", meta = (ClampMin = "1"))
+	float LandFullVolumeSpeed = 1000.f;
+
 private:
 	// The per-frame steps, called in order by Tick.
 	void UpdateGrounded();
@@ -219,8 +266,10 @@ private:
 	void ApplyMovement(const FSeedFormData& Data);
 	void ApplyGravityScale(const FSeedFormData& Data);
 	void ApplyGlide(const FSeedFormData& Data);
+	void UpdateRollAudio(const FSeedFormData& Data, float DeltaSeconds);
 
 	bool CheckForGround() const;
+	float GetMaxRollSpeed(const FSeedFormData& Data) const;
 	bool IsFormUnlocked(ESeedForm Form) const;
 
 	// The form state transition.
@@ -241,6 +290,10 @@ private:
 
 	// Velocity saved each Tick. By the time a hit event fires, physics has already changed the real velocity.
 	FVector PreImpactVelocity = FVector::ZeroVector;
+
+	// Falling speed on the last frame in the air. By the time the ball counts as grounded, it may have stopped.
+	float AirFallSpeed = 0.f;
+	float RollVolume = 0.f;
 
 	ESeedForm CurrentForm = ESeedForm::Seed;
 	FVector2D MoveInput = FVector2D::ZeroVector;

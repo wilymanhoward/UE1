@@ -6,8 +6,10 @@
 #include "Engine/CollisionProfile.h"
 #include "Engine/StaticMeshActor.h"
 #include "Engine/World.h"
+#include "Kismet/GameplayStatics.h"
 #include "LSDefaultMeshes.h"
 #include "SeedBall.h"
+#include "Sound/SoundBase.h"
 
 ACrackedWall::ACrackedWall()
 {
@@ -52,6 +54,7 @@ void ACrackedWall::Break(const FVector& ImpactVelocity)
 		}
 	}
 
+	UGameplayStatics::PlaySoundAtLocation(this, BreakSound, GetActorLocation());
 	PlayBreakEffect();
 	SetLifeSpan(DebrisLifetime);
 }

@@ -3,6 +3,7 @@
 #include "WindVolume.h"
 
 #include "Components/ArrowComponent.h"
+#include "Components/AudioComponent.h"
 #include "Components/BoxComponent.h"
 #include "Engine/World.h"
 #include "NiagaraComponent.h"
@@ -17,6 +18,10 @@ AWindVolume::AWindVolume()
 	Particles->SetupAttachment(Box);
 	// Tick turns it on once the wind is confirmed to be blowing.
 	Particles->SetAutoActivate(false);
+
+	WindAudio = CreateDefaultSubobject<UAudioComponent>(TEXT("WindAudio"));
+	WindAudio->SetupAttachment(Box);
+	WindAudio->SetAutoActivate(false);
 
 	DirectionArrow = CreateDefaultSubobject<UArrowComponent>(TEXT("DirectionArrow"));
 	DirectionArrow->SetupAttachment(Box);
@@ -61,10 +66,12 @@ void AWindVolume::Tick(float DeltaSeconds)
 		if (bActive)
 		{
 			Particles->Activate(true);
+			WindAudio->FadeIn(SoundFadeTime);
 		}
 		else
 		{
 			Particles->Deactivate();
+			WindAudio->FadeOut(SoundFadeTime, 0.f);
 		}
 		PlayWindActiveEffect(bActive);
 	}

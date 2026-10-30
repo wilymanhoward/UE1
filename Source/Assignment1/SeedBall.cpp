@@ -3,15 +3,18 @@
 #include "SeedBall.h"
 
 #include "Camera/CameraComponent.h"
+#include "Components/AudioComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/CollisionProfile.h"
 #include "Engine/StaticMesh.h"
 #include "Engine/World.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "Kismet/GameplayStatics.h"
 #include "LSGameInstance.h"
 #include "LSInteractable.h"
 #include "Materials/MaterialInterface.h"
 #include "PhysicalMaterials/PhysicalMaterial.h"
+#include "Sound/SoundBase.h"
 #include "TimerManager.h"
 #include "UObject/ConstructorHelpers.h"
 
@@ -54,6 +57,10 @@ ASeedBall::ASeedBall()
 
 	Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
 	Camera->SetupAttachment(SpringArm, USpringArmComponent::SocketName);
+
+	RollAudio = CreateDefaultSubobject<UAudioComponent>(TEXT("RollAudio"));
+	RollAudio->SetupAttachment(BallMesh);
+	RollAudio->SetAutoActivate(false);
 
 	// Default form values. All of them can be edited on the Blueprint child.
 	FormData.Add(ESeedForm::Seed, FSeedFormData());
@@ -135,6 +142,25 @@ void ASeedBall::Tick(float DeltaSeconds)
 	ApplyMovement(Data);
 	ApplyGravityScale(Data);
 	ApplyGlide(Data);
+	UpdateRollAudio(Data, DeltaSeconds);
+}
+
+void ASeedBall::UpdateRollAudio(const FSeedFormData& Data, float DeltaSeconds)
+{
+	// Checked here so the loop starts in one place: at the first frame of play, and again after each respawn.
+	if (RollAudio->Sound && !RollAudio->IsPlaying())
+	{
+		RollAudio->Play();
+	}
+
+	// 0 when still and 1 at this form's top speed, so each form uses its whole range even though Stone is slower.
+	const float Speed = BallMesh->GetPhysicsLinearVelocity().Size();
+	const float SpeedFraction = FMath::Clamp(Speed / FMath::Max(GetMaxRollSpeed(Data), 1.f), 0.f, 1.f);
+
+	// Silent in the air. Moving toward the target stops the sound from cutting in and out on small bumps.
+	RollVolume = FMath::FInterpTo(RollVolume, bIsGrounded ? SpeedFraction : 0.f, DeltaSeconds, RollFadeSpeed);
+	RollAudio->SetVolumeMultiplier(RollVolume);
+	RollAudio->SetPitchMultiplier(FMath::Lerp(RollMinPitch, RollMaxPitch, SpeedFraction));
 }
 
 void ASeedBall::UpdateTimers(float DeltaSeconds)
@@ -147,8 +173,20 @@ void ASeedBall::UpdateTimers(float DeltaSeconds)
 
 void ASeedBall::UpdateGrounded()
 {
+	const bool bWasGrounded = bIsGrounded;
+
 	// During the lockout the ball is still touching the ground, but it has already jumped.
 	bIsGrounded = JumpLockoutRemaining <= 0.f && CheckForGround();
+
+	if (!bIsGrounded)
+	{
+		AirFallSpeed = FMath::Max(-BallMesh->GetPhysicsLinearVelocity().Z, 0.f);
+	}
+	else if (!bWasGrounded && AirFallSpeed >= LandMinSpeed)
+	{
+		const float Volume = FMath::Min(AirFallSpeed / LandFullVolumeSpeed, 1.f);
+		UGameplayStatics::PlaySoundAtLocation(this, LandSound, GetActorLocation(), Volume);
+	}
 
 	if (bIsGrounded)
 	{
@@ -200,6 +238,8 @@ void ASeedBall::TryConsumeJump(const FSeedFormData& Data)
 	const float FallingSpeed = FMath::Min(BallMesh->GetPhysicsLinearVelocity().Z, 0.f);
 	// bVelChange = true means this is a direct speed change, so mass does not affect jump height.
 	BallMesh->AddImpulse(FVector(0.f, 0.f, Data.JumpImpulse - FallingSpeed), NAME_None, true);
+
+	UGameplayStatics::PlaySoundAtLocation(this, JumpSound, GetActorLocation());
 }
 
 void ASeedBall::ApplyMovement(const FSeedFormData& Data)
@@ -225,15 +265,19 @@ void ASeedBall::ApplyMovement(const FSeedFormData& Data)
 		// Torque does nothing useful in the air, so steer with a direct force at reduced strength.
 		// TorqueStrength * BallRadius converts spin acceleration into the matching linear acceleration.
 		const float AirAcceleration = Data.TorqueStrength * BallRadius * AirControlFraction;
-		const float MaxRollSpeed = FMath::DegreesToRadians(Data.MaxAngularSpeed) * BallRadius;
 
 		// Only push while below rolling top speed, so air control can't build unlimited speed.
 		const float SpeedAlongInput = FVector::DotProduct(BallMesh->GetPhysicsLinearVelocity(), MoveDirection);
-		if (SpeedAlongInput < MaxRollSpeed)
+		if (SpeedAlongInput < GetMaxRollSpeed(Data))
 		{
 			BallMesh->AddForce(MoveDirection * AirAcceleration, NAME_None, true);
 		}
 	}
+}
+
+float ASeedBall::GetMaxRollSpeed(const FSeedFormData& Data) const
+{
+	return FMath::DegreesToRadians(Data.MaxAngularSpeed) * BallRadius;
 }
 
 void ASeedBall::ApplyGravityScale(const FSeedFormData& Data)
@@ -330,6 +374,7 @@ bool ASeedBall::TrySwitchForm(ESeedForm NewForm)
 	OnEnterForm(NewForm);
 
 	FormCooldownRemaining = FormSwitchCooldown;
+	UGameplayStatics::PlaySoundAtLocation(this, FormSwitchSound, GetActorLocation());
 	PlayFormSwitchEffect(OldForm, NewForm);
 	OnFormChanged.Broadcast(OldForm, NewForm);
 	return true;
@@ -392,6 +437,8 @@ void ASeedBall::ApplyFormData(const FSeedFormData& Data)
 	{
 		BallMesh->SetMaterial(0, Data.Material);
 	}
+	// SetSound restarts the loop if one is playing, so the new form's sound takes over straight away.
+	RollAudio->SetSound(Data.RollSound);
 	BallMesh->SetPhysMaterialOverride(Data.PhysicalMaterial);
 	BallMesh->SetMassOverrideInKg(NAME_None, Data.MassKg, true);
 	BallMesh->SetLinearDamping(Data.LinearDamping);
@@ -416,6 +463,8 @@ void ASeedBall::Die()
 	bIsDead = true;
 	bIsSlamming = false;
 
+	RollAudio->Stop();
+	UGameplayStatics::PlaySoundAtLocation(this, DeathSound, GetActorLocation());
 	PlayDeathEffect();
 	OnDied.Broadcast();
 
@@ -439,6 +488,9 @@ void ASeedBall::Respawn()
 
 	JumpBufferRemaining = 0.f;
 	CoyoteTimeRemaining = 0.f;
+	// Clear the fall that caused the death, or the first touch at the checkpoint would play a hard landing.
+	AirFallSpeed = 0.f;
+	RollVolume = 0.f;
 	bIsDead = false;
 
 	OnRespawned.Broadcast();

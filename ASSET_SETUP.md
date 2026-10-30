@@ -157,6 +157,64 @@ Both work as soon as they are placed, using an engine sphere and cube. Create Bl
 - **Blobs:** they move in straight lines, so keep patrol routes free of walls. They stop at drops larger than **Max Drop Height**, so ledges are safe places.
 - **Storm:** set **Max Rise Distance** so its top stops below the end of the climb. Phase 7 stops it when the level is complete.
 
+## Phase 6
+
+The game runs silently until sounds are assigned, and any sound can be left empty. Import `.wav` files by dragging them into `Content/Audio`.
+
+### 1. Prepare the music files
+Do this for each music stem:
+
+1. Double-click the sound to open it.
+2. Tick **Looping**.
+3. Set **Virtualization Mode** to **Play When Silent**. Without this, a stem waiting at near-zero volume can restart when it fades in and fall out of time with the others.
+4. Save.
+
+All five stems must have exactly the same length and tempo, or they will drift apart as they loop. The finale track doesn't need either setting.
+
+### 2. Music manager
+Do this once in each level:
+
+1. In **Place Actors**, search for `MusicManager` and drag it into the level.
+2. With it selected, click **AdaptiveMusic** in the component list at the top of **Details**.
+3. Under **Music > Stems**, click **+** five times and assign them in this order:
+
+| Index | Stem | Starts when |
+|---|---|---|
+| 0 | Pads | Level start |
+| 1 | Percussion | 25% restored |
+| 2 | Bass | 50% restored |
+| 3 | Melody | 75% restored |
+| 4 | Strings | 100% restored |
+
+4. Assign **Finale Track**.
+
+### 3. Ball sounds
+Open `BP_SeedBall`, click **Class Defaults**, and assign:
+
+- **Audio:** **Jump Sound**, **Land Sound**, **Form Switch Sound** and **Death Sound**.
+- **Tuning > Forms > Form Data:** a looping **Roll Sound** for each of the 3 forms. Tick **Looping** on each sound, as in step 1, but leave **Virtualization Mode** as it is.
+
+### 4. World sounds
+These go in the Blueprint children from Phases 3 and 5. Create the Blueprint first if you don't have it yet.
+
+| Blueprint | Click | Assign |
+|---|---|---|
+| `BP_CrackedWall` | Class Defaults | **Break Sound** |
+| `BP_WitherBlob` | Class Defaults | **Contact Sound** and **Death Sound** |
+| `BP_WindVolume`, `BP_SteamVent` | **Wind Audio** component | **Sound** (looping) and **Attenuation Settings** |
+| `BP_WitheringStorm` | **Rumble Audio** component | **Sound** (looping). Leave attenuation empty, as the code sets its volume by distance |
+
+Life Note, Golden Petal, Form Flower and Shrine sounds were covered in Phase 2.
+
+### 5. Attenuation for wind
+Without attenuation, every wind volume is heard across the whole level.
+
+1. In `Content/Audio`, right-click and choose **Audio > Sound Attenuation**. Name it `ATT_Wind`.
+2. Open it. Set **Attenuation Shape** to **Sphere**, **Inner Radius** to about 500 and **Falloff Distance** to about 1500.
+3. Save, and assign it to **Attenuation Settings** on **Wind Audio**.
+
+Increase these for very large wind volumes, because the distance is measured from the centre of the volume.
+
 ## Input
 No input assets are required. All input is built in `ALSPlayerController`.
 

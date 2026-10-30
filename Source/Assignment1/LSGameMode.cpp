@@ -16,3 +16,12 @@ void ALSGameMode::AddGoldenPetal()
 	++GoldenPetalsCollected;
 	UE_LOG(LogTemp, Log, TEXT("Golden Petals collected: %d"), GoldenPetalsCollected);
 }
+
+void ALSGameMode::CompleteLevel()
+{
+	if (!bLevelComplete)
+	{
+		bLevelComplete = true;
+		OnLevelCompleted.Broadcast();
+	}
+}

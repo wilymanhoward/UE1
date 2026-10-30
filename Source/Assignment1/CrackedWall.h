@@ -12,6 +12,7 @@
 #include "LSInteractable.h"
 #include "CrackedWall.generated.h"
 
+class USoundBase;
 class UStaticMesh;
 class UStaticMeshComponent;
 
@@ -26,7 +27,7 @@ public:
 	virtual void OnBallHit(ASeedBall* Ball, FVector ImpactVelocity) override;
 
 protected:
-	/** Spawn the crack sound and dust here. */
+	/** Spawn dust here. */
 	UFUNCTION(BlueprintImplementableEvent, Category = "Cracked Wall|Effects")
 	void PlayBreakEffect();
 
@@ -37,6 +38,10 @@ protected:
 	/** Mesh used for each piece of debris. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cracked Wall")
 	TObjectPtr<UStaticMesh> DebrisMesh;
+
+	/** Plays when the wall breaks. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cracked Wall")
+	TObjectPtr<USoundBase> BreakSound;
 
 	/** Impact speed in cm/s Stone needs to break the wall. Stone's default top rolling speed is about 366. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tuning", meta = (ClampMin = "0"))

@@ -22,6 +22,7 @@ The player is the last glowing seed of a dead Heart Tree. This guide explains ea
 | `TrySwitchForm` | The state transition: guards, `OnExitForm`, `OnEnterForm`, effect hook, delegate |
 | `ApplyFormData` | Applies a form to the physics body, saving velocity because a mesh swap would lose it |
 | `Die` / `Respawn` | Freeze and hide, then teleport to the checkpoint with velocity zeroed |
+| `UpdateRollAudio` | Sets the roll loop's volume and pitch from speed as a fraction of the form's top speed |
 
 **Patterns:** state (small and data-driven) and observer (`OnFormChanged`, `OnDied`, `OnRespawned`).
 
@@ -33,14 +34,14 @@ The player is the last glowing seed of a dead Heart Tree. This guide explains ea
 - **Pattern:** command-style forwarding. The controller knows the keys, the ball knows the behaviour.
 
 - `ShowPrompt` is the single route for player messages. It shows debug text until the Phase 7 HUD exists.
-- Extra test commands: `LSDeleteSave`, and `LSDrainRestoration <amount>`.
+- Extra test commands: `LSDeleteSave`, `LSDrainRestoration <amount>`, and `LSCompleteLevel`.
 - `ShowRestorationStatus` displays the note count until the Phase 7 HUD exists.
 
 ### `ULSGameInstance` and `ULSSaveGame`: persistent data
 The game instance stores `UnlockedForms` and the last shrine reached. It survives level changes, so Level 2 keeps forms unlocked in Level 1. `SaveProgress` copies those values into a `ULSSaveGame` and writes it to disk, and `Init` loads them at startup. **Pattern:** memento (the save object is a plain snapshot).
 
 ### `ALSGameMode`: level rules
-Sets the default pawn and controller, and counts Golden Petals. Phase 7 adds the rest.
+Sets the default pawn and controller, and counts Golden Petals. `CompleteLevel` fires `OnLevelCompleted` once, which the music listens to. Phase 7 adds the rest.
 
 ### `ILSInteractable`: the interaction contract
 `OnBallOverlap(Ball)` and `OnBallHit(Ball, ImpactVelocity)`, both defaulting to no action. `ASeedBall::HandleBeginOverlap` and `HandleHit` cast whatever they touched to this interface and call it. **Pattern:** interface / polymorphism. The ball never casts to a pickup or a volume, so new world objects don't change the ball.
@@ -118,6 +119,12 @@ Hidden at the start. It starts growing when restoration reaches its threshold or
 ### `AWitheringStorm` and `AStormTrigger`: the chase
 `AStormTrigger` calls `StartRising`, which subscribes to the ball's events. `Tick` raises the box, updates the rumble and camera shake, and kills a ball inside. `HandleNoteCollected` pushes it down, `HandleCheckpointSet` saves a safe height, and `HandleBallRespawned` restores it. **Pattern:** observer.
 
+### `UAdaptiveMusicComponent` and `AMusicManager`: music that grows back
+`AMusicManager` is a placeable actor that stays loaded and holds the component. `BeginPlay` starts every stem together at near-zero volume and fades in stem 0. `HandleMilestoneReached` fades in the next stem at each restoration milestone. `PlayFinale` fades out the stems and fades in the finale when the level completes. **Pattern:** observer.
+
+### Sound effects
+Looping sounds use a `UAudioComponent`, so an attenuation can be assigned: `RollAudio` on the ball, `WindAudio` on wind volumes, and `RumbleAudio` on the storm. One-shot sounds call `UGameplayStatics::PlaySoundAtLocation`, which does nothing when the sound is empty, so every sound is optional. The roll sound lives in `FSeedFormData`, so each form sounds different with no form check in the code.
+
 ### Shared helpers
 - `ALSVolumeBase::GetBallInside` returns the living ball in the box, for children that act every frame.
 - `ASeedBall::AddExternalAcceleration` and `Knockback` are how the world pushes the ball.
@@ -145,6 +152,9 @@ Hidden at the start. It starts growing when restoration reaches its threshold or
 19. **Why two radii on the blob.** With `ChaseRadius` smaller than `LoseRadius`, a ball near the limit can't make the blob flip between states every frame.
 20. **Why the blob's collision blocks only level geometry.** It overlaps the ball, so the ball's physics isn't disturbed and the code decides what contact means, but it still stops at walls.
 21. **`RespawnClearance`.** Without it, a checkpoint reached with the storm just below would kill the player again on every respawn.
+22. **Why all stems start at the beginning.** A stem started at its milestone would begin from its first beat, out of time with the others. Starting them together and only changing volume keeps them in sync, which is why they need **Play When Silent**.
+23. **Why the stems use the fade and not the volume multiplier.** The final volume is the multiplier times the fade level. If the multiplier were set near zero, fading "up to 1" would still be near silent, so the multiplier stays at 1.
+24. **`AirFallSpeed`.** By the frame the ball counts as grounded, physics may already have stopped it, so the landing volume uses the speed from the last frame in the air. `Respawn` clears it so a fatal fall doesn't play a landing at the checkpoint.
 
 ## Suggested explanation order
 1. `SeedFormTypes.h`: what a form is.
@@ -166,3 +176,5 @@ Hidden at the start. It starts growing when restoration reaches its threshold or
 17. `ARestorableActor`: another listener, and the bounce curve.
 18. `AWitherBlob::UpdateState`: the enum state machine, then `HandleBallContact` for the slam check.
 19. `AWitheringStorm`: three events from two classes driving one chase.
+20. `UAdaptiveMusicComponent`: the same milestone event that grows plants brings in the music.
+21. `ASeedBall::UpdateRollAudio`: form data choosing the sound, and speed shaping it.

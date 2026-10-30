@@ -15,6 +15,7 @@
 
 class APressurePlate;
 class UArrowComponent;
+class UAudioComponent;
 class UNiagaraComponent;
 
 UCLASS()
@@ -33,13 +34,17 @@ public:
 	bool IsWindActive() const;
 
 protected:
-	/** Fires when the wind turns on or off. Use it for sound, or for effects beyond the Particles component. */
+	/** Fires when the wind turns on or off. Use it for effects beyond the Particles and Wind Audio components. */
 	UFUNCTION(BlueprintImplementableEvent, Category = "Wind|Effects")
 	void PlayWindActiveEffect(bool bActive);
 
 	/** Assign a Niagara system to this component. It plays only while the wind is on. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	TObjectPtr<UNiagaraComponent> Particles;
+
+	/** Assign a looping sound and an attenuation, or it is heard across the whole level. It plays only while the wind is on. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	TObjectPtr<UAudioComponent> WindAudio;
 
 	/** Shows the wind direction in the editor only. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
@@ -72,6 +77,10 @@ protected:
 	/** Seconds to shift this volume's pulse, so neighbouring volumes can take turns. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tuning", meta = (ClampMin = "0"))
 	float PulseOffset = 0.f;
+
+	/** Seconds the wind sound takes to fade when the wind turns on or off. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tuning", meta = (ClampMin = "0"))
+	float SoundFadeTime = 0.5f;
 
 private:
 	bool bWasActive = false;
