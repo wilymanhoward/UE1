@@ -131,6 +131,7 @@ Leave `M_Seed`, `BP_LifeNote` and other glowing objects out of this, because the
 2. Place an **Exponential Height Fog**, if the level doesn't have one.
 3. Place one `RestorationDriver` from **Place Actors**. In **Details** set **Parameter Collection** to `MPC_Restoration`, and use the eyedroppers to pick **Post Process Volume** and **Height Fog**.
 4. For World Partition levels such as `L_Test`: select the Post Process Volume and the fog, then untick **Is Spatially Loaded**. They must stay loaded, since the driver always is.
+5. Once your world materials use `MF_WitherBlend`, set the driver's **Withered Saturation** to about 0.8. The default of 0.15 greys the whole screen, including the glowing seed and each note's local colour, and is only suitable for levels with no blended materials yet.
 
 ### 5. Plants
 Create `BP_Flower` with parent `RestorableActor`, and assign the **Mesh** component's Static Mesh and material. Place copies, and set each one's **Restoration Threshold** and **Note Radius**. Use different thresholds so the world recovers in stages. For a plant the ball should bump into, set its **Mesh** component's **Collision Presets** to `BlockAll`.
