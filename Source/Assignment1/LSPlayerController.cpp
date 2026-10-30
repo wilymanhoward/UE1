@@ -11,6 +11,7 @@
 #include "InputMappingContext.h"
 #include "InputModifiers.h"
 #include "LSGameInstance.h"
+#include "RestorationSubsystem.h"
 #include "SeedBall.h"
 
 namespace
@@ -227,6 +228,21 @@ void ALSPlayerController::ShowPrompt(const FText& Message, float Duration)
 {
 	// shortcut: debug text, not visible in Shipping builds, Phase 7 sends this to ULSHUDWidget.
 	GEngine->AddOnScreenDebugMessage(-1, Duration, FColor::Yellow, Message.ToString());
+}
+
+void ALSPlayerController::ShowRestorationStatus()
+{
+	// shortcut: temporary text, Phase 7 shows this on the HUD and removes this function.
+	const URestorationSubsystem* Restoration = GetWorld()->GetSubsystem<URestorationSubsystem>();
+	const FString Status = FString::Printf(TEXT("Life Notes %d/%d - Restoration %d%%"),
+		Restoration->GetNotesCollected(), Restoration->GetNotesTotal(), FMath::RoundToInt(Restoration->GetRestoration() * 100.f));
+	ShowPrompt(FText::FromString(Status), StatusPromptDuration);
+}
+
+void ALSPlayerController::LSDrainRestoration(float Amount)
+{
+	GetWorld()->GetSubsystem<URestorationSubsystem>()->DrainRestoration(Amount);
+	ShowRestorationStatus();
 }
 
 void ALSPlayerController::LSDeleteSave()

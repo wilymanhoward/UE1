@@ -5,9 +5,11 @@
 #include "Components/PointLightComponent.h"
 #include "Components/SphereComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "Engine/World.h"
 #include "Kismet/GameplayStatics.h"
 #include "LSGameInstance.h"
 #include "NiagaraFunctionLibrary.h"
+#include "RestorationSubsystem.h"
 #include "SeedBall.h"
 
 ACheckpointShrine::ACheckpointShrine()
@@ -44,6 +46,8 @@ void ACheckpointShrine::OnBallOverlap(ASeedBall* Ball)
 		GameInstance->SetLastCheckpoint(UGameplayStatics::GetCurrentLevelName(this), RespawnLocation);
 		GameInstance->SaveProgress();
 	}
+
+	GetWorld()->GetSubsystem<URestorationSubsystem>()->LockInRestoration();
 
 	Glow->SetVisibility(true);
 	UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, ActivateEffect, GetActorLocation());

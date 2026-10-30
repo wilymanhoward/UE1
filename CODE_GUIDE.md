@@ -33,7 +33,8 @@ The player is the last glowing seed of a dead Heart Tree. This guide explains ea
 - **Pattern:** command-style forwarding. The controller knows the keys, the ball knows the behaviour.
 
 - `ShowPrompt` is the single route for player messages. It shows debug text until the Phase 7 HUD exists.
-- Extra test command: `LSDeleteSave`.
+- Extra test commands: `LSDeleteSave`, and `LSDrainRestoration <amount>`.
+- `ShowRestorationStatus` displays the note count until the Phase 7 HUD exists.
 
 ### `ULSGameInstance` and `ULSSaveGame`: persistent data
 The game instance stores `UnlockedForms` and the last shrine reached. It survives level changes, so Level 2 keeps forms unlocked in Level 1. `SaveProgress` copies those values into a `ULSSaveGame` and writes it to disk, and `Init` loads them at startup. **Pattern:** memento (the save object is a plain snapshot).
@@ -46,14 +47,14 @@ Sets the default pawn and controller, and counts Golden Petals. Phase 7 adds the
 
 ### `ALSPickupBase`, `ALifeNote`, `AGoldenPetal`, `AFormFlower`: pickups
 `ALSPickupBase` handles bob and spin, the collect-once guard, effects and `Destroy`. Children implement only `OnCollected`:
-- `ALifeNote`: logs for now, and reports to the restoration subsystem in Phase 4.
+- `ALifeNote`: reports to `URestorationSubsystem`.
 - `AGoldenPetal`: adds to the count in `ALSGameMode`.
 - `AFormFlower`: unlocks a form, saves, and shows a prompt.
 
 **Pattern:** template method. The base class fixes the order of the steps, and children fill in one step.
 
 ### `ACheckpointShrine`: respawn points
-On first touch it sets the ball's checkpoint, records and saves it, turns on the glow and plays effects. It then ignores further touches.
+On first touch it sets the ball's checkpoint, records and saves it, locks in the current restoration, turns on the glow and plays effects. It then ignores further touches.
 
 ### `ALSVolumeBase`, `AKillVolume`, `ATutorialTrigger`: volumes
 `ALSVolumeBase` creates the invisible overlap box. `AKillVolume` calls `Die`. `ATutorialTrigger` shows its message once.
@@ -88,6 +89,23 @@ Each frame it adds drag against the velocity, plus upward buoyancy that grows wi
 ### `AHazardVolume`: thorns
 `Tick` kills a ball that is fragile or lighter than `SurviveMassKg`, and otherwise calls `Knockback`. **Pattern:** data-driven.
 
+### `URestorationSubsystem`: the rules of restoration
+| Function | What it does |
+|---|---|
+| `OnWorldBeginPlay` | Counts every `ALifeNote` in the level |
+| `ReportNoteCollected` | Adds a note, tells listeners where it was, and recalculates. All notes always means 1.0 |
+| `DrainRestoration` | Lowers the value, never below the locked amount, and records the loss as `DrainPenalty` |
+| `LockInRestoration` | Called by shrines. The current value becomes the minimum |
+| `BroadcastNewMilestones` | Fires each of the 25, 50, 75 and 100 percent events once |
+
+**Patterns:** subsystem and observer.
+
+### `ARestorationDriver`: what the player sees
+`Tick` moves `DisplayedRestoration` smoothly toward the real value. `ApplyVisuals` writes it to the material parameter collection, the post-process volume and the fog. `HandleNoteCollected` sets `LastNoteLocation` and restarts the local bloom radius. **Pattern:** observer.
+
+### `ARestorableActor`: plants that grow back
+Hidden at the start. It starts growing when restoration reaches its threshold or a note is collected nearby. `Tick` scales it with a bounce curve, and only runs while growing. **Pattern:** observer.
+
 ### Shared helpers
 - `ALSVolumeBase::GetBallInside` returns the living ball in the box, for children that act every frame.
 - `ASeedBall::AddExternalAcceleration` and `AddVelocityChange` are how the world pushes the ball.
@@ -108,6 +126,10 @@ Each frame it adds drag against the velocity, plus upward buoyancy that grows wi
 12. **How the ball rides a platform.** Moving a kinematic body without teleporting gives it a real velocity in the physics engine, and friction carries the ball.
 13. **Forms are never named in hazard, ice or wind code.** They compare `MassKg`, `bFragile`, `WindResponse` and `bBuoyancyEnabled`, so tuning a form changes how the whole world treats it. `ACrackedWall` is the one exception: the brief says only Stone breaks it.
 14. **Why the wind pulse has no timer.** `Fmod(time, on + off) < on` works out the current state from world time, so there is no state to keep in sync.
+15. **Why rules and visuals are two classes.** A subsystem can't hold editor-assigned assets or level references, and it should only contain rules. The driver is a replaceable view of the same data.
+16. **Why restoration is recalculated from the note count.** Adding 0.05 twenty times can miss exactly 1.0 through rounding, and a milestone could be skipped. `Collected / Total - DrainPenalty` can't drift.
+17. **How one asset recolours the whole world.** A material parameter collection is shared by every material that reads it, so one value change updates them all with no list of objects.
+18. **`bIsSpatiallyLoaded = false`.** World Partition only loads actors near the player. Without this, distant notes wouldn't exist when they are counted, and the total would be wrong.
 
 ## Suggested explanation order
 1. `SeedFormTypes.h`: what a form is.
@@ -124,3 +146,6 @@ Each frame it adds drag against the velocity, plus upward buoyancy that grows wi
 12. `APressurePlate::Tick`, then `AGate::RefreshGate`: the observer pattern solving the two-plate puzzle.
 13. `AHazardVolume::Tick`, `AWindVolume::Tick` and `AWaterVolume::Tick`: one form data struct driving three different systems.
 14. `ACrumblingPlatform::Tick`: a state machine, then `ASinkingPad`'s constructor as the same logic with new values.
+15. `ALifeNote::OnCollected`, then `URestorationSubsystem::ReportNoteCollected`: one pickup updating the whole game.
+16. `ARestorationDriver::ApplyVisuals`, then the `MF_WitherBlend` material function: how a number becomes colour.
+17. `ARestorableActor`: another listener, and the bounce curve.

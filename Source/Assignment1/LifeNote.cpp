@@ -2,8 +2,25 @@
 
 #include "LifeNote.h"
 
+#include "Engine/World.h"
+#include "LSPlayerController.h"
+#include "RestorationSubsystem.h"
+#include "SeedBall.h"
+
+ALifeNote::ALifeNote()
+{
+#if WITH_EDITORONLY_DATA
+	// World Partition only loads actors near the player, and the note total must include the whole level.
+	bIsSpatiallyLoaded = false;
+#endif
+}
+
 void ALifeNote::OnCollected(ASeedBall* Ball)
 {
-	// shortcut: only logs for now, Phase 4 reports to URestorationSubsystem and blooms colour around the note.
-	UE_LOG(LogTemp, Log, TEXT("Life Note collected: %s"), *GetName());
+	GetWorld()->GetSubsystem<URestorationSubsystem>()->ReportNoteCollected(GetActorLocation());
+
+	if (ALSPlayerController* PlayerController = Ball->GetController<ALSPlayerController>())
+	{
+		PlayerController->ShowRestorationStatus();
+	}
 }

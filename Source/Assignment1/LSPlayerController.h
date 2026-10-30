@@ -30,6 +30,13 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "UI")
 	void ShowPrompt(const FText& Message, float Duration);
 
+	/** Shows the note count and restoration percentage. */
+	void ShowRestorationStatus();
+
+	/** Console test command: drains restoration by Amount (0 to 1), as a Wither Blob will in Phase 5. */
+	UFUNCTION(Exec)
+	void LSDrainRestoration(float Amount);
+
 	/** Console test command: unlocks Stone and Dandelion. */
 	UFUNCTION(Exec)
 	void LSUnlockAllForms();
@@ -70,6 +77,10 @@ protected:
 	/** Highest camera pitch in degrees (looking up from low down). */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tuning")
 	float MaxCameraPitch = 30.f;
+
+	/** Seconds the restoration status message stays on screen. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tuning", meta = (ClampMin = "0"))
+	float StatusPromptDuration = 3.f;
 
 private:
 	void CreateInputObjects();

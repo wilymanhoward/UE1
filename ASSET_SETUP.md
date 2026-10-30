@@ -89,6 +89,52 @@ Create `PM_Ice` in `Content/Physics`: **Friction** 0.05 and **Friction Combine**
 - **Wind on Stone:** Stone's **Wind Response** is 0.05, so it crosses strong wind almost unaffected. Use this for bridges that Seed can't cross.
 - **Updraft strength:** must beat gravity. The default of 1500 lifts Seed and Dandelion, but not Stone.
 
+## Phase 4
+
+Do these in order. Note counting and plant growth work without steps 1 to 3, but world colour needs them.
+
+### 1. Material parameter collection
+1. In `Content/Materials`, right-click and choose **Materials > Material Parameter Collection**. Name it `MPC_Restoration`.
+2. Add these parameters with exactly these names:
+
+| Type | Name | Default |
+|---|---|---|
+| Scalar | `Restoration` | 0 |
+| Scalar | `LocalBloomRadius` | 0 |
+| Vector | `LastNoteLocation` | 0, 0, 0, 0 |
+
+### 2. Material function
+Create `MF_WitherBlend` in `Content/Materials` (right-click, **Materials > Material Function**). Tick **Expose to Library**. Build this graph:
+
+1. Add a **Function Input** named `Color` with **Input Type** set to **Function Input Vector 3**.
+2. Add a **Collection Parameter** node for each of the three parameters, each with **Collection** set to `MPC_Restoration`.
+3. Add a **Distance** node. Connect **Absolute World Position** to A, and the RGB output of `LastNoteLocation` to B.
+4. Add a **Max** node with `LocalBloomRadius` in A and the constant `1` in B. This prevents dividing by zero.
+5. Add a **Divide** node with Distance in A and Max in B.
+6. Add a **OneMinus** after it, then a **Saturate**. This is the local bloom: 1 at the note, fading to 0 at the radius.
+7. Add a second **Max** node with `Restoration` in A and the Saturate output in B.
+8. Add a second **OneMinus** after it. This is the amount of grey.
+9. Add a **Desaturation** node. Connect `Color` to its input, and the second OneMinus to **Fraction**.
+10. Connect the Desaturation output to the **Output Result**, then save.
+
+### 3. World materials
+In every world material (ground, rocks, trees, plants):
+
+1. Add the `MF_WitherBlend` node.
+2. Connect what currently goes into **Base Color** to its `Color` input.
+3. Connect its output to **Base Color**.
+
+Leave `M_Seed`, `BP_LifeNote` and other glowing objects out of this, because they should stay colourful.
+
+### 4. Level setup
+1. Place a **Post Process Volume** and tick **Infinite Extent (Unbound)**.
+2. Place an **Exponential Height Fog**, if the level doesn't have one.
+3. Place one `RestorationDriver` from **Place Actors**. In **Details** set **Parameter Collection** to `MPC_Restoration`, and use the eyedroppers to pick **Post Process Volume** and **Height Fog**.
+4. For World Partition levels such as `L_Test`: select the Post Process Volume and the fog, then untick **Is Spatially Loaded**. They must stay loaded, since the driver always is.
+
+### 5. Plants
+Create `BP_Flower` with parent `RestorableActor`, and assign the **Mesh** component's Static Mesh and material. Place copies, and set each one's **Restoration Threshold** and **Note Radius**. Use different thresholds so the world recovers in stages. For a plant the ball should bump into, set its **Mesh** component's **Collision Presets** to `BlockAll`.
+
 ## Input
 No input assets are required. All input is built in `ALSPlayerController`.
 
