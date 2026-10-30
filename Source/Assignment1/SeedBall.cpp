@@ -9,6 +9,7 @@
 #include "Engine/World.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "LSGameInstance.h"
+#include "LSInteractable.h"
 #include "Materials/MaterialInterface.h"
 #include "PhysicalMaterials/PhysicalMaterial.h"
 #include "TimerManager.h"
@@ -30,6 +31,9 @@ ASeedBall::ASeedBall()
 	BallMesh->SetSimulatePhysics(true);
 	// A fast slam could pass through thin geometry in one physics step. CCD prevents that.
 	BallMesh->SetUseCCD(true);
+	// Both are off by default for physics bodies. They power the ILSInteractable calls.
+	BallMesh->SetGenerateOverlapEvents(true);
+	BallMesh->SetNotifyRigidBodyCollision(true);
 
 	// The engine sphere makes the pawn playable before any custom meshes exist.
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> SphereMesh(TEXT("/Engine/BasicShapes/Sphere.Sphere"));
@@ -89,6 +93,28 @@ void ASeedBall::BeginPlay()
 	CurrentForm = InitialForm;
 	// Apply data directly: this is the starting state, not a switch, so no effect or event should fire.
 	ApplyFormData(GetCurrentFormData());
+
+	BallMesh->OnComponentBeginOverlap.AddDynamic(this, &ASeedBall::HandleBeginOverlap);
+	BallMesh->OnComponentHit.AddDynamic(this, &ASeedBall::HandleHit);
+}
+
+void ASeedBall::HandleBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp,
+	int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+{
+	// The cast fails harmlessly for actors that don't implement the interface.
+	if (ILSInteractable* Interactable = Cast<ILSInteractable>(OtherActor))
+	{
+		Interactable->OnBallOverlap(this);
+	}
+}
+
+void ASeedBall::HandleHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp,
+	FVector NormalImpulse, const FHitResult& Hit)
+{
+	if (ILSInteractable* Interactable = Cast<ILSInteractable>(OtherActor))
+	{
+		Interactable->OnBallHit(this, PreImpactVelocity);
+	}
 }
 
 void ASeedBall::Tick(float DeltaSeconds)
@@ -99,6 +125,8 @@ void ASeedBall::Tick(float DeltaSeconds)
 	{
 		return;
 	}
+
+	PreImpactVelocity = BallMesh->GetPhysicsLinearVelocity();
 
 	const FSeedFormData& Data = GetCurrentFormData();
 	UpdateTimers(DeltaSeconds);

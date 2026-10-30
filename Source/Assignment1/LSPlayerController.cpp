@@ -3,6 +3,7 @@
 #include "LSPlayerController.h"
 
 #include "Camera/PlayerCameraManager.h"
+#include "Engine/Engine.h"
 #include "Engine/LocalPlayer.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
@@ -220,6 +221,20 @@ void ALSPlayerController::HandleTogglePause()
 {
 	// shortcut: pauses with no menu, Phase 7 replaces this with ULSPauseMenuWidget.
 	SetPause(!IsPaused());
+}
+
+void ALSPlayerController::ShowPrompt(const FText& Message, float Duration)
+{
+	// shortcut: debug text, not visible in Shipping builds, Phase 7 sends this to ULSHUDWidget.
+	GEngine->AddOnScreenDebugMessage(-1, Duration, FColor::Yellow, Message.ToString());
+}
+
+void ALSPlayerController::LSDeleteSave()
+{
+	if (ULSGameInstance* GameInstance = GetGameInstance<ULSGameInstance>())
+	{
+		GameInstance->DeleteProgress();
+	}
 }
 
 void ALSPlayerController::LSUnlockAllForms()

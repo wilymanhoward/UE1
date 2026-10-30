@@ -32,11 +32,31 @@ The player is the last glowing seed of a dead Heart Tree. This guide explains ea
 - Test commands: `LSUnlockAllForms`, `LSKillBall`.
 - **Pattern:** command-style forwarding. The controller knows the keys, the ball knows the behaviour.
 
-### `ULSGameInstance`: persistent data
-Stores `UnlockedForms`. A game instance survives level changes, so Level 2 keeps forms unlocked in Level 1.
+- `ShowPrompt` is the single route for player messages. It shows debug text until the Phase 7 HUD exists.
+- Extra test command: `LSDeleteSave`.
+
+### `ULSGameInstance` and `ULSSaveGame`: persistent data
+The game instance stores `UnlockedForms` and the last shrine reached. It survives level changes, so Level 2 keeps forms unlocked in Level 1. `SaveProgress` copies those values into a `ULSSaveGame` and writes it to disk, and `Init` loads them at startup. **Pattern:** memento (the save object is a plain snapshot).
 
 ### `ALSGameMode`: level rules
-Currently sets the default pawn and controller only. Phase 7 adds the rest.
+Sets the default pawn and controller, and counts Golden Petals. Phase 7 adds the rest.
+
+### `ILSInteractable`: the interaction contract
+`OnBallOverlap(Ball)` and `OnBallHit(Ball, ImpactVelocity)`, both defaulting to no action. `ASeedBall::HandleBeginOverlap` and `HandleHit` cast whatever they touched to this interface and call it. **Pattern:** interface / polymorphism. The ball never casts to a pickup or a volume, so new world objects don't change the ball.
+
+### `ALSPickupBase`, `ALifeNote`, `AGoldenPetal`, `AFormFlower`: pickups
+`ALSPickupBase` handles bob and spin, the collect-once guard, effects and `Destroy`. Children implement only `OnCollected`:
+- `ALifeNote`: logs for now, and reports to the restoration subsystem in Phase 4.
+- `AGoldenPetal`: adds to the count in `ALSGameMode`.
+- `AFormFlower`: unlocks a form, saves, and shows a prompt.
+
+**Pattern:** template method. The base class fixes the order of the steps, and children fill in one step.
+
+### `ACheckpointShrine`: respawn points
+On first touch it sets the ball's checkpoint, records and saves it, turns on the glow and plays effects. It then ignores further touches.
+
+### `ALSVolumeBase`, `AKillVolume`, `ATutorialTrigger`: volumes
+`ALSVolumeBase` creates the invisible overlap box. `AKillVolume` calls `Die`. `ATutorialTrigger` shows its message once.
 
 ## Points worth explaining
 1. **The camera does not spin with the ball.** The spring arm uses absolute rotation and control rotation.
@@ -45,6 +65,9 @@ Currently sets the default pawn and controller only. Phase 7 adds the rest.
 4. **Coyote time and jump buffering.** Two countdown timers forgive a jump pressed slightly late or slightly early.
 5. **The velocity save in `ApplyFormData`.** `SetStaticMesh` recreates the physics body, which would stop the ball mid-air without this.
 6. **The zero-delay timer guard in `Die`.** `SetTimer` with a rate of 0 cancels the timer, so the ball would never respawn.
+7. **`PreImpactVelocity`.** Hit events fire after physics has resolved the collision, so the ball's speed at that moment is already reduced. It is saved each Tick to get the true impact speed.
+8. **The `bCollected` guard.** `Destroy` doesn't remove the actor immediately, so the guard prevents collecting twice.
+9. **Why pickups have no overlap code of their own.** The ball is the only class listening for overlaps, which keeps the logic in one place.
 
 ## Suggested explanation order
 1. `SeedFormTypes.h`: what a form is.
@@ -54,3 +77,6 @@ Currently sets the default pawn and controller only. Phase 7 adds the rest.
 5. `TrySwitchForm` and `ApplyFormData`: the state pattern.
 6. Slam and glide: abilities driven by data flags.
 7. `Die`, `Respawn` and the delegates: the observer pattern.
+8. `ILSInteractable` and `ASeedBall::HandleBeginOverlap`: the interface.
+9. `ALSPickupBase::OnBallOverlap`, then the three short `OnCollected` versions: the template method.
+10. `ACheckpointShrine`, then `ULSGameInstance::SaveProgress`: checkpoints and saving.

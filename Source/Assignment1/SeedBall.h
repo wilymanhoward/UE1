@@ -7,7 +7,8 @@
 //   - Observer pattern: OnFormChanged, OnDied and OnRespawned let UI and audio react without the ball
 //     knowing they exist.
 // Connections: ALSPlayerController calls the input functions below. ULSGameInstance says which forms are
-// unlocked. Hazards, water and wind (Phase 3) read GetCurrentFormData().
+// unlocked. Everything the ball touches is told through ILSInteractable. Hazards, water and wind (Phase 3)
+// read GetCurrentFormData().
 
 #pragma once
 
@@ -215,6 +216,18 @@ private:
 	void ApplyFormData(const FSeedFormData& Data);
 
 	void Respawn();
+
+	// Physics events, forwarded to ILSInteractable. UFUNCTION is required to bind them with AddDynamic.
+	UFUNCTION()
+	void HandleBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp,
+		int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+
+	UFUNCTION()
+	void HandleHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp,
+		FVector NormalImpulse, const FHitResult& Hit);
+
+	// Velocity saved each Tick. By the time a hit event fires, physics has already changed the real velocity.
+	FVector PreImpactVelocity = FVector::ZeroVector;
 
 	ESeedForm CurrentForm = ESeedForm::Seed;
 	FVector2D MoveInput = FVector2D::ZeroVector;

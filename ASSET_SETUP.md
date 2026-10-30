@@ -35,6 +35,24 @@ Create `M_Seed`, `M_Stone` and `M_Dandelion`. Solid gold, grey and white are eno
 ### 5. Test level
 Create a Basic level `L_Test` with a large floor, some slopes, a few cubes and a Player Start. In **World Settings**, set **Kill Z** to about -1000 so falling off the floor triggers a respawn.
 
+## Phase 2
+
+Create these Blueprints in `Content/Blueprints`. Everything under **Effects** is optional.
+
+| Blueprint | Parent class | Assign |
+|---|---|---|
+| `BP_LifeNote` | `LifeNote` | **Mesh** component's Static Mesh and material (a gold note). **Collect Effect**, **Collect Sound** |
+| `BP_GoldenPetal` | `GoldenPetal` | **Mesh** component's Static Mesh and material. **Collect Effect**, **Collect Sound** |
+| `BP_FormFlower_Stone` | `FormFlower` | **Mesh**. **Form To Unlock** = Stone. **Prompt Message** = `Stone Shell unlocked! Press 2 to transform.` |
+| `BP_FormFlower_Dandelion` | `FormFlower` | **Mesh**. **Form To Unlock** = Dandelion. **Prompt Message** = `Dandelion unlocked! Press 3, then hold Space while falling to glide.` |
+| `BP_CheckpointShrine` | `CheckpointShrine` | **Mesh**. **Glow** component's colour and intensity. **Activate Effect**, **Activate Sound**. Optional: the **Play Activate Effect** event, to swap to a glowing material |
+
+The **Mesh** on pickups and shrines has no collision. For a shrine the ball should bump into, select its **Mesh** component and set **Collision Presets** to `BlockAll`. Keep its **Trigger** sphere larger than the mesh, or the ball won't reach it.
+
+These two can be placed directly, with no Blueprint, from the **Place Actors** panel by searching their names. Set their values per instance in the level:
+- **`KillVolume`:** place under gaps and scale to cover them.
+- **`TutorialTrigger`:** scale to cover the area, then set **Message** and **Display Duration**.
+
 ## Input
 No input assets are required. All input is built in `ALSPlayerController`.
 

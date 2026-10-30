@@ -1,0 +1,62 @@
+// Last Seed - a respawn point that lights up when the ball reaches it.
+//
+// Purpose: sets the ball's respawn location, turns on its glow and saves progress. It works only once.
+// Design pattern: none. It is a plain implementer of the ILSInteractable interface.
+// Connections: touched by ASeedBall through ILSInteractable. Calls ASeedBall::SetCheckpoint and
+// ULSGameInstance::SaveProgress.
+
+#pragma once
+
+#include "CoreMinimal.h"
+#include "GameFramework/Actor.h"
+#include "LSInteractable.h"
+#include "CheckpointShrine.generated.h"
+
+class UNiagaraSystem;
+class UPointLightComponent;
+class USoundBase;
+class USphereComponent;
+class UStaticMeshComponent;
+
+UCLASS()
+class ASSIGNMENT1_API ACheckpointShrine : public AActor, public ILSInteractable
+{
+	GENERATED_BODY()
+
+public:
+	ACheckpointShrine();
+
+	virtual void OnBallOverlap(ASeedBall* Ball) override;
+
+protected:
+	/** Change the mesh material here to make the shrine itself glow. */
+	UFUNCTION(BlueprintImplementableEvent, Category = "Checkpoint")
+	void PlayActivateEffect();
+
+	/** Overlap area that activates the shrine. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	TObjectPtr<USphereComponent> Trigger;
+
+	/** The visible shrine. It has no collision until you enable it on the Blueprint child. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	TObjectPtr<UStaticMeshComponent> Mesh;
+
+	/** Glow light, off until the shrine is activated. Set its colour and brightness here. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	TObjectPtr<UPointLightComponent> Glow;
+
+	/** Particle effect spawned on activation. Optional. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
+	TObjectPtr<UNiagaraSystem> ActivateEffect;
+
+	/** Sound played on activation. Optional. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
+	TObjectPtr<USoundBase> ActivateSound;
+
+	/** How far above the shrine the ball respawns, in cm, so it doesn't appear inside the floor. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tuning", meta = (ClampMin = "0"))
+	float RespawnHeight = 100.f;
+
+private:
+	bool bActivated = false;
+};

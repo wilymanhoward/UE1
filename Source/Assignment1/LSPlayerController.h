@@ -26,9 +26,17 @@ class ASSIGNMENT1_API ALSPlayerController : public APlayerController
 	GENERATED_BODY()
 
 public:
+	/** Shows a message to the player for the given number of seconds. */
+	UFUNCTION(BlueprintCallable, Category = "UI")
+	void ShowPrompt(const FText& Message, float Duration);
+
 	/** Console test command: unlocks Stone and Dandelion. */
 	UFUNCTION(Exec)
 	void LSUnlockAllForms();
+
+	/** Console test command: deletes the save file so unlock tests can start fresh. */
+	UFUNCTION(Exec)
+	void LSDeleteSave();
 
 	/** Console test command: kills the ball to test respawning. */
 	UFUNCTION(Exec)
