@@ -2,8 +2,8 @@
 //
 // Purpose: gives every volume in the game the same box setup, so children only write their reaction.
 // Design pattern: inheritance for shared setup. Children override OnBallOverlap from ILSInteractable.
-// Connections: touched by ASeedBall through ILSInteractable. Children are AKillVolume and ATutorialTrigger.
-// Phase 3's wind, water and hazard volumes will build on it too.
+// Connections: touched by ASeedBall through ILSInteractable. Children are AKillVolume, ATutorialTrigger,
+// AWindVolume, AWaterVolume, AHazardVolume and AThinIce.
 
 #pragma once
 
@@ -23,6 +23,9 @@ public:
 	ALSVolumeBase();
 
 protected:
+	/** The living ball inside the box, or null. For children that act every frame while the ball stays inside. */
+	ASeedBall* GetBallInside() const;
+
 	/** The trigger area. Resize it with Box Extent, or scale the actor in the level. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	TObjectPtr<UBoxComponent> Box;

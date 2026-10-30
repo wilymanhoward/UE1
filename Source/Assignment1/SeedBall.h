@@ -7,8 +7,8 @@
 //   - Observer pattern: OnFormChanged, OnDied and OnRespawned let UI and audio react without the ball
 //     knowing they exist.
 // Connections: ALSPlayerController calls the input functions below. ULSGameInstance says which forms are
-// unlocked. Everything the ball touches is told through ILSInteractable. Hazards, water and wind (Phase 3)
-// read GetCurrentFormData().
+// unlocked. Everything the ball touches is told through ILSInteractable. Hazards, water and wind read
+// GetCurrentFormData() and push the ball through AddExternalAcceleration and AddVelocityChange.
 
 #pragma once
 
@@ -82,6 +82,14 @@ public:
 	/** Sets where the next respawn happens. Called by ACheckpointShrine in Phase 2. */
 	UFUNCTION(BlueprintCallable, Category = "Seed|Death")
 	void SetCheckpoint(const FVector& Location) { CheckpointLocation = Location; }
+
+	// --- Forces from the world, called by wind, water and hazards ---
+
+	/** Adds acceleration in cm/s^2 for this frame. Mass does not affect it, so callers scale it by form data. */
+	void AddExternalAcceleration(const FVector& Acceleration);
+
+	/** Instantly changes velocity by this amount in cm/s. Used for knockback. */
+	void AddVelocityChange(const FVector& VelocityChange);
 
 	// --- Observer events ---
 

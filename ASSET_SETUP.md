@@ -53,6 +53,40 @@ These two can be placed directly, with no Blueprint, from the **Place Actors** p
 - **`KillVolume`:** place under gaps and scale to cover them.
 - **`TutorialTrigger`:** scale to cover the area, then set **Message** and **Display Duration**.
 
+## Phase 3
+
+Every class here works as soon as it is placed from the **Place Actors** panel, using engine cubes and a cone. Blueprint children are only needed when you add your own art. Create them in `Content/Blueprints` and set values in **Class Defaults**.
+
+| Blueprint | Parent class | Assign |
+|---|---|---|
+| `BP_CrackedWall` | `CrackedWall` | **Mesh** component's Static Mesh. **Debris Mesh**. Optional: **Play Break Effect** event |
+| `BP_PressurePlate` | `PressurePlate` | **Mesh** component's Static Mesh and material |
+| `BP_Gate` | `Gate` | **Door** component's Static Mesh. Optional: **Open Curve** (Float Curve asset) |
+| `BP_IceBlock` | `PushableBlock` | **Mesh** component's Static Mesh and material. Under **Collision**, set **Phys Material Override** to `PM_Ice` |
+| `BP_MovingPlatform` | `MovingPlatform` | **Mesh** component's Static Mesh |
+| `BP_CrumblingPlatform` | `CrumblingPlatform` | **Mesh** component's Static Mesh. Optional: **Play Crumble Effect** event |
+| `BP_SinkingPad` | `SinkingPad` | **Mesh** component's Static Mesh (a lily pad) |
+| `BP_ThinIce` | `ThinIce` | **Mesh** component's Static Mesh and material. Optional: **Play Break Effect** event |
+| `BP_WindVolume` | `WindVolume` | **Particles** component's Niagara system. Optional: **Play Wind Active Effect** event |
+| `BP_SteamVent` | `SteamVent` | **Particles** component's Niagara system (steam) |
+| `BP_WaterVolume` | `WaterVolume` | Add a **Plane** Static Mesh component with **No Collision** and a water material, at the top of the box |
+| `BP_Thorns` | `HazardVolume` | **Mesh** component's Static Mesh. Optional: **Play Knockback Effect** event |
+
+Create `PM_Ice` in `Content/Physics`: **Friction** 0.05 and **Friction Combine** set to **Min**, so ice stays slippery against normal floors. Assign it to icy floors too. Stone keeps its grip because `PM_Stone` uses **Max**, and Max takes priority over Min.
+
+### Set these on each placed actor in the level
+- **Gate:** add an entry to **Required Plates** and pick a plate with the eyedropper. Add two for the two-plate puzzle.
+- **Wind Volume:** set **Wind Direction**. Use `(0, 0, 1)` for an updraft. For the fan puzzle, pick a plate in **Power Plate**.
+- **Moving Platform:** select the placed actor, click a white spline point in the viewport and drag it. Alt+drag a point to add another. Turn on **Loop** for a closed route.
+- **Scaling:** resize volumes with **Box Extent**, or by scaling the actor.
+
+### Level design rules
+- **Thin ice:** the actor's origin is 50 cm above the ice surface. Put a kill volume or water below it.
+- **Water:** floating forms can't jump, so give every pool a gentle ramp out.
+- **Sinking pad:** put the top of the pad level with the water surface.
+- **Wind on Stone:** Stone's **Wind Response** is 0.05, so it crosses strong wind almost unaffected. Use this for bridges that Seed can't cross.
+- **Updraft strength:** must beat gravity. The default of 1500 lifts Seed and Dandelion, but not Stone.
+
 ## Input
 No input assets are required. All input is built in `ALSPlayerController`.
 

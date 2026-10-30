@@ -266,6 +266,16 @@ void ASeedBall::ApplyGlide(const FSeedFormData& Data)
 	}
 }
 
+void ASeedBall::AddExternalAcceleration(const FVector& Acceleration)
+{
+	BallMesh->AddForce(Acceleration, NAME_None, true);
+}
+
+void ASeedBall::AddVelocityChange(const FVector& VelocityChange)
+{
+	BallMesh->AddImpulse(VelocityChange, NAME_None, true);
+}
+
 void ASeedBall::SetMoveInput(const FVector2D& Input)
 {
 	MoveInput = Input;

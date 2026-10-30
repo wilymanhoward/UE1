@@ -58,6 +58,41 @@ On first touch it sets the ball's checkpoint, records and saves it, turns on the
 ### `ALSVolumeBase`, `AKillVolume`, `ATutorialTrigger`: volumes
 `ALSVolumeBase` creates the invisible overlap box. `AKillVolume` calls `Die`. `ATutorialTrigger` shows its message once.
 
+### `ACrackedWall`: breakable wall
+`OnBallHit` checks for Stone, then for a slam or an impact speed of at least `BreakSpeed`. `Break` hides the mesh, removes its collision, and spawns physics debris with a set lifespan. It is the first user of the `ImpactVelocity` value that `ASeedBall` saves before each impact.
+
+### `APressurePlate`: weight sensor
+`GetMassOnPlate` adds up the mass of every simulating body in the trigger. `Tick` compares it with `RequiredMassKg` and broadcasts `OnPlatePressed` or `OnPlateReleased` when the answer changes. `OnBallOverlap` shows the "Too light!" prompt. **Pattern:** observer.
+
+### `AGate`: door with a timeline
+`BeginPlay` builds the timeline from `OpenCurve`, or from `CreateDefaultCurve` when none is assigned, and subscribes to every plate. `RefreshGate` plays forward only if all plates are pressed, and otherwise reverses. **Pattern:** observer.
+
+### `APushableBlock`: heavy physics body
+Contains almost no code, because mass and friction produce the behaviour. `FellOutOfWorld` returns it to its start so a puzzle can't become impossible.
+
+### `AMovingPlatform`: spline path
+`Tick` advances a distance along the spline, handles ping-pong or loop at the ends, and moves the kinematic mesh. Two spline points are the simple A-to-B case, so there is one path system and not two.
+
+### `ACrumblingPlatform` and `ASinkingPad`: delayed collapse
+An `ECrumbleState` state machine: Solid, Shaking, Falling, Waiting, Returning. `ASinkingPad` only changes default values in its constructor. **Pattern:** state machine.
+
+### `AThinIce`: mass-limited surface
+`Tick` breaks the ice when the ball inside weighs at least `BreakMassKg`. A timer restores it. **Pattern:** data-driven.
+
+### `AWindVolume` and `ASteamVent`: directional force
+`IsWindActive` combines the optional power plate and the pulse timer. `Tick` switches the particles when that changes, then pushes the ball by `Strength * WindResponse`. `ASteamVent` only changes defaults. **Pattern:** data-driven.
+
+### `AWaterVolume`: buoyancy and drag
+Each frame it adds drag against the velocity, plus upward buoyancy that grows with depth if the form has `bBuoyancyEnabled`. **Pattern:** data-driven.
+
+### `AHazardVolume`: thorns
+`Tick` kills a ball that is fragile or lighter than `SurviveMassKg`, and otherwise calls `Knockback`. **Pattern:** data-driven.
+
+### Shared helpers
+- `ALSVolumeBase::GetBallInside` returns the living ball in the box, for children that act every frame.
+- `ASeedBall::AddExternalAcceleration` and `AddVelocityChange` are how the world pushes the ball.
+- `LSDefaultMeshes.h` supplies engine meshes, so actors are visible as soon as they are placed.
+
 ## Points worth explaining
 1. **The camera does not spin with the ball.** The spring arm uses absolute rotation and control rotation.
 2. **Why `bAccelChange = true`.** Rolling and jumping stay independent of mass, so mass can drive plates and blocks while handling is tuned separately. Friction still depends on the physical material.
@@ -68,6 +103,11 @@ On first touch it sets the ball's checkpoint, records and saves it, turns on the
 7. **`PreImpactVelocity`.** Hit events fire after physics has resolved the collision, so the ball's speed at that moment is already reduced. It is saved each Tick to get the true impact speed.
 8. **The `bCollected` guard.** `Destroy` doesn't remove the actor immediately, so the guard prevents collecting twice.
 9. **Why pickups have no overlap code of their own.** The ball is the only class listening for overlaps, which keeps the logic in one place.
+10. **Why plates, ice and hazards check every frame.** Switching form changes mass and abilities with no new overlap event. An overlap-only plate would miss Stone transforming while already on it.
+11. **Why the block needs no push code.** A rolling ball can only push as hard as its grip, which is friction x its weight. Seed's grip is smaller than the friction holding a 150 kg block, and Stone's is larger.
+12. **How the ball rides a platform.** Moving a kinematic body without teleporting gives it a real velocity in the physics engine, and friction carries the ball.
+13. **Forms are never named in hazard, ice or wind code.** They compare `MassKg`, `bFragile`, `WindResponse` and `bBuoyancyEnabled`, so tuning a form changes how the whole world treats it. `ACrackedWall` is the one exception: the brief says only Stone breaks it.
+14. **Why the wind pulse has no timer.** `Fmod(time, on + off) < on` works out the current state from world time, so there is no state to keep in sync.
 
 ## Suggested explanation order
 1. `SeedFormTypes.h`: what a form is.
@@ -80,3 +120,7 @@ On first touch it sets the ball's checkpoint, records and saves it, turns on the
 8. `ILSInteractable` and `ASeedBall::HandleBeginOverlap`: the interface.
 9. `ALSPickupBase::OnBallOverlap`, then the three short `OnCollected` versions: the template method.
 10. `ACheckpointShrine`, then `ULSGameInstance::SaveProgress`: checkpoints and saving.
+11. `ACrackedWall::OnBallHit`: the interface in use, with a real impact speed.
+12. `APressurePlate::Tick`, then `AGate::RefreshGate`: the observer pattern solving the two-plate puzzle.
+13. `AHazardVolume::Tick`, `AWindVolume::Tick` and `AWaterVolume::Tick`: one form data struct driving three different systems.
+14. `ACrumblingPlatform::Tick`: a state machine, then `ASinkingPad`'s constructor as the same logic with new values.
