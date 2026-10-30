@@ -136,6 +136,27 @@ Leave `M_Seed`, `BP_LifeNote` and other glowing objects out of this, because the
 ### 5. Plants
 Create `BP_Flower` with parent `RestorableActor`, and assign the **Mesh** component's Static Mesh and material. Place copies, and set each one's **Restoration Threshold** and **Note Radius**. Use different thresholds so the world recovers in stages. For a plant the ball should bump into, set its **Mesh** component's **Collision Presets** to `BlockAll`.
 
+## Phase 5
+
+Both work as soon as they are placed, using an engine sphere and cube. Create Blueprint children when you add your own art.
+
+| Blueprint | Parent class | Assign |
+|---|---|---|
+| `BP_WitherBlob` | `WitherBlob` | **Mesh** component's Static Mesh and a dark material. Optional: **Play Contact Effect** and **Play Death Effect** events |
+| `BP_WitheringStorm` | `WitheringStorm` | **Mesh** component's material (dark and translucent). **Rumble Audio** component's **Sound** (looping). **Close Shake** |
+| `BP_StormShake` | `CameraShakeBase` | **Root Shake Pattern** = Perlin Noise Camera Shake Pattern, with **Duration** of at least 1 s. Assign it to **Close Shake** |
+
+`AStormTrigger` needs no Blueprint: place it from **Place Actors**.
+
+### Set these on each placed actor in the level
+- **Wither Blob:** under **Patrol Points**, click **+** for each point, then drag its diamond widget in the viewport. Leave the list empty for a guard that stays at its start.
+- **Storm Trigger:** set **Storm** with the eyedropper, and scale it across the start of the climb.
+- **Withering Storm:** scale the actor to resize it, so the mesh and the kill box stay matched. Place its top well below the player's starting height.
+
+### Level design rules
+- **Blobs:** they move in straight lines, so keep patrol routes free of walls. They stop at drops larger than **Max Drop Height**, so ledges are safe places.
+- **Storm:** set **Max Rise Distance** so its top stops below the end of the climb. Phase 7 stops it when the level is complete.
+
 ## Input
 No input assets are required. All input is built in `ALSPlayerController`.
 

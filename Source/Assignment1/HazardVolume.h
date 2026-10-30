@@ -2,7 +2,7 @@
 //
 // Purpose: kills fragile or light forms on touch, and knocks heavy forms back.
 // Design pattern: data-driven. The result comes from bFragile and MassKg, and never from "is this Stone?".
-// Connections: child of ALSVolumeBase. Reads ASeedBall::GetCurrentFormData, then calls Die or AddVelocityChange.
+// Connections: child of ALSVolumeBase. Reads ASeedBall::GetCurrentFormData, then calls Die or Knockback.
 
 #pragma once
 

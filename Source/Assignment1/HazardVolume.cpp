@@ -46,17 +46,13 @@ void AHazardVolume::Tick(float DeltaSeconds)
 
 void AHazardVolume::Knockback(ASeedBall* Ball)
 {
-	const FVector Velocity = Ball->GetVelocity();
-
 	// Send the ball back the way it came. A ball that isn't moving is pushed away from the centre instead.
-	FVector Away = (-Velocity).GetSafeNormal2D();
+	FVector Away = (-Ball->GetVelocity()).GetSafeNormal2D();
 	if (Away.IsNearlyZero())
 	{
 		Away = (Ball->GetActorLocation() - GetActorLocation()).GetSafeNormal2D();
 	}
 
-	// Subtracting Velocity cancels the current motion, so the result is exactly the knockback.
-	const FVector Target = Away * KnockbackSpeed + FVector::UpVector * KnockbackUpSpeed;
-	Ball->AddVelocityChange(Target - Velocity);
+	Ball->Knockback(Away, KnockbackSpeed, KnockbackUpSpeed);
 	PlayKnockbackEffect();
 }

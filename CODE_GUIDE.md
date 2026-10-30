@@ -106,9 +106,21 @@ Each frame it adds drag against the velocity, plus upward buoyancy that grows wi
 ### `ARestorableActor`: plants that grow back
 Hidden at the start. It starts growing when restoration reaches its threshold or a note is collected nearby. `Tick` scales it with a bounce curve, and only runs while growing. **Pattern:** observer.
 
+### `AWitherBlob`: the enemy
+| Function | What it does |
+|---|---|
+| `UpdateState` | The state machine: Patrol, Chase, Return, with the rule for leaving each state |
+| `MoveToward` | Straight-line seek. A line trace finds the ground, stops the blob at ledges, and a sweep stops it at walls |
+| `HandleBallContact` | A slam from above kills the blob. Otherwise it drains restoration and knocks the ball back |
+
+**Pattern:** state machine.
+
+### `AWitheringStorm` and `AStormTrigger`: the chase
+`AStormTrigger` calls `StartRising`, which subscribes to the ball's events. `Tick` raises the box, updates the rumble and camera shake, and kills a ball inside. `HandleNoteCollected` pushes it down, `HandleCheckpointSet` saves a safe height, and `HandleBallRespawned` restores it. **Pattern:** observer.
+
 ### Shared helpers
 - `ALSVolumeBase::GetBallInside` returns the living ball in the box, for children that act every frame.
-- `ASeedBall::AddExternalAcceleration` and `AddVelocityChange` are how the world pushes the ball.
+- `ASeedBall::AddExternalAcceleration` and `Knockback` are how the world pushes the ball.
 - `LSDefaultMeshes.h` supplies engine meshes, so actors are visible as soon as they are placed.
 
 ## Points worth explaining
@@ -130,6 +142,9 @@ Hidden at the start. It starts growing when restoration reaches its threshold or
 16. **Why restoration is recalculated from the note count.** Adding 0.05 twenty times can miss exactly 1.0 through rounding, and a milestone could be skipped. `Collected / Total - DrainPenalty` can't drift.
 17. **How one asset recolours the whole world.** A material parameter collection is shared by every material that reads it, so one value change updates them all with no list of objects.
 18. **`bIsSpatiallyLoaded = false`.** World Partition only loads actors near the player. Without this, distant notes wouldn't exist when they are counted, and the total would be wrong.
+19. **Why two radii on the blob.** With `ChaseRadius` smaller than `LoseRadius`, a ball near the limit can't make the blob flip between states every frame.
+20. **Why the blob's collision blocks only level geometry.** It overlaps the ball, so the ball's physics isn't disturbed and the code decides what contact means, but it still stops at walls.
+21. **`RespawnClearance`.** Without it, a checkpoint reached with the storm just below would kill the player again on every respawn.
 
 ## Suggested explanation order
 1. `SeedFormTypes.h`: what a form is.
@@ -149,3 +164,5 @@ Hidden at the start. It starts growing when restoration reaches its threshold or
 15. `ALifeNote::OnCollected`, then `URestorationSubsystem::ReportNoteCollected`: one pickup updating the whole game.
 16. `ARestorationDriver::ApplyVisuals`, then the `MF_WitherBlend` material function: how a number becomes colour.
 17. `ARestorableActor`: another listener, and the bounce curve.
+18. `AWitherBlob::UpdateState`: the enum state machine, then `HandleBallContact` for the slam check.
+19. `AWitheringStorm`: three events from two classes driving one chase.

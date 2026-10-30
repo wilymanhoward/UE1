@@ -8,7 +8,7 @@
 //     knowing they exist.
 // Connections: ALSPlayerController calls the input functions below. ULSGameInstance says which forms are
 // unlocked. Everything the ball touches is told through ILSInteractable. Hazards, water and wind read
-// GetCurrentFormData() and push the ball through AddExternalAcceleration and AddVelocityChange.
+// GetCurrentFormData() and push the ball through AddExternalAcceleration and Knockback.
 
 #pragma once
 
@@ -24,6 +24,7 @@ class UStaticMeshComponent;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnSeedFormChanged, ESeedForm, OldForm, ESeedForm, NewForm);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnSeedDied);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnSeedRespawned);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnSeedCheckpointSet, FVector, Location);
 
 UCLASS()
 class ASSIGNMENT1_API ASeedBall : public APawn
@@ -79,17 +80,17 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Seed|Death")
 	void Die();
 
-	/** Sets where the next respawn happens. Called by ACheckpointShrine in Phase 2. */
+	/** Sets where the next respawn happens. Called by ACheckpointShrine. */
 	UFUNCTION(BlueprintCallable, Category = "Seed|Death")
-	void SetCheckpoint(const FVector& Location) { CheckpointLocation = Location; }
+	void SetCheckpoint(const FVector& Location);
 
 	// --- Forces from the world, called by wind, water and hazards ---
 
 	/** Adds acceleration in cm/s^2 for this frame. Mass does not affect it, so callers scale it by form data. */
 	void AddExternalAcceleration(const FVector& Acceleration);
 
-	/** Instantly changes velocity by this amount in cm/s. Used for knockback. */
-	void AddVelocityChange(const FVector& VelocityChange);
+	/** Replaces the ball's velocity, so a knockback is the same size whatever speed the ball had. Speeds are in cm/s. */
+	void Knockback(const FVector& Direction, float HorizontalSpeed, float UpSpeed);
 
 	// --- Observer events ---
 
@@ -104,6 +105,10 @@ public:
 	/** Fires once the ball is back at its checkpoint. */
 	UPROPERTY(BlueprintAssignable, Category = "Seed|Events")
 	FOnSeedRespawned OnRespawned;
+
+	/** Fires when a new checkpoint is set, with its location. */
+	UPROPERTY(BlueprintAssignable, Category = "Seed|Events")
+	FOnSeedCheckpointSet OnCheckpointSet;
 
 protected:
 	virtual void BeginPlay() override;

@@ -271,9 +271,15 @@ void ASeedBall::AddExternalAcceleration(const FVector& Acceleration)
 	BallMesh->AddForce(Acceleration, NAME_None, true);
 }
 
-void ASeedBall::AddVelocityChange(const FVector& VelocityChange)
+void ASeedBall::Knockback(const FVector& Direction, float HorizontalSpeed, float UpSpeed)
 {
-	BallMesh->AddImpulse(VelocityChange, NAME_None, true);
+	BallMesh->SetPhysicsLinearVelocity(Direction * HorizontalSpeed + FVector::UpVector * UpSpeed);
+}
+
+void ASeedBall::SetCheckpoint(const FVector& Location)
+{
+	CheckpointLocation = Location;
+	OnCheckpointSet.Broadcast(Location);
 }
 
 void ASeedBall::SetMoveInput(const FVector2D& Input)

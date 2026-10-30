@@ -18,6 +18,13 @@ namespace LSDefaultMeshes
 		return Finder.Object.Get();
 	}
 
+	/** A 100 cm wide sphere with its pivot at the centre. */
+	inline UStaticMesh* Sphere()
+	{
+		static ConstructorHelpers::FObjectFinder<UStaticMesh> Finder(TEXT("/Engine/BasicShapes/Sphere.Sphere"));
+		return Finder.Object.Get();
+	}
+
 	/** A 100 cm cone with its pivot at the centre. */
 	inline UStaticMesh* Cone()
 	{
