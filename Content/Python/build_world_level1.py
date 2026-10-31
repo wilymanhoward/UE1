@@ -1,7 +1,7 @@
 # Last Seed - turns the straight Level 1 greybox into a winding Withered Forest at sunset.
 #
 # Purpose: copies L_Level1 to L_Level1_World, bends the route along a curved road with hills, moves every gameplay actor
-# onto it, adds the extra challenges that make the level last about 4:45, and builds the ground, forest, boundaries and
+# onto it, adds the extra challenges that make the level last over 4 minutes, and builds the ground, forest, boundaries and
 # light around it. The art follows three concept pictures, one per zone.
 #
 # How the bending works: every greybox position (x, y, z) becomes distance along the road s = to_road(x), distance to its
@@ -62,6 +62,9 @@ GREYBOX_FLOOR = [(0, 6500, 0, 0), (6500, 8000, 0, 300), (8000, 26100, 300, 300),
 MARSH = (28000.0, 32500.0)
 MARSH_GREYBOX = (19600.0, 22600.0)
 WATER_LEVEL = 300.0
+SWAMP = (27200.0, 37400.0)  # Picture 3's open water spreads either side of the road between these. The marsh lane is the middle of it.
+SWAMP_WIDTH = 6500.0  # How far the water reaches from the road, before the land climbs out of it.
+MIST_LAYERS = (20.0, 60.0, 110.0)  # Heights above the water. Stacked sheets of drifting noise read as mist lying on it.
 MARSH_BED = -50.0
 ISLAND_CHAIN = (6490.0, 8890.0)
 CAVERN_GAP = (19700.0, 22300.0)
@@ -180,8 +183,14 @@ def gap_amount(s):
     return 0.0
 
 
-def marsh_amount(s):
-    return smoothstep(MARSH[0] - 300.0, MARSH[0] + 100.0, s) * (1.0 - smoothstep(MARSH[1] - 100.0, MARSH[1] + 300.0, s))
+def swamp_amount(s):
+    return smoothstep(SWAMP[0], SWAMP[0] + 700.0, s) * (1.0 - smoothstep(SWAMP[1] - 700.0, SWAMP[1], s))
+
+
+def road_box(s0, s1, margin):
+    """The world box around a stretch of road, as (x0, x1, y0, y1)."""
+    points = [road.point(s) for s in range(int(s0), int(s1), 200)]
+    return (min(p[0] for p in points) - margin, max(p[0] for p in points) + margin, min(p[1] for p in points) - margin, max(p[1] for p in points) + margin)
 
 
 def in_cavern(s, d, margin=1.05):
@@ -241,7 +250,7 @@ def side_ground(s, d, x, y):
     if in_pocket(x, y):
         height = level(near_s) - 20.0
     side = max(abs(d) - EDGE, 0.0)
-    height = lerp(height, WATER_LEVEL - 70.0, marsh_amount(near_s) * (1.0 - smoothstep(200.0, 2400.0, side)))
+    height = lerp(height, WATER_LEVEL - 70.0, swamp_amount(near_s) * (1.0 - smoothstep(SWAMP_WIDTH - 2500.0, SWAMP_WIDTH, side)))
     if in_cavern(s, d):
         return CAVERN_FLOOR
     return lerp(height, CHASM, gap_amount(near_s) * (1.0 - smoothstep(150.0, 1600.0, side)))
@@ -264,7 +273,7 @@ def terrain_height(x, y):
         if MARSH[0] <= s <= MARSH[1]:
             if abs(d) <= LANE:
                 return WATER_LEVEL - 400.0
-            return WATER_LEVEL + 15.0
+            return WATER_LEVEL - 70.0
         if has_road(s):
             # Sunk under the road mesh, which is the surface here.
             return road_height(s, d, x, y) - 40.0
@@ -428,6 +437,57 @@ def build_cavern_dome():
     return import_generated_mesh("SM_LS_CavernDome", built, solid=True)
 
 
+def build_swamp_water():
+    """A flat sheet in one mesh, as the road bends under it and overlapping planes would double up. Squares standing on high ground are left out."""
+    built = Mesh()
+    step = 400.0
+    x0, x1, y0, y1 = road_box(SWAMP[0], SWAMP[1], SWAMP_WIDTH)
+    x = x0
+    while x < x1:
+        y = y0
+        while y < y1:
+            s, d = road.project(x + step / 2.0, y + step / 2.0)
+            if swamp_amount(min(max(s, 0.0), ROAD_LENGTH)) > 0.0 and outside_distance(s, d) < SWAMP_WIDTH + 400.0:
+                if min(terrain_height(x + a, y + b) for a in (0.0, step) for b in (0.0, step)) < WATER_LEVEL + 20.0:
+                    first = len(built.points)
+                    for a, b in ((0.0, 0.0), (step, 0.0), (0.0, step), (step, step)):
+                        built.add_vertex((x + a, y + b, WATER_LEVEL - 3.0), ((x + a) / 2000.0, (y + b) / 2000.0))
+                    built.triangles += [(first, first + 1, first + 2), (first + 1, first + 3, first + 2)]
+            y += step
+        x += step
+    built.smooth_normals()
+    return import_generated_mesh("SM_LS_SwampWater", built, nanite=False)
+
+
+def build_swamp_mist():
+    """A sheet like the water's. Its U is how thick the mist is, which fades it out at the swamp's edges and thins it over the road, where the ball must stay easy to see."""
+    built = Mesh()
+    step = 400.0
+
+    def thickness(x, y):
+        s, d = road.project(x, y)
+        side = outside_distance(s, d)
+        return (swamp_amount(min(max(s, 0.0), ROAD_LENGTH)) * (1.0 - smoothstep(SWAMP_WIDTH - 1800.0, SWAMP_WIDTH - 200.0, side))
+                * (0.3 + 0.7 * smoothstep(LANE, LANE + 500.0, abs(d))))
+
+    x0, x1, y0, y1 = road_box(SWAMP[0], SWAMP[1], SWAMP_WIDTH)
+    x = x0
+    while x < x1:
+        y = y0
+        while y < y1:
+            corners = [(x + a, y + b) for a, b in ((0.0, 0.0), (step, 0.0), (0.0, step), (step, step))]
+            amounts = [thickness(*corner) for corner in corners]
+            if max(amounts) > 0.0:
+                first = len(built.points)
+                for corner, amount in zip(corners, amounts):
+                    built.add_vertex((corner[0], corner[1], WATER_LEVEL), (amount, 0.0))
+                built.triangles += [(first, first + 1, first + 2), (first + 1, first + 3, first + 2)]
+            y += step
+        x += step
+    built.smooth_normals()
+    return import_generated_mesh("SM_LS_SwampMist", built, nanite=False)
+
+
 def build_vines():
     """Thin vines hanging from the cavern's roof, all in one mesh. They have no collision."""
     built = Mesh()
@@ -456,7 +516,13 @@ def import_world_meshes():
             "root_arch": import_generated_mesh("SM_LS_RootArch", ls_generate_world_meshes.build_root_arch()),
             "pivot": import_generated_mesh("SM_LS_LogPivot", ls_generate_world_meshes.build_log_pivot()),
             "shaft": import_generated_mesh("SM_LS_LightShaft", ls_generate_world_meshes.build_light_shaft(), nanite=False),
-            "island": import_generated_mesh("SM_LS_FloatingIsland", ls_generate_world_meshes.build_floating_island())}
+            "island": import_generated_mesh("SM_LS_FloatingIsland", ls_generate_world_meshes.build_floating_island()),
+            "moss": import_generated_mesh("SM_LS_TreeMoss", ls_generate_world_meshes.build_tree_moss()),
+            "roots": import_generated_mesh("SM_LS_RootClump", ls_generate_world_meshes.build_root_clump()),
+            "bramble": import_generated_mesh("SM_LS_Bramble", ls_generate_world_meshes.build_bramble()),
+            "blob": import_generated_mesh("SM_LS_Blob", ls_generate_world_meshes.build_blob(), nanite=False),
+            "water": build_swamp_water(),
+            "mist": build_swamp_mist()}
 
 
 # --- Materials ---
@@ -596,9 +662,52 @@ def build_materials():
     output(material, combine(material, unreal.MaterialExpressionMultiply, tinted, combine(material, unreal.MaterialExpressionMultiply, left_gap, right_gap)), unreal.MaterialProperty.MP_BASE_COLOR)
     output(material, number(material, 0.85), unreal.MaterialProperty.MP_ROUGHNESS)
     materials["planks"] = finish(material)
-    materials["pad"] = glow("M_LS_LilyPad", 0.16, 0.34, 0.1, 0.05)
+    material = fresh_material("M_LS_Blob")
+    # One mesh, one material: the mesh's U says which part this is. See ls_generate_world_meshes.build_blob.
+    part = mask(material, node(material, unreal.MaterialExpressionTextureCoordinate), True)
+    eye = node(material, unreal.MaterialExpressionSaturate)
+    ls_material_helpers.library.connect_material_expressions(combine(material, unreal.MaterialExpressionMultiply, combine(material, unreal.MaterialExpressionSubtract, part, number(material, 0.75)), number(material, 10.0)), "", eye, "")
+    goo = node(material, unreal.MaterialExpressionSaturate)
+    ls_material_helpers.library.connect_material_expressions(combine(material, unreal.MaterialExpressionMultiply, combine(material, unreal.MaterialExpressionSubtract, part, number(material, 0.25)), number(material, 10.0)), "", goo, "")
+    output(material, colour(material, 0.035, 0.02, 0.05), unreal.MaterialProperty.MP_BASE_COLOR)
+    glowing = blend(material, combine(material, unreal.MaterialExpressionMultiply, goo, colour(material, 0.035, 0.005, 0.07)), colour(material, 6.0, 6.0, 6.0), eye)
+    output(material, glowing, unreal.MaterialProperty.MP_EMISSIVE_COLOR)
+    output(material, number(material, 0.35), unreal.MaterialProperty.MP_ROUGHNESS)
+    materials["blob"] = finish(material)
+
+    material = fresh_material("M_LS_LilyPad")
+    # Darker toward the rim, with the grass texture for its veins. A cylinder's top has round UVs, the same trick as the plate's rings.
+    uv = node(material, unreal.MaterialExpressionTextureCoordinate)
+    offset = combine(material, unreal.MaterialExpressionSubtract, uv, node(material, unreal.MaterialExpressionConstant2Vector, r=0.5, g=0.5))
+    radius = node(material, unreal.MaterialExpressionLength)
+    ls_material_helpers.library.connect_material_expressions(offset, "", radius, "")
+    centre_light = combine(material, unreal.MaterialExpressionSubtract, number(material, 1.25), combine(material, unreal.MaterialExpressionMultiply, radius, number(material, 1.6)))
+    leaf = combine(material, unreal.MaterialExpressionMultiply, texture(material, terrain_folder + "/T_Grass_2", world_uv(material, 180.0)), colour(material, 0.28, 0.55, 0.14))
+    output(material, combine(material, unreal.MaterialExpressionMultiply, leaf, centre_light), unreal.MaterialProperty.MP_BASE_COLOR)
+    output(material, number(material, 0.55), unreal.MaterialProperty.MP_ROUGHNESS)
+    materials["pad"] = finish(material)
+    material = fresh_material("M_LS_Mist")
+    material.set_editor_property("blend_mode", unreal.BlendMode.BLEND_TRANSLUCENT)
+    material.set_editor_property("shading_model", unreal.MaterialShadingModel.MSM_UNLIT)
+    material.set_editor_property("two_sided", True)
+    # Two noises drifting at different speeds never repeat in an obvious way.
+    slow = node(material, unreal.MaterialExpressionPanner, speed_x=0.012, speed_y=0.006)
+    ls_material_helpers.library.connect_material_expressions(world_uv(material, 2600.0), "", slow, "Coordinate")
+    fast = node(material, unreal.MaterialExpressionPanner, speed_x=-0.02, speed_y=0.016)
+    ls_material_helpers.library.connect_material_expressions(world_uv(material, 900.0), "", fast, "Coordinate")
+    wisps = combine(material, unreal.MaterialExpressionAdd, mask(material, texture(material, terrain_folder + "/T_Dirt", slow), True), mask(material, texture(material, terrain_folder + "/T_Dirt", fast), True))
+    clear_gaps = node(material, unreal.MaterialExpressionSaturate)
+    ls_material_helpers.library.connect_material_expressions(wisps, "", clear_gaps, "")
+    amount = mask(material, node(material, unreal.MaterialExpressionTextureCoordinate), True)
+    # Where a sheet meets a root or the water it fades out, or it would draw a hard line across it.
+    soft = node(material, unreal.MaterialExpressionDepthFade, fade_distance_default=90.0)
+    ls_material_helpers.library.connect_material_expressions(combine(material, unreal.MaterialExpressionMultiply, combine(material, unreal.MaterialExpressionMultiply, clear_gaps, amount), number(material, 0.36)), "", soft, "Opacity")
+    output(material, colour(material, 0.3, 0.32, 0.32), unreal.MaterialProperty.MP_EMISSIVE_COLOR)
+    output(material, soft, unreal.MaterialProperty.MP_OPACITY)
+    materials["mist"] = finish(material)
+    materials["goal_glow"] = glow("M_LS_GoalGlow", 1.0, 0.6, 0.14, 2.6)
+    materials["moss_strand"] = glow("M_LS_MossStrand", 0.1, 0.13, 0.05, 0.0)
     materials["thorn"] = glow("M_LS_Thorn", 0.5, 0.03, 0.05, 0.6)
-    materials["blob"] = glow("M_LS_Blob", 0.02, 0.01, 0.03, 0.0)
     materials["note"] = glow("M_LS_Note", 1.0, 0.62, 0.1, 2.0)
     materials["petal"] = glow("M_LS_Petal", 1.0, 0.25, 0.4, 1.3)
     materials["shrine"] = glow("M_LS_Shrine", 0.3, 0.75, 1.0, 1.2)
@@ -699,7 +808,7 @@ def block_physical_material():
 
 
 def add_challenges():
-    """The new gameplay that brings the level to about 4:45. Every piece is an existing gameplay class."""
+    """The new gameplay that brings the level past 4 minutes. Every piece is an existing gameplay class."""
     # 1-1: the note that sat beside the road now rewards the island jumps.
     note = find_by_origin("BP_LifeNote_C", 5000.0, 400.0)
     place_on_road(note, ISLANDS[1][0], ISLANDS[1][1], hills(ISLANDS[1][0]) + ISLANDS[1][2] + 80.0)
@@ -831,8 +940,16 @@ def dress_actor(actor, materials, thorns, rng):
         component = actor.get_component_by_class(unreal.StaticMeshComponent)
         component.set_static_mesh(unreal.load_asset("/Engine/BasicShapes/Cylinder"))
         component.set_material(0, materials["pad"])
+        # What the player must find stays in colour, and the grey water makes a green leaf easy to spot.
+        component.set_render_custom_depth(True)
+        component.set_custom_depth_stencil_value(ls_world_common.FULL_COLOUR_STENCIL)
     elif class_name == "WitherBlob":
-        actor.get_component_by_class(unreal.StaticMeshComponent).set_material(0, materials["blob"])
+        component = keep_coloured(actor, None)
+        component.set_static_mesh(unreal.load_asset(WORLD_MESHES["blob"]))
+        component.set_material(0, materials["blob"])
+        component.set_relative_scale3d(unreal.Vector(1.0, 1.0, 1.0))
+        # shortcut: the eyes look back down the road, where the player comes from, and never turn. Turn the mesh in AWitherBlob::MoveToward if that shows.
+        component.set_relative_rotation(unreal.Rotator(0.0, 0.0, 180.0), False, False)
     elif class_name == "BP_LifeNote_C":
         component = keep_coloured(actor, None)
         component.set_static_mesh(unreal.load_asset(WORLD_MESHES["note"]))
@@ -923,7 +1040,7 @@ def usable(x, y, distance_range, margin=120.0):
     near_s = min(max(s, 0.0), ROAD_LENGTH)
     if gap_amount(near_s) > 0.0 and abs(d) < 1500.0:
         return False
-    if marsh_amount(near_s) > 0.0 and terrain_height(x, y) < WATER_LEVEL + 5.0:
+    if swamp_amount(near_s) > 0.0 and terrain_height(x, y) < WATER_LEVEL + 5.0:
         return False
     if in_cavern(s, d) or in_tunnel(s, d):
         return False
@@ -967,7 +1084,9 @@ def scatter_rings(materials):
     for x, y, s in along_road(-1500, -100, -2000, 2000, 300.0, rng):
         trees_near.add(mesh(rng.choice(PALETTES["1_1"]["trees"])), x, y, terrain_height(x, y), rng.uniform(1.0, 1.7), rng, sink=20.0)
     for x, y, s in along_road(ROAD_LENGTH + 300, ROAD_LENGTH + 1800, -2000, 2000, 300.0, rng):
-        trees_near.add(mesh(rng.choice(PALETTES["1_3"]["trees"])), x, y, terrain_height(x, y), rng.uniform(1.0, 1.7), rng, sink=20.0)
+        # The middle stays clear for the goal's arch. See thornmire_marsh.
+        if abs(road.project(x, y)[1]) > 1500.0:
+            trees_near.add(mesh(rng.choice(PALETTES["1_3"]["trees"])), x, y, terrain_height(x, y), rng.uniform(1.0, 1.7), rng, sink=20.0)
 
     # Middle ring: forest in depth, with large rocks breaking it up. It covers a box around the bent road.
     x0, x1, y0, y1 = min(road.xs), max(road.xs), min(road.ys), max(road.ys)
@@ -1347,6 +1466,135 @@ def rootwood_hollow(materials):
     zone_grade(x, y, 1100.0, CAVERN[1], CAVERN[2], 1300.0, road.yaw(CAVERN[0]), -0.2, unreal.LinearColor(0.92, 1.0, 0.8, 1.0), "CavernGrade")
 
 
+def stilt_platform(s, d, top, size, materials, rng, folder):
+    """A ruined deck on leaning posts, standing in the water away from the road."""
+    x, y = road.point(s, d)
+    yaw = rng.uniform(0.0, 360.0)
+    mesh_actor("/Engine/BasicShapes/Cube", x, y, top, folder, (size / 100.0, size * 0.7 / 100.0, 0.25), yaw, materials["planks"], "StiltDeck")
+    turned = math.radians(yaw)
+    for along, side in ((-0.4, -0.3), (-0.4, 0.3), (0.4, -0.3), (0.4, 0.3)):
+        px = x + size * (along * math.cos(turned) - side * math.sin(turned))
+        py = y + size * (along * math.sin(turned) + side * math.cos(turned))
+        mesh_actor(WORLD_MESHES["log"], px, py, WATER_LEVEL - 80.0, folder, ((top - WATER_LEVEL + 80.0) / 800.0, 0.5, 0.5), rng.uniform(0.0, 360.0), materials["bark"], "StiltPost", pitch=rng.uniform(84.0, 90.0))
+
+
+def post_pad(s, d, top, size, materials, rng, folder):
+    """A lily pad held up on a post, out of reach, for depth."""
+    x, y = road.point(s, d)
+    mesh_actor("/Engine/BasicShapes/Cylinder", x, y, top, folder, (size / 50.0, size / 50.0, 0.1), rng.uniform(0.0, 360.0), materials["pad"], "PostPad")
+    mesh_actor(WORLD_MESHES["log"], x, y, WATER_LEVEL - 80.0, folder, ((top - WATER_LEVEL + 80.0) / 800.0, 0.7, 0.7), rng.uniform(0.0, 360.0), materials["bark"], "PadPost", pitch=90.0)
+
+
+def thornmire_marsh(materials):
+    """Zone 1-3, after picture 3: open misty water, giant mossy trees on their roots, thorns along the way, and a glowing tree in an arch at the end."""
+    folder = "Zone 1-3"
+    rng = random.Random(SEED + 11)
+    mesh_actor(WORLD_MESHES["water"], 0.0, 0.0, 0.0, folder, material=unreal.load_asset("/Game/Stylized_PBR_Nature/Terrain/M_Water_Basic"), label="SwampWater")
+
+    # The giants. Their roots reach 1500 cm at full size, so each stands far enough out to keep them off the road.
+    for s, d, scale in ((28350.0, -2300.0, 1.0), (29500.0, 3000.0, 0.85), (30900.0, -3100.0, 0.95), (31900.0, 2500.0, 0.75),
+                        (33300.0, 2700.0, 0.8), (34700.0, -2100.0, 0.7), (35600.0, 3400.0, 0.9), (36700.0, -2600.0, 0.8)):
+        x, y = road.point(s, d)
+        yaw = rng.uniform(0.0, 360.0)
+        z = WATER_LEVEL - 70.0
+        mesh_actor(WORLD_MESHES["tree"], x, y, z, folder, (scale, scale, scale), yaw, materials["bark"], "SwampGiant")
+        mesh_actor(WORLD_MESHES["moss"], x, y, z, folder, (scale, scale, scale), yaw, materials["moss_strand"], "SwampMoss")
+
+    # Dead trees further out in the water, thinning into the mist.
+    drowned = Scatter("Swamp_Drowned", 26000, 36000)
+    for x, y in jittered_grid(*road_box(SWAMP[0], SWAMP[1], SWAMP_WIDTH), 620.0, rng):
+        s, d = road.project(x, y)
+        if 1100.0 < abs(d) < SWAMP_WIDTH and swamp_amount(min(max(s, 0.0), ROAD_LENGTH)) > 0.3 and rng.random() < 0.55:
+            drowned.add(mesh(rng.choice(["SM_Fruit_Tree_01_dead", "SM_Pine_Tree_03_dead", "SM_Fruit_Tree_01_dead_cut", "SM_Pine_Tree_03_stump"])), x, y, terrain_height(x, y), rng.uniform(1.0, 1.9), rng, sink=10.0, tilt=7.0)
+    drowned.build()
+
+    # Roots wrap the sides of the raised path, and a line of brambles marks where the ball can't go.
+    roots = Scatter("Swamp_Roots", 14000, 19000, material=materials["bark"])
+    brambles = Scatter("Swamp_Brambles", 12000, 16000, material=materials["bark"])
+    blooms = Scatter("Swamp_Blooms", 7000, 9000, shadows=False, stencil=True)
+    s = SWAMP[0] + 900.0
+    while s < SWAMP[1] - 400.0:
+        for side in (-1, 1):
+            if s < MARSH[1]:
+                brambles.add(WORLD_MESHES["bramble"], *road.point(s, side * (EDGE + rng.uniform(40.0, 150.0))), WATER_LEVEL - 25.0, rng.uniform(0.55, 0.95), rng, sink=0.0, tilt=8.0)
+            else:
+                # Scatter rests a mesh's lowest point on the ground it is given, and these should hang from the road's edge.
+                size = rng.uniform(0.9, 1.4)
+                roots.add(WORLD_MESHES["roots"], *road.point(s, side * (EDGE + 130.0)), level(s) + 25.0 + base_height_offset(unreal.load_asset(WORLD_MESHES["roots"]), size), size, rng, sink=0.0)
+                brambles.add(WORLD_MESHES["bramble"], *road.point(s + 120.0, side * (EDGE + rng.uniform(180.0, 300.0))), WATER_LEVEL - 25.0, rng.uniform(0.8, 1.3), rng, sink=0.0, tilt=8.0)
+                if rng.random() < 0.3:
+                    blooms.add(mesh(rng.choice(LIVING_FLOWERS[:4])), *road.point(s, side * (LANE - rng.uniform(0.0, 50.0))), level(s), rng.uniform(0.6, 1.0), rng, sink=2.0)
+        s += rng.uniform(190.0, 300.0)
+
+    # The pit under each glide is full of thorns, so a miss looks like the danger it is.
+    pit = Scatter("Pit_Brambles", 14000, 19000, material=materials["bark"])
+    for gap0, gap1 in GAPS[3:]:
+        for s, d in jittered_grid(gap0 - 50.0, gap1 + 50.0, -1700.0, 1700.0, 230.0, rng):
+            pit.add(WORLD_MESHES["bramble"], *road.point(s, d), level(gap0) - rng.uniform(560.0, 720.0), rng.uniform(1.6, 2.6), rng, sink=0.0, tilt=14.0)
+        # Leaves on the wind the glide rides, as in picture 3.
+        for d in (-350.0, 350.0):
+            niagara("/Game/FreeParticle_SoftTofu/Niagara/NS_leaf", *road.point((gap0 + gap1) / 2.0 + d, d), level(gap0) - 120.0, folder, 2.5)
+    pit.build()
+    roots.build()
+    brambles.build()
+    blooms.build()
+
+    # Posts beside each lily pad, as if something once tied them here.
+    for actor in actors_of("SinkingPad"):
+        location = actor.get_actor_location()
+        s, d = road.project(location.x, location.y)
+        px, py = road.point(s + rng.uniform(-80.0, 80.0), d + (190.0 if d >= 0.0 else -190.0))
+        mesh_actor(WORLD_MESHES["log"], px, py, WATER_LEVEL - 80.0, folder, (0.33, 0.5, 0.5), rng.uniform(0.0, 360.0), materials["bark"], "PadMooring", pitch=rng.uniform(80.0, 90.0))
+
+    # Out of reach, for depth: pads on posts, ruined decks, and roots arching across the water like bridges.
+    for _ in range(26):
+        s, d = rng.uniform(MARSH[0] - 300.0, 36500.0), rng.choice((-1.0, 1.0)) * rng.uniform(1000.0, 3600.0)
+        post_pad(s, d, WATER_LEVEL + rng.uniform(40.0, 260.0), rng.uniform(130.0, 260.0), materials, rng, folder)
+    for s, d, top, size in ((28900.0, 1900.0, 620.0, 520.0), (30100.0, -1700.0, 700.0, 460.0), (31500.0, 3500.0, 760.0, 620.0), (32200.0, -3600.0, 680.0, 540.0),
+                            (33800.0, 1800.0, 780.0, 480.0), (35000.0, 2300.0, 830.0, 560.0), (36100.0, -1600.0, 740.0, 500.0)):
+        stilt_platform(s, d, top, size, materials, rng, folder)
+    for s, d, turn, scale in ((29400.0, -1800.0, 72.0, 1.6), (30600.0, 2200.0, -76.0, 1.5), (32300.0, 1900.0, 65.0, 1.3), (33900.0, -1700.0, -70.0, 1.2), (35900.0, 1800.0, 70.0, 1.4)):
+        x, y = road.point(s, d)
+        mesh_actor(WORLD_MESHES["root_arch"], x, y, WATER_LEVEL - 40.0, folder, (scale, scale, scale * 0.7), road.yaw(s) + turn, materials["bark"], "RootBridge")
+    # Three great roots over the way itself, too high to reach.
+    for s in (27950.0, 33000.0, 36300.0):
+        x, y = road.point(s)
+        mesh_actor(WORLD_MESHES["root_arch"], x, y, level(s) - 10.0, folder, (1.2, 0.9, 1.1), road.yaw(s) + rng.uniform(-8.0, 8.0), materials["bark"], "RootArch")
+
+    # Local Fog Volumes only start 20 m from the camera, so the mist around the ball is made from sheets instead.
+    for up in MIST_LAYERS:
+        mesh_actor(WORLD_MESHES["mist"], 0.0, 0.0, up, folder, material=materials["mist"], label="SwampMist").static_mesh_component.set_cast_shadow(False)
+
+    # The cold grey of the marsh, a stretch at a time, as a box can't bend with the road.
+    tint = unreal.LinearColor(0.8, 0.9, 0.93, 1.0)
+    for s0, s1 in ((27200.0, 32700.0), (32700.0, 34800.0), (34800.0, 37400.0)):
+        middle = (s0 + s1) / 2.0
+        x, y = road.point(middle)
+        zone_grade(x, y, 1500.0, (s1 - s0) / 2.0 + 1500.0, 7000.0, 3000.0, road.yaw(middle), -0.25, tint, "MarshGrade")
+
+    # The goal: a glowing tree in a ring, set into a spire of rock at the road's end.
+    s = ROAD_LENGTH + 420.0
+    x, y = road.point(s)
+    z = level(ROAD_LENGTH)
+    yaw = road.yaw(ROAD_LENGTH)
+    ring_middle = z + 720.0
+    ring = mesh_actor(WORLD_MESHES["ring"], x, y, ring_middle, folder, (2.1, 2.1, 2.1), yaw, materials["goal_glow"], "GoalRing")
+    tree = mesh_actor(WORLD_MESHES["tree"], *road.point(s + 20.0), z + 110.0, folder, (0.27, 0.27, 0.27), yaw, materials["goal_glow"], "GoalTree")
+    for glowing in (ring, tree):
+        glowing.static_mesh_component.set_render_custom_depth(True)
+        glowing.static_mesh_component.set_custom_depth_stencil_value(ls_world_common.FULL_COLOUR_STENCIL)
+    for s_rock, d, name, scale, up in ((s + 2200.0, 0.0, "SM_RockPack_Cliff_07_B", 2.6, -200.0), (s + 300.0, -2300.0, "SM_RockPack_Cliff_07_D", 2.2, -150.0), (s + 300.0, 2300.0, "SM_RockPack_Cliff_07_D", 2.2, -150.0),
+                                       (s + 1200.0, -1500.0, "SM_S_Rock_10", 4.0, -100.0), (s + 1200.0, 1600.0, "SM_S_Rock_04", 4.0, -100.0)):
+        path = mesh(name)
+        rock_x, rock_y = road.point(s_rock, d)
+        mesh_actor(path, rock_x, rock_y, z + up - base_height_offset(unreal.load_asset(path), scale), folder, (scale, scale, scale), yaw + rng.uniform(-30.0, 30.0))
+    for side in (-1, 1):
+        arch_x, arch_y = road.point(s - 380.0, side * 1050.0)
+        mesh_actor(WORLD_MESHES["root_arch"], arch_x, arch_y, z - 30.0, folder, (1.0, 0.75, 1.1), yaw + side * 58.0, materials["bark"], "GoalRoot")
+    point_light(*road.point(s - 250.0), ring_middle, unreal.LinearColor(1.0, 0.62, 0.2, 1.0), 110.0, 3200.0, folder)
+    niagara("/Game/FreeParticle_SoftTofu/Niagara/NS_Sparkling_Glow", *road.point(s - 60.0), ring_middle - 100.0, folder, 5.0)
+
+
 def rock_set_pieces():
     """Cliffs where the player should feel enclosed, and at each edge the eye is drawn to."""
     folder = "Set Pieces"
@@ -1398,14 +1646,6 @@ def rock_set_pieces():
             location = actor.get_actor_location()
             x, y = road.point(s - 250.0)
             niagara("/Game/FreeParticle_SoftTofu/Niagara/NS_Sparkling_Glow", x, y, location.z - 150.0, folder, 2.0)
-
-
-def build_water():
-    water = unreal.load_asset("/Game/Stylized_PBR_Nature/Terrain/M_Water_Basic")
-    s = (MARSH[0] + MARSH[1]) / 2.0
-    x, y = road.point(s)
-    length = MARSH[1] - MARSH[0] + 900.0
-    mesh_actor("/Engine/BasicShapes/Plane", x, y, WATER_LEVEL - 3.0, "Water", (length / 100.0, 56.0, 1.0), road.yaw(s), water, "MarshWater")
 
 
 def build_boundaries():
@@ -1489,14 +1729,6 @@ def build_guides(materials):
         x, y = road.point(gap1 + 150.0)
         point_light(x, y, level(gap1) + 300.0, warm, 45.0, 1500.0)
 
-    # The end of the level: a living tree, which is what the whole climb back to colour has been about.
-    goal_s = ROAD_LENGTH - 200.0
-    tree = mesh("SM_Tree_Broadleaf_1")
-    x, y = road.point(goal_s)
-    z = level(goal_s)
-    mesh_actor(tree, x, y, z - base_height_offset(unreal.load_asset(tree), 1.3), "Guide Lights", (1.3, 1.3, 1.3))
-    niagara("/Game/FreeParticle_SoftTofu/Niagara/NS_Sparkling_Glow", x, y, z + 300.0, "Guide Lights", 4.0)
-
 
 def build_preview_cameras():
     def camera(name, s_from, d_from, up_from, s_to, d_to, up_to):
@@ -1520,6 +1752,11 @@ def build_preview_cameras():
                camera("Preview_1_2_J", 21700.0, 300.0, 420.0, 20700.0, -700.0, 250.0),   # Toward the sun shaft.
                camera("Preview_1_2_K", 20050.0, -1350.0, 240.0, 21000.0, -1650.0, 120.0),   # The second tilting log.
                camera("Preview_1_2_L", 23300.0, -200.0, 200.0, 24500.0, 0.0, 150.0),   # The thorn tunnel.
+               camera("Preview_1_3_D", 27950.0, -120.0, 150.0, 30500.0, 300.0, 250.0),   # The marsh from the lane, like picture 3.
+               camera("Preview_1_3_E", 33100.0, 200.0, 230.0, 34800.0, -300.0, 60.0),   # The raised path and its blobs.
+               camera("Preview_1_3_F", 39600.0, 0.0, 450.0, 40400.0, 0.0, -500.0),   # The glide over the thorn pit.
+               camera("Preview_1_3_G", 43000.0, 0.0, 260.0, 45100.0, 0.0, 600.0),   # The goal.
+               camera("Preview_1_3_H", 33500.0, 400.0, 110.0, 33500.0, -300.0, 40.0),   # A blob up close.
                camera("Preview_Route", 20000.0, -18000.0, 22000.0, 20000.0, 0.0, 0.0)]
     for name, s0, s1 in ZONES[1:]:
         middle = (s0 + s1) / 2.0
@@ -1579,8 +1816,8 @@ def main():
     living_start()
     awakening_grove_landmarks(materials)
     rootwood_hollow(materials)
+    thornmire_marsh(materials)
     rock_set_pieces()
-    build_water()
     build_boundaries()
     build_guides(materials)
 

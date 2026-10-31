@@ -431,6 +431,8 @@ The road now winds and has hills, and the level has extra challenges. The first 
 
 To change how a tilting log behaves, select it under **World > Cavern** and change **Counterweight Kg Cm** or **Tilt Response** under **Tuning**. A rerun resets these, so make lasting changes in `build_world_level1.py`.
 
+To change the marsh's mist, edit `MIST_LAYERS` at the top of the script and the `0.36` opacity in `M_LS_Mist` under `build_materials`, then rerun. The giant trees, decks and post pads are listed in `thornmire_marsh`, with their spot along the road and to its side.
+
 To jump to a preview, find `Preview_1_1_A` and the others under **World > Preview Cameras** in the Outliner, right-click one and choose **Pilot**. Click **Eject** at the top of the viewport when you are done.
 
 To tune the withered look, select `RestorationDriver` in the Outliner. Changes to generated actors or the sky are replaced on the next rerun, so make those in the script. Changes to anything outside the `World` folder stay, apart from the materials and meshes the script assigns.

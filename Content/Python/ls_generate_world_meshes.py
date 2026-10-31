@@ -1,6 +1,6 @@
 # Last Seed - generates world pieces that the Fab packs don't have, using only the Python standard library.
 #
-# Purpose: the giant dead tree, the music note, the gate's ring and the floating island. The same random seed always gives
+# Purpose: the giant dead tree and its moss, the music note, the gate's ring, the floating island, and the marsh's roots, brambles and blob. The same random seed always gives
 # the same shapes. build_world_level1.py imports these, and the files are not stored in git.
 # Coordinates are Unreal's: X forward, Y right, Z up, in cm. UVs: U runs around a branch and V along it, for the bark.
 
@@ -46,11 +46,13 @@ def bend_path(rng, start, direction, length, segments, wander, upward=0.0):
     return path
 
 
-def grow_branch(mesh, rng, start, direction, length, radius, depth):
+def grow_branch(mesh, rng, start, direction, length, radius, depth, hang_points=None):
     segments = 6 if depth > 1 else 4
     path = bend_path(rng, start, direction, length, segments, 0.32 if depth > 1 else 0.45, 0.02)
     radii = [radius * (1.0 - 0.72 * i / segments) for i in range(segments + 1)]
     add_tube(mesh, path, radii, 10 if depth > 2 else 6 if depth > 0 else 4)
+    if hang_points is not None and depth <= 2:
+        hang_points += path[2::2]
     if depth == 0:
         return
     for child in range(3 if depth > 1 else 2):
@@ -60,11 +62,12 @@ def grow_branch(mesh, rng, start, direction, length, radius, depth):
         angle = rng.uniform(0.0, 2.0 * math.pi)
         spread = rng.uniform(0.6, 1.1)
         outward = add(scale(side, math.cos(angle) * spread), scale(up, math.sin(angle) * spread))
-        grow_branch(mesh, rng, path[at], add(ahead, outward), length * rng.uniform(0.55, 0.75), radii[at] * 0.72, depth - 1)
+        grow_branch(mesh, rng, path[at], add(ahead, outward), length * rng.uniform(0.55, 0.75), radii[at] * 0.72, depth - 1, hang_points)
 
 
-def build_gnarled_tree():
-    """The dead Heart Tree: a thick twisted trunk on spreading roots, with bare branches. About 3000 cm tall."""
+def build_gnarled_tree(hang_points=None):
+    """The dead Heart Tree: a thick twisted trunk on spreading roots, with bare branches. About 3000 cm tall.
+    A list passed as hang_points collects spots along the branches, in the tree's own coordinates."""
     rng = random.Random(1711)
     mesh = Mesh()
 
@@ -82,7 +85,7 @@ def build_gnarled_tree():
         add_tube(mesh, path, radii, 12)
         # Each strand ends in one of the great limbs.
         top = path[-1]
-        grow_branch(mesh, rng, top, (math.cos(angle + 2.4), math.sin(angle + 2.4), 1.0), 1300.0, 80.0, 3)
+        grow_branch(mesh, rng, top, (math.cos(angle + 2.4), math.sin(angle + 2.4), 1.0), 1300.0, 80.0, 3, hang_points)
 
     # Roots leave the base, arch over the ground and dive back in.
     for root in range(9):
@@ -100,6 +103,96 @@ def build_gnarled_tree():
             path.append((out[0] * distance - out[1] * sideways, out[1] * distance + out[0] * sideways, height))
             radii.append(120.0 * (1.0 - 0.8 * t))
         add_tube(mesh, path, radii, 10)
+    mesh.smooth_normals()
+    return mesh
+
+
+def build_tree_moss():
+    """Moss hanging from the gnarled tree's branches. It shares the tree's origin, so placing both alike lines them up."""
+    points = []
+    build_gnarled_tree(points)
+    rng = random.Random(61)
+    mesh = Mesh()
+    for point in points:
+        if rng.random() > 0.55:
+            continue
+        for _ in range(rng.randint(2, 4)):
+            length = rng.uniform(180.0, 750.0)
+            wander = rng.uniform(0.0, 6.0)
+            top = (point[0] + rng.uniform(-25.0, 25.0), point[1] + rng.uniform(-25.0, 25.0), point[2])
+            path = [(top[0] + 14.0 * math.sin(i + wander), top[1] + 14.0 * math.cos(i * 0.8 + wander), top[2] - length * i / 5.0) for i in range(6)]
+            add_tube(mesh, path, [rng.uniform(9.0, 14.0) * (1.0 - 0.17 * i) for i in range(6)], 4)
+    mesh.smooth_normals()
+    return mesh
+
+
+def build_root_clump():
+    """Roots spreading from one spot, arching up a little and then diving 400 cm. They cover the sides of the raised path."""
+    rng = random.Random(77)
+    mesh = Mesh()
+    for root in range(7):
+        angle = 2.0 * math.pi * (root + rng.uniform(-0.3, 0.3)) / 7.0
+        reach = rng.uniform(170.0, 280.0)
+        wobble = rng.uniform(0.0, 6.0)
+        path = []
+        for row in range(9):
+            t = row / 8.0
+            distance = 20.0 + reach * t
+            sideways = math.sin(t * 5.0 + wobble) * 40.0 * t
+            path.append((math.cos(angle) * distance - math.sin(angle) * sideways, math.sin(angle) * distance + math.cos(angle) * sideways,
+                         50.0 * math.sin(t * math.pi * 0.8) - 420.0 * t ** 3))
+        add_tube(mesh, path, [rng.uniform(26.0, 38.0) * (1.0 - 0.7 * row / 8.0) for row in range(9)], 7)
+    mesh.smooth_normals()
+    return mesh
+
+
+def build_bramble():
+    """Arching thorny stems about 400 cm across and 180 cm high, with spikes all along them. Picture 3's foreground."""
+    rng = random.Random(31)
+    mesh = Mesh()
+    for stem in range(7):
+        angle = rng.uniform(0.0, 2.0 * math.pi)
+        turn = rng.uniform(-0.9, 0.9)
+        rise = rng.uniform(90.0, 180.0)
+        path = []
+        for row in range(11):
+            t = row / 10.0
+            heading = angle + turn * t
+            distance = -200.0 + 400.0 * t
+            path.append((math.cos(heading) * distance, math.sin(heading) * distance, rise * math.sin(math.pi * t) - 15.0))
+        add_tube(mesh, path, [rng.uniform(9.0, 13.0)] * 11, 6)
+        for row in range(1, 10):
+            for _ in range(2):
+                out = normalize((rng.uniform(-1.0, 1.0), rng.uniform(-1.0, 1.0), rng.uniform(-0.4, 1.0)))
+                add_tube(mesh, [path[row], add(path[row], scale(out, rng.uniform(26.0, 48.0)))], [7.0, 0.5], 4)
+    mesh.smooth_normals()
+    return mesh
+
+
+def build_blob():
+    """A squat dark blob with two eyes on its +X side, in a pool of goo. Radius about 70 cm. U tells the material which part is which: 0 body, 0.5 goo, 1 eye."""
+    mesh = Mesh()
+    points, triangles = icosphere(3)
+
+    def ball(centre, sizes, u, lumps=0.0):
+        first = len(mesh.points)
+        for p in points:
+            bump = 1.0 + lumps * math.sin(p[0] * 7.0 + 1.0) * math.sin(p[1] * 6.0) * math.sin(p[2] * 5.0 + 2.0)
+            mesh.add_vertex((centre[0] + p[0] * sizes[0] * bump, centre[1] + p[1] * sizes[1] * bump, centre[2] + p[2] * sizes[2] * bump), (u, 0.0))
+        mesh.triangles += [(a + first, b + first, c + first) for a, b, c in triangles]
+
+    ball((0.0, 0.0, -8.0), (70.0, 70.0, 60.0), 0.0, 0.12)
+    for side in (-1.0, 1.0):
+        ball((56.0, side * 25.0, 14.0), (15.0, 17.0, 19.0), 1.0)
+        ball((68.0, side * 25.0, 14.0), (5.0, 7.0, 8.0), 0.0)
+    # The pool of goo is a flat wavy disc around the body. It hides where the blob meets the ground.
+    centre = mesh.add_vertex((0.0, 0.0, -66.0), (0.5, 0.0))
+    sides = 36
+    for side in range(sides):
+        angle = 2.0 * math.pi * side / sides
+        radius = 112.0 + 16.0 * math.sin(angle * 3.0 + 1.0) + 10.0 * math.sin(angle * 5.0)
+        mesh.add_vertex((math.cos(angle) * radius, math.sin(angle) * radius, -69.0), (0.5, 0.0))
+    mesh.triangles += [(centre, centre + 1 + side, centre + 1 + (side + 1) % sides) for side in range(sides)]
     mesh.smooth_normals()
     return mesh
 
@@ -272,7 +365,9 @@ def faces_outward(mesh, centre):
 
 if __name__ == "__main__":
     for name, built, centre in (("tree", build_gnarled_tree(), None), ("note", build_music_note(), None),
-                                ("ring", build_gate_ring(), None), ("island", build_floating_island(), (0.0, 0.0, -50.0))):
+                                ("ring", build_gate_ring(), None), ("island", build_floating_island(), (0.0, 0.0, -50.0)),
+                                ("moss", build_tree_moss(), None), ("roots", build_root_clump(), None), ("bramble", build_bramble(), None),
+                                ("blob", build_blob(), None)):
         print(name, len(built.points), "points", len(built.triangles), "triangles", "outward" if centre is None or faces_outward(built, centre) else "REVERSED")
         for normal in built.normals:
             assert normal is not None
