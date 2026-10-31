@@ -1,7 +1,7 @@
 # Last Seed - turns the straight Level 1 greybox into a winding Withered Forest at sunset.
 #
 # Purpose: copies L_Level1 to L_Level1_World, bends the route along a curved road with hills, moves every gameplay actor
-# onto it, adds the extra challenges that make the level last over 4 minutes, and builds the ground, forest, boundaries and
+# onto it, adds the extra challenges that lengthen the level, and builds the ground, forest, boundaries and
 # light around it. The art follows three concept pictures, one per zone.
 #
 # How the bending works: every greybox position (x, y, z) becomes distance along the road s = to_road(x), distance to its
@@ -91,19 +91,17 @@ CAVERN_WATER = 170.0
 CAVERN_HIGH = 2100.0
 PAD_TOP = 450.0  # The same height as the road either side of the cavern.
 # The parkour route, in order. Rock pads are (s, d, radius).
-PADS = [(20100.0, 300.0, 230.0), (20100.0, 1000.0, 230.0), (21580.0, 1000.0, 230.0), (21580.0, -520.0, 300.0), (20100.0, -1000.0, 230.0), (20100.0, -1650.0, 230.0), (21700.0, -1650.0, 230.0)]
-CRUMBLING = [(21580.0, 470.0), (21580.0, -10.0)]  # A solid pad follows them, where the ball can wait for the moving platform.
-MOVING = (21580.0, -1000.0, 20500.0, -1000.0)  # From (s, d) to (s, d).
-LOG_ONE = (20850.0, 1000.0)
-LOG_TWO = (20850.0, -1650.0)
+# One straight fenced walkway down the middle, as this is the first level: floor, log, sunlit floor, log, floor.
+ROUTE_FLOORS = [(19680.0, 19750.0), (20730.0, 21270.0), (22250.0, 22320.0)]
+ROUTE_FENCE = 310.0  # The fence's middle. Its hidden wall is 100 thick, which leaves a walkway 520 wide.
+LOGS = [20240.0, 21760.0]
+SUN_PAD_RADIUS = 620.0  # The rock under the sun shaft, which the walkway crosses.
 LOG_HALF = 500.0
 LOG_TILT = 10.0
-LOG_EASY_COUNTERWEIGHT = 6000.0  # Seed (20 kg) tips it from 300 cm past the pivot, and Stone (80 kg) from 75.
-LOG_HEAVY_COUNTERWEIGHT = 20000.0  # More than Seed can manage at the very end of the log (10000), and Stone tips it from 250.
-# Rock ridges with hidden walls behind them. Seed jumps 890 cm, which could otherwise skip most of the route.
-RIDGES = [((21950.0, -1200.0), (21950.0, 3000.0)), ((20400.0, -1300.0), (21950.0, -1300.0))]
-BRIDGES = [((21900.0, -1650.0), (22150.0, -1650.0)), ((22150.0, -1650.0), (22330.0, -200.0))]
-# Patch 1 is 200 cm clear of patch 2 at a walking line, so these give Stone room to cross the lane between them.
+LOG_COUNTERWEIGHT = 2000.0  # Light enough for every form: Seed (20 kg) tips it from 100 cm past the pivot, and Stone (80 kg) from 25.
+
+BLOCK_S = 17050.0
+PLATE_S = 18000.0
 THORN_SHIFT = 250.0
 HEART_TREE = (3000.0, -2700.0)  # (s, d). Where it stands in view from the start, with its roots clear of the road.
 # The hop up to the ledge moved back from the first island jump. Coming off it at full speed carries a ball about 330 cm.
@@ -808,34 +806,36 @@ def block_physical_material():
 
 
 def add_challenges():
-    """The new gameplay that brings the level past 4 minutes. Every piece is an existing gameplay class."""
+    """The gameplay added to the greybox. Every piece is an existing gameplay class."""
     # 1-1: the note that sat beside the road now rewards the island jumps.
     note = find_by_origin("BP_LifeNote_C", 5000.0, 400.0)
     place_on_road(note, ISLANDS[1][0], ISLANDS[1][1], hills(ISLANDS[1][0]) + ISLANDS[1][2] + 80.0)
 
-    # 1-2: the gate now needs a second plate. It is 1200 cm from the gate, and Stone covers about 1100 in the 3 seconds
-    # a gate stays open, so holding it and racing through doesn't work. A block has to be pushed onto it.
-    plate_a = actors_of("PressurePlate")[0]
-    block_a = actors_of("PushableBlock")[0]
+    # 1-2: one plate and one block, in a line down the middle of the tunnel. The block runs in a chute, so it can't jam or get lost.
+    plate = actors_of("PressurePlate")[0]
+    block = actors_of("PushableBlock")[0]
     z = hills(17000.0) + 300.0
-    plate_b = clone(plate_a, "PressurePlate", 18000.0, 0.0, z - 10.0)
-    plate_b.get_component_by_class(unreal.StaticMeshComponent).set_material(0, plate_a.get_component_by_class(unreal.StaticMeshComponent).get_material(0))
-    block_b = clone(block_a, "PushableBlock", 17050.0, 0.0, z + 60.0)
-    block_b.set_editor_property("mass_kg", 52.0)
-    slippery = block_physical_material()
-    for block in (block_a, block_b):
-        component = block.get_component_by_class(unreal.StaticMeshComponent)
-        component.set_phys_material_override(slippery)
-        # A block that could turn would wedge itself across a chute.
-        body = component.get_editor_property("body_instance")
-        body.set_editor_property("lock_z_rotation", True)
-        component.set_editor_property("body_instance", body)
-    actors_of("Gate")[0].set_editor_property("required_plates", [plate_a, plate_b])
+    place_on_road(plate, PLATE_S, 0.0, z - 10.0)
+    place_on_road(block, BLOCK_S, 0.0, z + 60.0)
+    block.set_editor_property("mass_kg", 52.0)
+    component = block.get_component_by_class(unreal.StaticMeshComponent)
+    component.set_phys_material_override(block_physical_material())
+    # A block that could turn would wedge itself across the chute.
+    body = component.get_editor_property("body_instance")
+    body.set_editor_property("lock_z_rotation", True)
+    component.set_editor_property("body_instance", body)
+    actors_of("Gate")[0].set_editor_property("required_plates", [plate])
 
-    # 1-2: a third thorn patch, which makes the clear lane wind once more.
-    thorns = actors_of("HazardVolume")[0]
-    third = clone(thorns, "Thorns", 25400.0, -200.0, hills(25400.0) + 350.0)
-    third.set_actor_scale3d(thorns.get_actor_scale3d())
+    # 1-2: both thorn patches on the left, which leaves one straight clear lane on the right. The note waits in that lane.
+    for thorns in actors_of("HazardVolume"):
+        location = thorns.get_actor_location()
+        s, d = road.project(location.x, location.y)
+        place_on_road(thorns, s, -abs(d), location.z)
+    for note_actor in actors_of("BP_LifeNote_C"):
+        location = note_actor.get_actor_location()
+        s, d = road.project(location.x, location.y)
+        if abs(s - 24450.0) < 50.0:
+            place_on_road(note_actor, s, 400.0, location.z)
 
     # 1-3: three more lily pads and a third blob.
     pad = actors_of("SinkingPad")[0]
@@ -845,27 +845,27 @@ def add_challenges():
     blob = clone(blob_source, "WitherBlob", 34800.0, -300.0, hills(34800.0) + 370.0)
     blob.set_editor_property("patrol_points", [unreal.Vector(0.0, 0.0, 0.0), unreal.Vector(0.0, 600.0, 0.0)])
 
-    # Three notes move from the thorn lane onto the parkour route, as rewards along the way.
-    for x, y, s, d in ((17400.0, -400.0, 20100.0, 1000.0), (17400.0, 400.0, 21580.0, 1000.0), (16000.0, 400.0, 20100.0, -1000.0)):
-        place_on_road(find_by_origin("BP_LifeNote_C", x, y), s, d, PAD_TOP + 80.0)
+    # Three notes move from the thorn lane onto the cavern's walkway, so following the path collects them.
+    for x, y, s, height in ((17400.0, -400.0, LOGS[0], 160.0), (17400.0, 400.0, CAVERN[0], 80.0), (16000.0, 400.0, LOGS[1], 160.0)):
+        place_on_road(find_by_origin("BP_LifeNote_C", x, y), s, 0.0, PAD_TOP + height)
 
-    # A checkpoint on the ledge before the cavern, as a fall into the water would otherwise cost the whole puzzle.
-    shrine = clone(actors_of("BP_CheckpointShrine_C")[0], "Shrine", 19620.0, 0.0, PAD_TOP + 50.0)
+    # A checkpoint just before the cavern, as a fall into the water would otherwise cost the whole puzzle.
+    shrine = clone(actors_of("BP_CheckpointShrine_C")[0], "Shrine", 19380.0, 0.0, PAD_TOP + 50.0)
 
-    hints = []
-    for s, d, text in ((19620.0, 0.0, "The cavern floods below. Stone is too heavy to jump far, so choose your form with care."),
-                       (20250.0, 1000.0, "This log tips under weight. Heavier forms tip it faster."),
-                       (20200.0, -1650.0, "This log is too heavy for Seed. Roll past its middle as Stone Shell.")):
-        hint = clone(actors_of("TutorialTrigger")[0], "Tutorial", s, d, PAD_TOP + 200.0)
-        hint.set_actor_scale3d(unreal.Vector(1.0, 1.0, 1.5))
-        hint.set_editor_property("message", unreal.Text(text))
-        hint.set_editor_property("display_duration", 6.0)
-        hints.append(hint)
+    hint = clone(actors_of("TutorialTrigger")[0], "Tutorial", 19620.0, 0.0, PAD_TOP + 200.0)
+    hint.set_actor_scale3d(unreal.Vector(1.0, 1.0, 1.5))
+    hint.set_editor_property("message", unreal.Text("Follow the lanterns across. The logs tip under your weight, then roll on."))
+    hint.set_editor_property("display_duration", 6.0)
+
+    for actor in actors_of("TutorialTrigger"):
+        if "pressure plate" in str(actor.get_editor_property("message")):
+            place_on_road(actor, BLOCK_S - 700.0, 0.0, actor.get_actor_location().z)
+            actor.set_editor_property("message", unreal.Text("Push the block along the logs onto the glowing plate, then go around and through the gate."))
 
     # The route is longer now, so the time to beat is too.
     actors_of("LevelGoal")[0].set_editor_property("par_time_seconds", 390.0)
 
-    return [note, plate_b, block_b, third, blob, shrine] + hints
+    return [note, blob, shrine, hint]
 
 
 def build_island_chain(materials):
@@ -1256,24 +1256,37 @@ def tilting_log(s, d, counterweight, materials, folder="Cavern"):
     x, y = road.point(s, d)
     actor = spawn(unreal.TiltingLog, x, y, PAD_TOP + drop, "TiltingLog", folder, road.yaw(s))
     actor.set_editor_property("half_length", LOG_HALF)
-    actor.set_editor_property("half_width", 180.0)
+    actor.set_editor_property("half_width", ROUTE_FENCE - 70.0)
     actor.set_editor_property("max_tilt_degrees", LOG_TILT)
     actor.set_editor_property("counterweight_kg_cm", counterweight)
-    actor.set_editor_property("tilt_response", 0.008)
+    # Quick enough that a fast Seed finds the far end already coming down, and doesn't launch off it.
+    actor.set_editor_property("tilt_response", 0.025)
     log_mesh = actor.get_editor_property("log_mesh")
     log_mesh.set_static_mesh(unreal.load_asset(WORLD_MESHES["log"]))
     log_mesh.set_material(0, materials["bark"])
-    log_mesh.set_relative_scale3d(unreal.Vector(LOG_HALF * 2.0 / 800.0, 180.0 / 45.0, 1.5))
+    log_mesh.set_relative_scale3d(unreal.Vector(LOG_HALF * 2.0 / 800.0, (ROUTE_FENCE - 70.0) / 45.0, 1.5))
     log_mesh.set_relative_location(unreal.Vector(-LOG_HALF, 0.0, -68.0), False, False)
     mesh_actor(WORLD_MESHES["pivot"], x, y, PAD_TOP + drop - 140.0, folder, (1.0, 1.0, (PAD_TOP + drop - 140.0 - CAVERN_FLOOR) / 500.0), road.yaw(s), materials["bark"], "LogStump")
     # The hub, as a ring on each side of the log.
     for side in (-1.0, 1.0):
-        hx, hy = road.point(s, d + side * 195.0)
+        hx, hy = road.point(s, d + side * (ROUTE_FENCE - 55.0))
         mesh_actor(WORLD_MESHES["ring"], hx, hy, PAD_TOP + drop - 70.0, folder, (0.22, 0.22, 0.22), road.yaw(s) + 90.0, materials["plate"], "LogHub")
 
 
+def route_fence(x0, y0, x1, y1, materials, folder="Cavern"):
+    """Two rails on posts, with a hidden wall on the same line, so the player can see why the ball stopped. The wall runs higher than the posts, as a fast ball can leave a log's raised end."""
+    invisible_wall(x0, y0, x1, y1, PAD_TOP - 60.0, PAD_TOP + 450.0, folder)
+    length = math.hypot(x1 - x0, y1 - y0)
+    yaw = math.degrees(math.atan2(y1 - y0, x1 - x0))
+    for up in (70.0, 215.0):
+        mesh_actor(WORLD_MESHES["log"], x0, y0, PAD_TOP + up, folder, (length / 800.0, 0.32, 0.32), yaw, materials["bark"], "FenceRail")
+    for index in range(int(length / 480.0) + 2):
+        t = min(index * 480.0 / length, 1.0)
+        mesh_actor(WORLD_MESHES["log"], lerp(x0, x1, t), lerp(y0, y1, t), CAVERN_WATER, folder, ((PAD_TOP + 240.0 - CAVERN_WATER) / 800.0, 0.3, 0.3), 0.0, materials["bark"], "FencePost", pitch=90.0)
+
+
 def build_cavern(materials):
-    """Behind the gate: a dome over dark water, with a parkour route looping around a shaft of sun from the roof."""
+    """Behind the gate: a dome over dark water, crossed by one fenced walkway with two tilting logs, under a shaft of sun from the roof."""
     folder = "Cavern"
     rng = random.Random(SEED + 9)
     centre_s, half_s, half_d = CAVERN
@@ -1287,55 +1300,26 @@ def build_cavern(materials):
     mesh_actor("/Engine/BasicShapes/Plane", x, y, CAVERN_WATER, folder, (half_s * 2.2 / 100.0, half_d * 2.2 / 100.0, 1.0), road.yaw(centre_s), water, "CavernWater")
     kill_volume(x, y, CAVERN_WATER - 260.0, half_s * 1.05, half_d * 1.05, 200.0, road.yaw(centre_s))
 
-    # The route.
-    for s, d, radius in PADS:
-        rock_pad(s, d, radius, materials)
-    crumbling_class = unreal.load_class(None, "/Script/Assignment1.CrumblingPlatform")
-    for s, d in CRUMBLING:
-        x, y = road.point(s, d)
-        ledge = spawn(crumbling_class, x, y, PAD_TOP - 15.0, "CrumblingLedge", folder, road.yaw(s))
-        ledge.get_component_by_class(unreal.StaticMeshComponent).set_material(0, materials["rock"])
-    moving_class = unreal.load_class(None, "/Script/Assignment1.MovingPlatform")
-    x, y = road.point(MOVING[0], MOVING[1])
-    platform = spawn(moving_class, x, y, PAD_TOP - 15.0, "MovingPlatform", folder)
-    platform.get_component_by_class(unreal.SplineComponent).set_location_at_spline_point(1, unreal.Vector(*road.point(MOVING[2], MOVING[3]), PAD_TOP - 15.0), unreal.SplineCoordinateSpace.WORLD)
-    platform.get_component_by_class(unreal.StaticMeshComponent).set_material(0, materials["planks"])
-    # A ball rolls freely on a moving floor, so it drifts back unless the player rolls along with it. Slow and wide makes that easy.
-    platform.get_component_by_class(unreal.StaticMeshComponent).set_relative_scale3d(unreal.Vector(5.0, 5.0, 0.3))
-    platform.set_editor_property("speed", 130.0)
-    tilting_log(LOG_ONE[0], LOG_ONE[1], LOG_EASY_COUNTERWEIGHT, materials)
-    tilting_log(LOG_TWO[0], LOG_TWO[1], LOG_HEAVY_COUNTERWEIGHT, materials)
-    # A low bough at the heavy log's far end. Seed can't tip the log, so it meets the bough, and would otherwise fly off the raised end
-    # and land on the next pad. Stone tips the log and rolls under. The hidden wall runs from just above the ball to the roof, right across the dome.
-    bough_s = LOG_TWO[0] + LOG_HALF - 10.0
-    x0, y0 = road.point(bough_s, -1300.0)
-    x1, y1 = road.point(bough_s, -3300.0)
-    invisible_wall(x0, y0, x1, y1, PAD_TOP + 115.0, CAVERN_FLOOR + CAVERN_HIGH + 200.0, folder)
-    bough_x, bough_y = road.point(bough_s, -1250.0)
-    mesh_actor(WORLD_MESHES["log"], bough_x, bough_y, PAD_TOP + 190.0, folder, (1.1, 1.3, 1.3), road.yaw(bough_s) + 90.0, materials["bark"], "LowBough")
-    for start, end in BRIDGES:
-        x0, y0 = road.point(*start)
-        x1, y1 = road.point(*end)
-        bridge = spawn(unreal.StaticMeshActor, (x0 + x1) / 2.0, (y0 + y1) / 2.0, PAD_TOP - 100.0, "RockBridge", folder, math.degrees(math.atan2(y1 - y0, x1 - x0)))
-        bridge.set_actor_scale3d(unreal.Vector(math.hypot(x1 - x0, y1 - y0) / 100.0 + 2.0, 5.0, 2.0))
-        bridge.static_mesh_component.set_static_mesh(unreal.load_asset("/Engine/BasicShapes/Cube"))
-        bridge.static_mesh_component.set_material(0, materials["moss"])
-        bridge.static_mesh_component.set_collision_profile_name("BlockAll")
-
-    # The ridges that keep the route in order.
+    # The route: one straight line from the gate to the exit, which is lit and in view the whole way.
+    for s in LOGS:
+        tilting_log(s, 0.0, LOG_COUNTERWEIGHT, materials)
+    # The floor under each log sits just below the log's lowest point. A ball rolling back under a raised end stays on the walkway, and can't drop through.
+    for s0, s1, sink in [(s0, s1, 0.0) for s0, s1 in ROUTE_FLOORS] + [(s - LOG_HALF, s + LOG_HALF, 14.0) for s in LOGS]:
+        x, y = road.point((s0 + s1) / 2.0)
+        floor = spawn(unreal.StaticMeshActor, x, y, PAD_TOP - 100.0 - sink, "RouteFloor", folder, road.yaw(s0))
+        floor.set_actor_scale3d(unreal.Vector((s1 - s0) / 100.0, (ROUTE_FENCE + 10.0) * 2.0 / 100.0, 2.0))
+        floor.static_mesh_component.set_static_mesh(unreal.load_asset("/Engine/BasicShapes/Cube"))
+        floor.static_mesh_component.set_material(0, materials["moss"])
+        floor.static_mesh_component.set_collision_profile_name("BlockAll")
+    for side in (-1.0, 1.0):
+        route_fence(*road.point(ROUTE_FLOORS[0][0], side * ROUTE_FENCE), *road.point(ROUTE_FLOORS[-1][1], side * ROUTE_FENCE), materials)
+        # Each end flares out to the road's full width, so the ball is led in and not stopped by a post.
+        route_fence(*road.point(ROUTE_FLOORS[0][0] - 180.0, side * (LANE - 40.0)), *road.point(ROUTE_FLOORS[0][0], side * ROUTE_FENCE), materials)
+        route_fence(*road.point(ROUTE_FLOORS[-1][1], side * ROUTE_FENCE), *road.point(ROUTE_FLOORS[-1][1] + 180.0, side * (LANE - 40.0)), materials)
     ridge_rock = mesh("SM_RockPack_Cliff_07_B")
-    for (s0, d0), (s1, d1) in RIDGES:
-        x0, y0 = road.point(s0, d0)
-        x1, y1 = road.point(s1, d1)
-        invisible_wall(x0, y0, x1, y1, CAVERN_FLOOR, CAVERN_FLOOR + CAVERN_HIGH + 200.0, folder)
-        count = int(math.hypot(x1 - x0, y1 - y0) / 420.0) + 1
-        for index in range(count + 1):
-            t = index / count
-            scale = rng.uniform(0.8, 1.15)
-            mesh_actor(ridge_rock, lerp(x0, x1, t), lerp(y0, y1, t), CAVERN_FLOOR - 60.0 - base_height_offset(unreal.load_asset(ridge_rock), scale), folder, (scale, scale, scale), rng.uniform(0, 360), label="RidgeRock")
 
     # Giant roots across the dome, and rock and waterfalls around its foot. Nothing here is solid.
-    for s, turn, scale, up in ((20300.0, 20.0, 2.1, 300.0), (21700.0, -25.0, 2.3, 250.0), (20700.0, 70.0, 1.8, 350.0)):
+    for s, turn, scale, up in ((20300.0, 20.0, 2.1, 300.0), (21700.0, -25.0, 2.3, 250.0)):
         x, y = road.point(s)
         mesh_actor(WORLD_MESHES["root_arch"], x, y, CAVERN_FLOOR + up, folder, (scale, scale, scale * 0.9), road.yaw(s) + turn, materials["bark"], "CavernRoot")
     for step in range(16):
@@ -1355,11 +1339,12 @@ def build_cavern(materials):
     # Jungle growth wherever there is rock to hold it.
     plants = Scatter("Cavern_Plants", 7000, 9000, shadows=False)
     jungle = ["SM_Fern", "SM_Fern", "SM_Clover", "SM_Fol_Plant_1", "SM_Fol_Plant_5", "SM_Fol_Plant_9", "SM_Fol_Plant_14", "SM_Fol_Grass_Clump_3"]
-    for pad_s, pad_d, radius in PADS:
-        for _ in range(14):
-            angle, distance = rng.uniform(0.0, 2.0 * math.pi), radius * rng.uniform(0.72, 1.0)
-            x, y = road.point(pad_s + math.cos(angle) * distance, pad_d + math.sin(angle) * distance)
-            plants.add(mesh(rng.choice(jungle)), x, y, PAD_TOP, rng.uniform(0.9, 1.5), rng, sink=2.0)
+    for _ in range(40):
+        # Outside the fence, on the rock under the sun.
+        angle, distance = rng.uniform(0.0, 2.0 * math.pi), SUN_PAD_RADIUS * rng.uniform(0.72, 1.0)
+        s, d = CAVERN[0] + math.cos(angle) * distance, math.sin(angle) * distance
+        if abs(d) > ROUTE_FENCE + 40.0:
+            plants.add(mesh(rng.choice(jungle)), *road.point(s, d), PAD_TOP - 5.0, rng.uniform(0.9, 1.5), rng, sink=2.0)
     for s0, s1 in TUNNELS:
         for side in (-1.0, 1.0):
             d0, d1 = (610.0, 790.0) if side > 0 else (-790.0, -610.0)
@@ -1381,24 +1366,27 @@ def build_cavern(materials):
     component.set_inner_cone_angle(14.0)
     component.set_outer_cone_angle(24.0)
     component.set_cast_shadows(True)
-    for width, pitch, yaw, high in ((1.0, 0.0, 0.0, 1.0), (0.55, 4.0, 40.0, 0.92), (0.45, -5.0, 200.0, 0.85)):
-        shaft = mesh_actor(WORLD_MESHES["shaft"], x, y, top + 60.0, folder, (width, width, high), yaw, materials["sun_shaft"], "SunShaft", pitch=pitch)
+    for width, pitch, yaw, high, up in ((1.0, 0.0, 0.0, 1.0, 960.0), (0.55, 4.0, 40.0, 0.92, 950.0), (0.45, -5.0, 200.0, 0.85, 80.0)):
+        shaft = mesh_actor(WORLD_MESHES["shaft"], x, y, top + up, folder, (width, width, high), yaw, materials["sun_shaft"], "SunShaft", pitch=pitch)
         shaft.static_mesh_component.set_cast_shadow(False)
     niagara("/Game/FreeParticle_SoftTofu/Niagara/NS_Sparkling_Noise", x, y, PAD_TOP + 300.0, folder, 8.0)
-    rock_pad(centre_s, 0.0, 300.0, materials, top=PAD_TOP - 120.0)
+    rock_pad(centre_s, 0.0, SUN_PAD_RADIUS, materials, top=PAD_TOP - 5.0)
 
     # Soft green bounce, as if the light came through leaves, and lanterns to mark the way.
     for s, d in ((20300.0, 1600.0), (21500.0, 1500.0), (20300.0, -1500.0), (21500.0, -1500.0), (21000.0, 0.0)):
         x, y = road.point(s, d)
         point_light(x, y, 1100.0, unreal.LinearColor(0.5, 1.0, 0.4, 1.0), 38.0, 2600.0, folder)
-    for s, d in ((19650.0, 450.0), (19650.0, -450.0), (20100.0, 1180.0), (21580.0, 1180.0), (20100.0, -1180.0), (20100.0, -1830.0), (21700.0, -1830.0), (22330.0, 450.0), (22330.0, -450.0)):
-        x, y = road.point(s, d)
-        post = mesh_actor(WORLD_MESHES["log"], x, y, PAD_TOP - 20.0, folder, (0.3, 0.28, 0.28), rng.uniform(0, 360), materials["bark"], "LanternPost", pitch=90.0)
-        post.static_mesh_component.set_cast_shadow(False)
-        globe = mesh_actor("/Engine/BasicShapes/Sphere", x, y, PAD_TOP + 240.0, folder, (0.3, 0.3, 0.3), material=materials["lantern"], label="Lantern")
-        globe.static_mesh_component.set_render_custom_depth(True)
-        globe.static_mesh_component.set_custom_depth_stencil_value(ls_world_common.FULL_COLOUR_STENCIL)
-        point_light(x, y, PAD_TOP + 240.0, unreal.LinearColor(1.0, 0.6, 0.25, 1.0), 26.0, 750.0, folder)
+    # A line of lanterns on both fences, in colour against the grey, with the brightest light at the way out.
+    for index, s in enumerate((19700.0, 20180.0, 20660.0, 21140.0, 21620.0, 22100.0, 22320.0)):
+        for side in (-1.0, 1.0):
+            x, y = road.point(s, side * ROUTE_FENCE)
+            globe = mesh_actor("/Engine/BasicShapes/Sphere", x, y, PAD_TOP + 275.0, folder, (0.3, 0.3, 0.3), material=materials["lantern"], label="Lantern")
+            globe.static_mesh_component.set_render_custom_depth(True)
+            globe.static_mesh_component.set_custom_depth_stencil_value(ls_world_common.FULL_COLOUR_STENCIL)
+        x, y = road.point(s)
+        point_light(x, y, PAD_TOP + 300.0, unreal.LinearColor(1.0, 0.6, 0.25, 1.0), 40.0, 900.0, folder)
+    x, y = road.point(22500.0)
+    point_light(x, y, level(22500.0) + 400.0, unreal.LinearColor(1.0, 0.7, 0.35, 1.0), 120.0, 1800.0, folder)
 
 
 def rootwood_hollow(materials):
@@ -1427,8 +1415,8 @@ def rootwood_hollow(materials):
             point_light(x, y, level(s) + 500.0, unreal.LinearColor(0.2, 0.95, 0.75, 1.0), 5.0, 1100.0, folder)
             s += 900.0
 
-    # Log chutes guide each block onto its plate and stop it just past. A block pushed against a wall could never be pulled back, which would
-    # leave the gate shut for good. A chute is just wider than the ball, so the ball can't slip past the block, and its mouth flares to guide the ball in.
+    # A log chute guides the block onto its plate and stops it just past, so it can't be pushed out of reach. The ball can't slip past the block in there,
+    # and the road stays open on both sides of the chute.
     def chute_log(s0, d0, s1, d1):
         x0, y0 = road.point(s0, d0)
         x1, y1 = road.point(s1, d1)
@@ -1437,14 +1425,10 @@ def rootwood_hollow(materials):
         length = math.hypot(x1 - x0, y1 - y0)
         mesh_actor(WORLD_MESHES["log"], x0, y0, top + 28.0, folder, (length / 800.0, 0.75, 0.75), math.degrees(math.atan2(y1 - y0, x1 - x0)), materials["bark"], "ChuteLog")
 
-    plate_s = to_road(13300.0)
     for side in (-1.0, 1.0):
-        chute_log(plate_s + side * 150.0, 430.0, plate_s + side * 150.0, -430.0)
-        chute_log(plate_s + side * 340.0, 610.0, plate_s + side * 150.0, 430.0)
-        chute_log(16930.0, side * 150.0, 18130.0, side * 150.0)
-        chute_log(16720.0, side * 340.0, 16930.0, side * 150.0)
-    chute_log(plate_s - 150.0, -430.0, plate_s + 150.0, -430.0)
-    chute_log(18130.0, -150.0, 18130.0, 150.0)
+        chute_log(BLOCK_S - 120.0, side * 150.0, PLATE_S + 130.0, side * 150.0)
+        chute_log(BLOCK_S - 300.0, side * 280.0, BLOCK_S - 120.0, side * 150.0)
+    chute_log(PLATE_S + 130.0, -150.0, PLATE_S + 130.0, 150.0)
 
     # A frame of logs around the plank gate, and planks above it up to the roof.
     s = to_road(14800.0)
@@ -1745,12 +1729,12 @@ def build_preview_cameras():
                camera("Preview_1_1_F", 2800.0, -1200.0, 300.0, 4000.0, -3400.0, 500.0),   # Waterfalls.
                camera("Preview_1_2_D", 13500.0, 0.0, 240.0, 14500.0, 0.0, 300.0),   # The blocked cave.
                camera("Preview_1_2_E", 14900.0, -150.0, 170.0, 16000.0, 80.0, 180.0),   # Inside the tunnel.
-               camera("Preview_1_2_F", 15250.0, 300.0, 330.0, 15720.0, -100.0, 0.0),   # The first plate.
+               camera("Preview_1_2_F", 16400.0, 200.0, 330.0, 18000.0, 0.0, 0.0),   # The block, its chute and the plate.
                camera("Preview_1_2_G", 18300.0, 300.0, 210.0, 19200.0, 0.0, 250.0),   # The plank gate.
                camera("Preview_1_2_H", 19450.0, 0.0, 320.0, 21000.0, 0.0, 200.0),   # The cavern from its entrance.
-               camera("Preview_1_2_I", 20000.0, 650.0, 300.0, 20950.0, 1000.0, 60.0),   # The first tilting log.
-               camera("Preview_1_2_J", 21700.0, 300.0, 420.0, 20700.0, -700.0, 250.0),   # Toward the sun shaft.
-               camera("Preview_1_2_K", 20050.0, -1350.0, 240.0, 21000.0, -1650.0, 120.0),   # The second tilting log.
+               camera("Preview_1_2_I", 19600.0, 0.0, 260.0, 20700.0, 0.0, 60.0),   # The first tilting log.
+               camera("Preview_1_2_J", 20500.0, 900.0, 420.0, 21300.0, 0.0, 200.0),   # The walkway under the sun shaft.
+               camera("Preview_1_2_K", 21000.0, 0.0, 240.0, 22400.0, 0.0, 120.0),   # The second tilting log and the way out.
                camera("Preview_1_2_L", 23300.0, -200.0, 200.0, 24500.0, 0.0, 150.0),   # The thorn tunnel.
                camera("Preview_1_3_D", 27950.0, -120.0, 150.0, 30500.0, 300.0, 250.0),   # The marsh from the lane, like picture 3.
                camera("Preview_1_3_E", 33100.0, 200.0, 230.0, 34800.0, -300.0, 60.0),   # The raised path and its blobs.
