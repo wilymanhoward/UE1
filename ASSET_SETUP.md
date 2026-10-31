@@ -418,6 +418,19 @@ In `BP_LSPlayerController`, tick **Dev > Enable Dev Cheats** to use these. Untic
 
 To tune a form, open `BP_SeedBall` and expand **Tuning > Forms > Form Data**. **Glow Color** and **Glow Brightness** set its light, and **Glow Effect** sets its particles. A rerun of the script resets the art fields, but not **Roll Sound** or the movement numbers.
 
+### Stage 3: Level 1 world
+`Content/Python/build_world_level1.py` copies `L_Level1` to `Content/LastSeed/Maps/L_Level1_World` the first time and builds the forest in the copy. `L_Level1` stays untouched as a backup. It is safe to rerun, as it only replaces actors tagged `LS_Generated`. A rebuild takes about a minute, plus about a minute for the screenshots.
+
+1. Save your work, then choose **Tools > Execute Python Script**.
+2. Pick `Content/Python/build_world_level1.py` and click **Open**.
+3. Leave the editor window on screen until **Output Log** shows `Last Seed world: preview screenshots saved`. The viewport moves through the preview cameras by itself.
+4. Check the pictures in `Saved/Screenshots/LS_Previews`.
+5. Press **Play** in the map it left open.
+
+To jump to a preview, find `Preview_1_1_A` and the others under **World > Preview Cameras** in the Outliner, right-click one and choose **Pilot**. Click **Eject** at the top of the viewport when you are done.
+
+To tune the withered look, select `RestorationDriver` in the Outliner. Changes to generated actors or the sky are replaced on the next rerun, so make those in the script. Changes to anything outside the `World` folder stay, apart from the materials and meshes the script assigns.
+
 ### EngineWire (optional AI editor control)
 `Plugins/EngineWire` is a third-party plugin (0.6.0, MIT) that lets an AI assistant control the open editor. It loads in the editor only and is not part of the packaged game or this git repo. The project opens normally without it. To remove it, close the editor and delete that folder. The status bar shows `MCP :3000 (0)` while it is running.
 

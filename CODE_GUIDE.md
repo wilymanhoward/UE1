@@ -162,6 +162,9 @@ A standalone script using only the standard library. It builds each model from m
 ### `Content/Python/ls_import_player_assets.py`: the player's art
 An editor script that imports the OBJ files, builds the materials node by node, creates the physical materials and fills in `BP_SeedBall`'s form data. Rerunning it rebuilds each asset in place. The materials need no textures, because the UVs carry masks: on the Stone, U says how much of a crack a point is, and the material turns that into glowing gold.
 
+### `Content/Python/build_world_level1.py` and `ls_world_common.py`: the forest
+The level script decides what goes where, and `ls_world_common.py` knows how to place it, so Level 2 can share it. `Route` reads the floors and gaps from the greybox actors instead of repeating their numbers, so the ground always matches the collision. `Route.height` gives one height for any point, and both the terrain mesh and the trees use it, which is why trees sit on the hills. `Scatter` groups transforms by mesh into one instanced component each, with a cull distance per ring. `jittered_grid` with a fixed seed gives a forest that looks random but rebuilds identically. `ls_material_helpers.py` holds the small node-building functions the material scripts share.
+
 ### Dev cheats
 `bEnableDevCheats` on `ALSPlayerController` adds F1, F2 and F3 to the mapping context. F3 collects real notes through `OnBallOverlap`, so the count and stars stay correct.
 
@@ -238,6 +241,9 @@ Each rubric area, with what to show and where it is.
 29. **Why the visuals are separate from the physics sphere.** A bumpy mesh on the physics body would make the ball bounce on its own bumps, and swapping meshes would rebuild the body and lose its speed. A hidden perfect sphere does the physics, so all three forms roll the same way, and the art can change freely.
 30. **How the sprout stays upright on a rolling ball.** `UprightVisual` uses absolute rotation, so it ignores the ball's spin. The mesh is modelled around the ball's centre with no offset, so there is no position for the spin to swing around.
 31. **How the player stays in colour in a grey world.** Post-process saturation greys every pixel, including the player. Instead, the ball's meshes write stencil value 1, and `M_LS_WitherPost` greys only the pixels without it. This needs `r.CustomDepth=3` in `DefaultEngine.ini`, which turns on the stencil.
+32. **Why the cubes are hidden and not deleted.** A flat cube is perfect collision for a rolling ball, and a Fab mesh's rough collision would make it bounce. Hidden components still collide, so art and physics can each be what they are best at.
+33. **Why instancing matters.** The forest has about 5,700 objects. One instanced component draws all copies of a mesh together, and its cull distance drops distant ones, which keeps a laptop GPU near 60 fps.
+34. **Why the invisible walls ignore the camera channel.** The spring arm pulls in when it hits something on that channel, so a wall that blocked it would make the view jump whenever the ball rolled beside an edge.
 
 ## Suggested explanation order
 1. `SeedFormTypes.h`: what a form is.

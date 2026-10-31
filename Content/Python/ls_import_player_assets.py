@@ -11,16 +11,15 @@ import os
 import unreal
 
 import ls_generate_player_meshes
+from ls_material_helpers import MATERIAL_FOLDER, blend, colour, combine, finish, fresh_material, library, mask, node, number
 
 ROOT = "/Game/LastSeed"
 MESH_FOLDER = ROOT + "/Meshes"
-MATERIAL_FOLDER = ROOT + "/Materials"
 PHYSICS_FOLDER = ROOT + "/Physics"
 BALL_BLUEPRINT = "/Game/Blueprint/BP_SeedBall"
 GLOW_EFFECT = "/Game/FreeParticle_SoftTofu/Niagara/NS_Sparkling_Glow"
 
 assets = unreal.AssetToolsHelpers.get_asset_tools()
-library = unreal.MaterialEditingLibrary
 
 
 # --- Meshes ---
@@ -53,7 +52,7 @@ def import_meshes():
         nanite = meshes[name].get_editor_property("nanite_settings")
         nanite.set_editor_property("enabled", False)
         unreal.get_editor_subsystem(unreal.StaticMeshEditorSubsystem).set_nanite_settings(meshes[name], nanite, True)
-        unreal.EditorAssetLibrary.save_loaded_asset(meshes[name])
+        unreal.EditorAssetLibrary.save_loaded_asset(meshes[name], False)
     return meshes
 
 
@@ -65,62 +64,6 @@ def check_mesh_placement(meshes):
     if lowest < 40.0 or abs(shell.box_extent.z - 50.0) > 2.0:
         raise RuntimeError("Last Seed player assets: meshes imported at the wrong scale or axis (sprout bottom {:.1f}, shell half height {:.1f})".format(
             lowest, shell.box_extent.z))
-
-
-# --- Material helpers ---
-
-def fresh_material(name):
-    """Returns an empty material, so a rerun rebuilds the graph instead of adding to it."""
-    path = "{}/{}".format(MATERIAL_FOLDER, name)
-    if unreal.EditorAssetLibrary.does_asset_exist(path):
-        material = unreal.load_asset(path)
-        library.delete_all_material_expressions(material)
-        return material
-    return assets.create_asset(name, MATERIAL_FOLDER, unreal.Material, unreal.MaterialFactoryNew())
-
-
-def node(material, expression_class, **properties):
-    expression = library.create_material_expression(material, expression_class)
-    for key, value in properties.items():
-        expression.set_editor_property(key, value)
-    return expression
-
-
-def colour(material, r, g, b):
-    return node(material, unreal.MaterialExpressionConstant3Vector, constant=unreal.LinearColor(r, g, b, 1.0))
-
-
-def number(material, value):
-    return node(material, unreal.MaterialExpressionConstant, r=value)
-
-
-def mask(material, source, red):
-    """Picks the red or green channel of a node, which is how the graphs read the masks stored in the UVs."""
-    picked = node(material, unreal.MaterialExpressionComponentMask, r=red, g=not red, b=False, a=False)
-    library.connect_material_expressions(source, "", picked, "")
-    return picked
-
-
-def blend(material, a, b, alpha):
-    lerp = node(material, unreal.MaterialExpressionLinearInterpolate)
-    library.connect_material_expressions(a, "", lerp, "A")
-    library.connect_material_expressions(b, "", lerp, "B")
-    library.connect_material_expressions(alpha, "", lerp, "Alpha")
-    return lerp
-
-
-def combine(material, expression_class, a, b):
-    result = node(material, expression_class)
-    library.connect_material_expressions(a, "", result, "A")
-    library.connect_material_expressions(b, "", result, "B")
-    return result
-
-
-def finish(material):
-    library.layout_material_expressions(material)
-    library.recompile_material(material)
-    unreal.EditorAssetLibrary.save_loaded_asset(material)
-    return material
 
 
 # --- The materials ---
@@ -234,7 +177,7 @@ def build_physical_material(name, friction, restitution, combine_max=False):
         # Max outranks the Min on PM_Ice. Without this, Stone has no grip on ice and cannot climb Level 2's slope.
         physical.set_editor_property("override_friction_combine_mode", True)
         physical.set_editor_property("friction_combine_mode", unreal.FrictionCombineMode.MAX)
-    unreal.EditorAssetLibrary.save_loaded_asset(physical)
+    unreal.EditorAssetLibrary.save_loaded_asset(physical, False)
     return physical
 
 
@@ -257,7 +200,9 @@ def assign_to_ball(form_assets):
     defaults.set_editor_property("form_data", form_data)
 
     unreal.BlueprintEditorLibrary.compile_blueprint(blueprint)
-    unreal.EditorAssetLibrary.save_loaded_asset(blueprint)
+    # False saves even when not marked dirty. Editing class defaults from Python doesn't mark it, so a plain save does nothing.
+    if not unreal.EditorAssetLibrary.save_loaded_asset(blueprint, False):
+        raise RuntimeError("Last Seed player assets: could not save " + BALL_BLUEPRINT)
 
 
 def main():
