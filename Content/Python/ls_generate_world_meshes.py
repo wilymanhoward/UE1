@@ -108,7 +108,50 @@ def build_log():
     """A bare log 800 cm long and 45 cm in radius, along X from the origin. The Fab trunks all keep their branches."""
     mesh = Mesh()
     path = [(800.0 * i / 8, 8.0 * math.sin(i * 1.1), 8.0 * math.sin(i * 0.7)) for i in range(9)]
-    add_tube(mesh, path, [45.0 + 4.0 * math.sin(i * 1.7) for i in range(9)], 12)
+    radii = [45.0 + 4.0 * math.sin(i * 1.7) for i in range(9)]
+    # A ring shrunk to almost nothing closes each end, so the sawn faces don't look hollow.
+    add_tube(mesh, [(0.1, path[0][1], path[0][2])] + path[1:-1] + [(799.9, path[-1][1], path[-1][2])], radii[:1] + radii[1:-1] + radii[-1:], 12)
+    add_tube(mesh, [path[0], (0.1, path[0][1], path[0][2])], [0.1, radii[0]], 12)
+    add_tube(mesh, [(799.9, path[-1][1], path[-1][2]), path[-1]], [radii[-1], 0.1], 12)
+    mesh.smooth_normals()
+    return mesh
+
+
+def build_log_pivot():
+    """A stump with spreading roots, like the one under the log in picture 2. Its top is at Z = 0, and it reaches 500 cm down."""
+    rng = random.Random(9)
+    mesh = Mesh()
+    add_tube(mesh, [(0.0, 0.0, -520.0), (8.0, -6.0, -340.0), (-6.0, 5.0, -170.0), (0.0, 0.0, 0.0)], [150.0, 100.0, 75.0, 90.0], 14)
+    for root in range(8):
+        angle = 2.0 * math.pi * root / 8.0 + rng.uniform(-0.2, 0.2)
+        out = (math.cos(angle), math.sin(angle))
+        path = []
+        for row in range(8):
+            t = row / 7.0
+            distance = 60.0 + 340.0 * t
+            path.append((out[0] * distance, out[1] * distance, -170.0 - 340.0 * t * t))
+        add_tube(mesh, path, [48.0 * (1.0 - 0.75 * row / 7.0) for row in range(8)], 8)
+    mesh.smooth_normals()
+    return mesh
+
+
+def build_light_shaft():
+    """A cone of light widening downward from Z = 0 to Z = -1900, seen from both sides. V is 0 at the top and 1 at the bottom."""
+    mesh = Mesh()
+    rows, sides = 6, 20
+    for row in range(rows + 1):
+        t = row / rows
+        radius = 300.0 + 420.0 * t
+        for side in range(sides):
+            angle = 2.0 * math.pi * side / sides
+            mesh.add_vertex((math.cos(angle) * radius, math.sin(angle) * radius, -1900.0 * t), (side / sides, t))
+    for row in range(rows):
+        for side in range(sides):
+            a = row * sides + side
+            b = row * sides + (side + 1) % sides
+            c = a + sides
+            d = b + sides
+            mesh.triangles += [(a, b, c), (b, d, c)]
     mesh.smooth_normals()
     return mesh
 

@@ -80,6 +80,9 @@ On first touch it sets the ball's checkpoint, locks in the current restoration, 
 ### `ALSVolumeBase`, `AKillVolume`, `ATutorialTrigger`: volumes
 `ALSVolumeBase` creates the invisible overlap box. `AKillVolume` calls `Die`. `ATutorialTrigger` shows its message once.
 
+### `ATiltingLog`: mass balance
+Each tick it adds up mass times distance from the pivot for every simulating body in `Trigger`. It compares that with `CounterweightKgCm` and turns the log, with `Damping` and a limit of `MaxTiltDegrees`. It moves itself instead of simulating physics, so it can't fling or jam the ball. Stone tips it quickly and Seed slowly, and a counterweight above Seed's best makes a log only Stone can tip.
+
 ### `ACrackedWall`: breakable wall
 `OnBallHit` checks for Stone, then for a slam or an impact speed of at least `BreakSpeed`. `Break` hides the mesh and any `RubbleActors`, removes their collision, and spawns physics debris with a set lifespan. It is the first user of the `ImpactVelocity` value that `ASeedBall` saves before each impact.
 
@@ -248,6 +251,8 @@ Each rubric area, with what to show and where it is.
 36. **Why blocks have their own physical material.** Stone's grip is so strong that pushing a block also presses it into the ground, and that friction also fights the ball's spin, which jammed it. `PM_Block`'s lower friction leaves enough push to move it at a fair pace. Seed can push it too, but only Stone or a block can hold a plate down.
 38. **Why the blocks run in log chutes.** A block pushed against a wall could never be pulled back, which would leave the gate shut for good. A chute is just wider than the ball, so the ball can't slip past, and a log at its end stops the block on the plate. Each block also has its Z rotation locked, because a turning block wedged itself across the chute.
 39. **How the rock pile breaks.** The hidden `ACrackedWall` cube is still what the ball hits. The boulders are plain scenery listed in its `RubbleActors`, which it hides as it breaks. The cave shell is solid, which keeps the camera inside the tunnel.
+41. **Why the cavern has ridges and a low bough.** Seed jumps 890 cm, which could skip most of the route, and it could fly off the raised end of the heavy log. Hidden walls behind the visible rocks keep the route in order, and the wall behind the bough starts just above the ball, so only a tipped log lets the ball roll under it.
+42. **Why the sun shaft fades at its edges.** A cone would show hard lines in the air, so the material's Fresnel term dims the faces seen edge-on. It is additive and has no shadows, which keeps it cheap. The real light comes from one spotlight.
 40. **How a zone gets its own look.** `zone_grade` adds a post-process component under a box, so the change applies only while the camera is inside it and fades at the edges. A box can't bend, so Rootwood Hollow uses three.
 37. **Why the world starts at saturation 0.** `RestorationDriver` starts Level 1 fully black and white, so `WitheredSaturation` must be 0. A higher value keeps too much of the sunset's colour and the effect stops reading. Things with stencil 1 keep their colour, which now includes the start of the road, as in the concept art.
 

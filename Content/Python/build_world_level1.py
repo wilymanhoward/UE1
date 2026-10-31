@@ -43,45 +43,63 @@ ORIGIN_TAG = "LS_Origin"
 
 # --- The layout, all in one place ---
 
-ROAD_LENGTH = 41700.0
+ROAD_LENGTH = 44700.0
 # (start, end, degrees). Positive turns right. Everything between bends is straight on purpose: gaps, ledge, cave, plates, gate, marsh.
 BENDS = [(500, 3200, 35), (4100, 5500, -60), (8900, 11800, 70), (12200, 14000, -50), (16000, 16600, 20),
-         (19500, 20800, 40), (20800, 22800, -50), (22800, 24800, 55), (29700, 33800, -85), (33800, 36000, 40), (39900, 41700, -30)]
+         (22500, 23800, 40), (23800, 25800, -50), (25800, 27800, 55), (32700, 36800, -85), (36800, 39000, 40), (42900, 44700, -30)]
 # (greybox x, extra length). This is where the new challenges fit between the greybox's own.
-INSERTS = [(6490, 2400), (14300, 2000), (17100, 1000), (21500, 1500), (24400, 1000), (29500, 1600)]
+INSERTS = [(6490, 2400), (14300, 2000), (15000, 3000), (17100, 1000), (21500, 1500), (24400, 1000), (29500, 1600)]
 # Height added to the greybox's own, as (s, height). Flat wherever two neighbours match. Steepest about 9 degrees.
-HILLS = [(0, 0), (300, 0), (1700, 130), (3200, 0), (4100, 0), (4800, -70), (5500, 0), (12200, 0), (14000, 150), (19700, 150),
-         (21000, 40), (23200, 40), (24800, 0), (29700, 0), (31500, 150), (33800, 0), (39700, 0), (41000, 80), (41700, 80)]
+HILLS = [(0, 0), (300, 0), (1700, 130), (3200, 0), (4100, 0), (4800, -70), (5500, 0), (12200, 0), (14000, 150), (22700, 150),
+         (24000, 40), (26200, 40), (27800, 0), (32700, 0), (34500, 150), (36800, 0), (42700, 0), (44000, 80), (44700, 80)]
 # How much the land rises on the left and falls on the right, as (s, height). Negative rises on the right instead.
-SIDE_TILT = [(0, 750), (6000, 750), (8000, 200), (12200, 300), (13000, 0), (23000, 0), (24800, 300), (33800, -300), (41700, 200)]
+SIDE_TILT = [(0, 750), (6000, 750), (8000, 200), (12200, 300), (13000, 0), (26000, 0), (27800, 300), (36800, -300), (44700, 200)]
 # How much the land rises on both sides, which makes a canyon.
-CANYON = [(0, 0), (12200, 0), (13200, 1800), (22500, 1800), (23500, 0), (41700, 0)]
+CANYON = [(0, 0), (12200, 0), (13200, 1800), (25500, 1800), (26500, 0), (44700, 0)]
 
 # The greybox's floor as (x0, x1, z0, z1), which gives the height the road starts from.
 GREYBOX_FLOOR = [(0, 6500, 0, 0), (6500, 8000, 0, 300), (8000, 26100, 300, 300), (26100, 28100, 300, 800), (28100, 30200, 800, 800), (30200, 32200, 300, 300)]
-MARSH = (25000.0, 29500.0)
+MARSH = (28000.0, 32500.0)
 MARSH_GREYBOX = (19600.0, 22600.0)
 WATER_LEVEL = 300.0
 MARSH_BED = -50.0
 ISLAND_CHAIN = (6490.0, 8890.0)
-GAPS = [(3500.0, 3900.0), ISLAND_CHAIN, (36700.0, 37700.0), (38500.0, 39700.0)]
-GLIDE_ISLAND = (37700.0, 38500.0, 500.0)  # A landing that splits the glide in two.
+CAVERN_GAP = (19700.0, 22300.0)
+GAPS = [(3500.0, 3900.0), ISLAND_CHAIN, CAVERN_GAP, (39700.0, 40700.0), (41500.0, 42700.0)]
+GLIDE_ISLAND = (40700.0, 41500.0, 500.0)  # A landing that splits the glide in two.
 # The road's solid pieces, between gaps and the marsh. The first two stay in colour, as the start of picture 1.
-ROAD_PIECES = [(-800.0, 3500.0, True), (3900.0, 6490.0, True), (8890.0, 25000.0, False), (29500.0, 36700.0, False), (37700.0, 38500.0, False), (39700.0, ROAD_LENGTH + 800.0, False)]
+ROAD_PIECES = [(-800.0, 3500.0, True), (3900.0, 6490.0, True), (8890.0, 19700.0, False), (22300.0, 28000.0, False), (32500.0, 39700.0, False), (40700.0, 41500.0, False), (42700.0, ROAD_LENGTH + 800.0, False)]
 # (s, d, height). A full-speed jump travels about 890 cm, so 333 cm gaps and 700 cm islands land safely from anywhere near an edge.
 ISLANDS = [(7173.0, -120.0, 0.0), (8206.0, 120.0, 40.0)]
 ISLAND_RADIUS = 350.0
 # (s of the ledge, half width, far side, has a floor). Side areas that lead to the hidden petals. All are on the right.
-POCKETS = [(5200.0, 500.0, 2700.0, True), (13400.0, 500.0, 2700.0, True), (37000.0, 500.0, 2500.0, False)]
+POCKETS = [(5200.0, 500.0, 2700.0, True), (13400.0, 500.0, 2700.0, True), (40000.0, 500.0, 2500.0, False)]
 
-ZONES = [("1_1", 0.0, 12200.0), ("1_2", 12200.0, 23200.0), ("1_3", 23200.0, ROAD_LENGTH)]
-# Zone 1-2. The cave's mouth is just before the wall that breaks, and it opens out before the first plate.
-CAVE = (14440.0, 15320.0)
+ZONES = [("1_1", 0.0, 12200.0), ("1_2", 12200.0, 26200.0), ("1_3", 26200.0, ROAD_LENGTH)]
+# Zone 1-2. Two closed tunnels with the big cavern between them. The first starts at the rock pile and ends just past the gate.
+TUNNELS = [(14440.0, 19500.0), (22300.0, 25900.0)]
+TUNNEL_HALF = 820.0
+TUNNEL_HIGH = 1000.0
 CAVE_WALL_S = 14500.0
-# A pool to the right of the road, below a rocky edge. Scenery only, as the walls stop the ball.
-POOL = (15400.0, 19000.0)
-POOL_BED = 180.0
-POOL_WATER = 260.0
+# The cavern is a dome over dark water, measured from its centre. The hole in its roof lets the sun in.
+CAVERN = (21000.0, 2000.0, 3200.0)  # (s of the centre, half length along the road, half width across it)
+CAVERN_FLOOR = 60.0
+CAVERN_WATER = 170.0
+CAVERN_HIGH = 2100.0
+PAD_TOP = 450.0  # The same height as the road either side of the cavern.
+# The parkour route, in order. Rock pads are (s, d, radius).
+PADS = [(20100.0, 300.0, 230.0), (20100.0, 1000.0, 230.0), (21580.0, 1000.0, 230.0), (21580.0, -520.0, 300.0), (20100.0, -1000.0, 230.0), (20100.0, -1650.0, 230.0), (21700.0, -1650.0, 230.0)]
+CRUMBLING = [(21580.0, 470.0), (21580.0, -10.0)]  # A solid pad follows them, where the ball can wait for the moving platform.
+MOVING = (21580.0, -1000.0, 20500.0, -1000.0)  # From (s, d) to (s, d).
+LOG_ONE = (20850.0, 1000.0)
+LOG_TWO = (20850.0, -1650.0)
+LOG_HALF = 500.0
+LOG_TILT = 10.0
+LOG_EASY_COUNTERWEIGHT = 6000.0  # Seed (20 kg) tips it from 300 cm past the pivot, and Stone (80 kg) from 75.
+LOG_HEAVY_COUNTERWEIGHT = 20000.0  # More than Seed can manage at the very end of the log (10000), and Stone tips it from 250.
+# Rock ridges with hidden walls behind them. Seed jumps 890 cm, which could otherwise skip most of the route.
+RIDGES = [((21950.0, -1200.0), (21950.0, 3000.0)), ((20400.0, -1300.0), (21950.0, -1300.0))]
+BRIDGES = [((21900.0, -1650.0), (22150.0, -1650.0)), ((22150.0, -1650.0), (22330.0, -200.0))]
 # Patch 1 is 200 cm clear of patch 2 at a walking line, so these give Stone room to cross the lane between them.
 THORN_SHIFT = 250.0
 HEART_TREE = (3000.0, -2700.0)  # (s, d). Where it stands in view from the start, with its roots clear of the road.
@@ -166,9 +184,12 @@ def marsh_amount(s):
     return smoothstep(MARSH[0] - 300.0, MARSH[0] + 100.0, s) * (1.0 - smoothstep(MARSH[1] - 100.0, MARSH[1] + 300.0, s))
 
 
-def pool_amount(s, d):
-    along = smoothstep(POOL[0], POOL[0] + 400.0, s) * (1.0 - smoothstep(POOL[1] - 400.0, POOL[1], s))
-    return along * smoothstep(655.0, 820.0, d) * (1.0 - smoothstep(3000.0, 3800.0, d))
+def in_cavern(s, d, margin=1.05):
+    return ((s - CAVERN[0]) / CAVERN[1]) ** 2 + (d / CAVERN[2]) ** 2 < margin * margin
+
+
+def in_tunnel(s, d):
+    return abs(d) < TUNNEL_HALF + 300.0 and any(s0 - 100.0 < s < s1 + 100.0 for s0, s1 in TUNNELS)
 
 
 def in_pocket(x, y, margin=0.0):
@@ -221,7 +242,8 @@ def side_ground(s, d, x, y):
         height = level(near_s) - 20.0
     side = max(abs(d) - EDGE, 0.0)
     height = lerp(height, WATER_LEVEL - 70.0, marsh_amount(near_s) * (1.0 - smoothstep(200.0, 2400.0, side)))
-    height = lerp(height, POOL_BED, pool_amount(near_s, d))
+    if in_cavern(s, d):
+        return CAVERN_FLOOR
     return lerp(height, CHASM, gap_amount(near_s) * (1.0 - smoothstep(150.0, 1600.0, side)))
 
 
@@ -236,6 +258,8 @@ def road_height(s, d, x, y):
 
 def terrain_height(x, y):
     s, d = road.project(x, y)
+    if in_cavern(s, d):
+        return CAVERN_FLOOR
     if 0.0 <= s <= ROAD_LENGTH and abs(d) < ROAD_SIDE - 100.0:
         if MARSH[0] <= s <= MARSH[1]:
             if abs(d) <= LANE:
@@ -316,25 +340,23 @@ def build_stair_mesh(s0, s1):
     return import_generated_mesh("SM_LS_Stairs_L1", built)
 
 
-def build_cave_shell():
-    """A rock hill with a tunnel through it, following the road. The ball rolls on the road and the rock is solid, which also keeps the camera inside."""
+def build_tunnel(s0, s1, index):
+    """A rock hill with a closed tunnel through it, following the road. It is solid, which also keeps the camera inside."""
     built = Mesh()
-    rows, columns = 24, 26
-    inner_half, inner_high = 800.0, 680.0
-    outer_half, outer_high = 2000.0, 1500.0
-    base = level((CAVE[0] + CAVE[1]) / 2.0)
+    rows, columns = int((s1 - s0) / 100.0), 26
+    outer_half, outer_high = 2000.0, 1800.0
 
     def lumps(row, column, size):
         return size * (math.sin(row * 1.3 + column * 0.7) * 0.5 + math.sin(row * 0.4 - column * 1.9 + 2.0) * 0.5)
 
-    for surface, half, high, sink, lump in ((0, inner_half, inner_high, 30.0, 26.0), (1, outer_half, outer_high, 120.0, 90.0)):
+    for half, high, sink, lump in ((TUNNEL_HALF, TUNNEL_HIGH, 30.0, 26.0), (outer_half, outer_high, 120.0, 90.0)):
         for row in range(rows + 1):
-            s = lerp(CAVE[0], CAVE[1], row / rows)
+            s = lerp(s0, s1, row / rows)
             for column in range(columns + 1):
                 angle = math.pi * (1.0 - column / columns)
                 rough = lumps(row, column, lump) if 0 < column < columns else 0.0
                 x, y = road.point(s, math.cos(angle) * (half + rough))
-                built.add_vertex((x, y, base - sink + math.sin(angle) * (high + rough)), (0.0, 0.0))
+                built.add_vertex((x, y, level(s) - sink + math.sin(angle) * (high + rough)), (0.0, 0.0))
     width = columns + 1
     outer = (rows + 1) * width
     for row in range(rows):
@@ -356,7 +378,74 @@ def build_cave_shell():
             else:
                 built.triangles += [(i, o, i2), (i2, o, o2)]
     built.smooth_normals()
-    return import_generated_mesh("SM_LS_CaveShell", built, solid=True)
+    return import_generated_mesh("SM_LS_Tunnel_{}".format(index), built, solid=True)
+
+
+def build_cavern_dome():
+    """The cavern's roof and walls, with a hole at the top. The parts where the two tunnels pass through are left out."""
+    built = Mesh()
+    centre_s, half_s, half_d = CAVERN
+    rows, columns = 22, 54
+    first_angle = math.asin(0.16)
+    for offset in (0.0, 160.0):
+        for row in range(rows + 1):
+            theta = lerp(first_angle, math.pi / 2.0, row / rows)
+            for column in range(columns):
+                phi = 2.0 * math.pi * column / columns
+                rough = 45.0 * math.sin(row * 1.1 + column * 0.9) * math.sin(row * 0.5 - column * 1.4) if row < rows else 0.0
+                s = centre_s + (half_s + offset + rough) * math.sin(theta) * math.cos(phi)
+                d = (half_d + offset + rough) * math.sin(theta) * math.sin(phi)
+                x, y = road.point(s, d)
+                built.add_vertex((x, y, CAVERN_FLOOR + (CAVERN_HIGH + offset + rough) * math.cos(theta)), (0.0, 0.0))
+    per_surface = (rows + 1) * columns
+    centre_x, centre_y = road.point(centre_s)
+    centre = (centre_x, centre_y, CAVERN_FLOOR)
+    for surface in (0, 1):
+        for row in range(rows):
+            for column in range(columns):
+                base = surface * per_surface + row * columns
+                a, b = base + column, base + (column + 1) % columns
+                c, d = a + columns, b + columns
+                for triangle in ((a, b, c), (b, d, c)):
+                    p = [built.points[i] for i in triangle]
+                    px, py, pz = (p[0][0] + p[1][0] + p[2][0]) / 3.0, (p[0][1] + p[1][1] + p[2][1]) / 3.0, (p[0][2] + p[1][2] + p[2][2]) / 3.0
+                    s, side = road.project(px, py)
+                    if abs(side) < TUNNEL_HALF + 40.0 and pz < PAD_TOP + TUNNEL_HIGH + 40.0 and abs(s - centre_s) > 1000.0:
+                        continue
+                    # Each triangle is turned to face the middle on the inner surface, and away from it on the outer.
+                    u = [p[1][i] - p[0][i] for i in range(3)]
+                    v = [p[2][i] - p[0][i] for i in range(3)]
+                    normal = (u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0])
+                    facing_centre = sum(normal[i] * (centre[i] - p[0][i]) for i in range(3)) > 0.0
+                    wanted = surface == 0
+                    built.triangles.append(triangle if facing_centre == wanted else (triangle[0], triangle[2], triangle[1]))
+    # The thickness of the rock around the hole, seen from below.
+    for column in range(columns):
+        a, b = column, (column + 1) % columns
+        c, d = per_surface + a, per_surface + b
+        built.triangles += [(a, c, b), (b, c, d)]
+    built.smooth_normals()
+    return import_generated_mesh("SM_LS_CavernDome", built, solid=True)
+
+
+def build_vines():
+    """Thin vines hanging from the cavern's roof, all in one mesh. They have no collision."""
+    built = Mesh()
+    rng = random.Random(SEED + 8)
+    centre_s, half_s, half_d = CAVERN
+    for _ in range(90):
+        theta = rng.uniform(0.25, 1.15)
+        phi = rng.uniform(0.0, 2.0 * math.pi)
+        s = centre_s + half_s * math.sin(theta) * math.cos(phi)
+        d = half_d * math.sin(theta) * math.sin(phi)
+        x, y = road.point(s, d)
+        top = CAVERN_FLOOR + CAVERN_HIGH * math.cos(theta) + 20.0
+        length = rng.uniform(250.0, 900.0)
+        wander = rng.uniform(0.0, 6.0)
+        path = [(x + 12.0 * math.sin(i * 0.9 + wander), y + 12.0 * math.cos(i * 0.7 + wander), top - length * i / 7.0) for i in range(8)]
+        ls_generate_world_meshes.add_tube(built, path, [rng.uniform(5.0, 8.0) * (1.0 - 0.08 * i) for i in range(8)], 5)
+    built.smooth_normals()
+    return import_generated_mesh("SM_LS_Vines", built)
 
 
 def import_world_meshes():
@@ -365,6 +454,8 @@ def import_world_meshes():
             "ring": import_generated_mesh("SM_LS_GateRing", ls_generate_world_meshes.build_gate_ring()),
             "log": import_generated_mesh("SM_LS_Log", ls_generate_world_meshes.build_log()),
             "root_arch": import_generated_mesh("SM_LS_RootArch", ls_generate_world_meshes.build_root_arch()),
+            "pivot": import_generated_mesh("SM_LS_LogPivot", ls_generate_world_meshes.build_log_pivot()),
+            "shaft": import_generated_mesh("SM_LS_LightShaft", ls_generate_world_meshes.build_light_shaft(), nanite=False),
             "island": import_generated_mesh("SM_LS_FloatingIsland", ls_generate_world_meshes.build_floating_island())}
 
 
@@ -458,6 +549,22 @@ def build_materials():
     # Strong emissive values burn out to white, so these stay low to keep their colour.
     materials["guide"] = glow("M_LS_GuideGlow", 1.0, 0.42, 0.06, 0.9)
     materials["teal"] = glow("M_LS_GuideTeal", 0.1, 0.9, 0.8, 1.6)
+    materials["lantern"] = glow("M_LS_Lantern", 1.0, 0.55, 0.15, 5.0)
+    materials["vine"] = glow("M_LS_Vine", 0.05, 0.16, 0.04, 0.0)
+
+    material = fresh_material("M_LS_SunShaft")
+    material.set_editor_property("blend_mode", unreal.BlendMode.BLEND_ADDITIVE)
+    material.set_editor_property("shading_model", unreal.MaterialShadingModel.MSM_UNLIT)
+    material.set_editor_property("two_sided", True)
+    # Strongest at the hole, fading to nothing before it reaches the water. V runs from the top to the bottom of the shaft.
+    along = mask(material, node(material, unreal.MaterialExpressionTextureCoordinate), False)
+    fade = combine(material, unreal.MaterialExpressionSubtract, number(material, 1.0), along)
+    # The cone's edges fade out too, or they would show as hard lines in the air.
+    edge = node(material, unreal.MaterialExpressionFresnel, exponent=1.6, base_reflect_fraction=0.0)
+    soft = combine(material, unreal.MaterialExpressionSubtract, number(material, 1.0), edge)
+    strength = combine(material, unreal.MaterialExpressionMultiply, combine(material, unreal.MaterialExpressionMultiply, fade, fade), soft)
+    output(material, combine(material, unreal.MaterialExpressionMultiply, strength, colour(material, 0.5, 0.38, 0.18)), unreal.MaterialProperty.MP_EMISSIVE_COLOR)
+    materials["sun_shaft"] = finish(material)
 
     material = fresh_material("M_LS_Plate")
     # Gold rings around the plate's centre, cut from the distance to the middle of its top face.
@@ -618,18 +725,38 @@ def add_challenges():
 
     # 1-2: a third thorn patch, which makes the clear lane wind once more.
     thorns = actors_of("HazardVolume")[0]
-    third = clone(thorns, "Thorns", 22400.0, -200.0, hills(22400.0) + 350.0)
+    third = clone(thorns, "Thorns", 25400.0, -200.0, hills(25400.0) + 350.0)
     third.set_actor_scale3d(thorns.get_actor_scale3d())
 
     # 1-3: three more lily pads and a third blob.
     pad = actors_of("SinkingPad")[0]
-    for s, d in ((27400.0, -250.0), (27900.0, 250.0), (28400.0, 0.0)):
+    for s, d in ((30400.0, -250.0), (30900.0, 250.0), (31400.0, 0.0)):
         clone(pad, "SinkingPad", s, d, 300.0)
     blob_source = actors_of("WitherBlob")[0]
-    blob = clone(blob_source, "WitherBlob", 31800.0, -300.0, hills(31800.0) + 370.0)
+    blob = clone(blob_source, "WitherBlob", 34800.0, -300.0, hills(34800.0) + 370.0)
     blob.set_editor_property("patrol_points", [unreal.Vector(0.0, 0.0, 0.0), unreal.Vector(0.0, 600.0, 0.0)])
 
-    return [note, plate_b, block_b, third, blob]
+    # Three notes move from the thorn lane onto the parkour route, as rewards along the way.
+    for x, y, s, d in ((17400.0, -400.0, 20100.0, 1000.0), (17400.0, 400.0, 21580.0, 1000.0), (16000.0, 400.0, 20100.0, -1000.0)):
+        place_on_road(find_by_origin("BP_LifeNote_C", x, y), s, d, PAD_TOP + 80.0)
+
+    # A checkpoint on the ledge before the cavern, as a fall into the water would otherwise cost the whole puzzle.
+    shrine = clone(actors_of("BP_CheckpointShrine_C")[0], "Shrine", 19620.0, 0.0, PAD_TOP + 50.0)
+
+    hints = []
+    for s, d, text in ((19620.0, 0.0, "The cavern floods below. Stone is too heavy to jump far, so choose your form with care."),
+                       (20250.0, 1000.0, "This log tips under weight. Heavier forms tip it faster."),
+                       (20200.0, -1650.0, "This log is too heavy for Seed. Roll past its middle as Stone Shell.")):
+        hint = clone(actors_of("TutorialTrigger")[0], "Tutorial", s, d, PAD_TOP + 200.0)
+        hint.set_actor_scale3d(unreal.Vector(1.0, 1.0, 1.5))
+        hint.set_editor_property("message", unreal.Text(text))
+        hint.set_editor_property("display_duration", 6.0)
+        hints.append(hint)
+
+    # The route is longer now, so the time to beat is too.
+    actors_of("LevelGoal")[0].set_editor_property("par_time_seconds", 390.0)
+
+    return [note, plate_b, block_b, third, blob, shrine] + hints
 
 
 def build_island_chain(materials):
@@ -798,7 +925,7 @@ def usable(x, y, distance_range, margin=120.0):
         return False
     if marsh_amount(near_s) > 0.0 and terrain_height(x, y) < WATER_LEVEL + 5.0:
         return False
-    if pool_amount(near_s, d) > 0.3:
+    if in_cavern(s, d) or in_tunnel(s, d):
         return False
     tree_x, tree_y = road.point(*HEART_TREE)
     return math.hypot(x - tree_x, y - tree_y) > 1300.0
@@ -943,33 +1070,33 @@ def awakening_grove_landmarks(materials):
 
 
 def build_cave(materials):
-    """The tunnel, then the rock pile blocking its mouth. The pile's glowing cracks hint that Stone is what breaks it."""
+    """The first tunnel, then the rock pile blocking its mouth. The pile's glowing cracks hint that Stone is what breaks it."""
     folder = "Zone 1-2"
     rng = random.Random(SEED + 6)
-    mesh_actor(build_cave_shell(), 0.0, 0.0, 0.0, folder, material=materials["moss"], label="CaveShell").static_mesh_component.set_collision_profile_name("BlockAll")
-
-    # Cliffs around the mouth hide where the hill meets the land.
-    for d, up, scale, yaw in ((-1650.0, -60.0, 1.5, 200.0), (1650.0, -60.0, 1.5, 20.0), (-900.0, 900.0, 1.2, 80.0), (900.0, 950.0, 1.1, 300.0)):
-        path = mesh("SM_RockPack_Cliff_07_B")
-        x, y = road.point(CAVE[0] - 60.0, d)
-        mesh_actor(path, x, y, level(CAVE[0]) + up - base_height_offset(unreal.load_asset(path), scale), folder, (scale, scale, scale), yaw, label="CaveCliff")
+    for index, (s0, s1) in enumerate(TUNNELS):
+        mesh_actor(build_tunnel(s0, s1, index), 0.0, 0.0, 0.0, folder, material=materials["moss"], label="Tunnel").static_mesh_component.set_collision_profile_name("BlockAll")
 
     # Rough rocks around the arch, which hide the shell's flat front. Together they read as a cave mouth.
     cliff = mesh("SM_RockPack_Cliff_07_D")
     bounds = unreal.load_asset(cliff).get_bounds()
+    mouth = TUNNELS[0][0]
     for step in range(11):
         angle = math.pi * step / 10.0
         scale = rng.uniform(0.55, 0.8)
-        x, y = road.point(CAVE[0] - 40.0, math.cos(angle) * 1120.0)
-        z = level(CAVE[0]) + math.sin(angle) * 960.0 - bounds.origin.z * scale
+        x, y = road.point(mouth - 40.0, math.cos(angle) * 1140.0)
+        z = level(mouth) + math.sin(angle) * 1280.0 - bounds.origin.z * scale
         mesh_actor(cliff, x, y, z, folder, (scale, scale, scale), rng.uniform(0, 360), label="CaveMouthRock")
+    for d, up, scale, yaw in ((-1650.0, -60.0, 1.5, 200.0), (1650.0, -60.0, 1.5, 20.0)):
+        path = mesh("SM_RockPack_Cliff_07_B")
+        x, y = road.point(mouth - 60.0, d)
+        mesh_actor(path, x, y, level(mouth) + up - base_height_offset(unreal.load_asset(path), scale), folder, (scale, scale, scale), yaw, label="CaveCliff")
 
     # Rows of boulders that fill the arch, largest at the bottom. Nothing here is solid: the hidden wall behind them stops the ball.
     rubble = []
     ground = level(CAVE_WALL_S)
     names = ["SM_R_Rock_01", "SM_R_Rock_02", "SM_R_Rock_03", "SM_S_Rock_01"]
     # Pack rocks are 3 to 6 m tall, so these are small scales. Two layers leave no gaps to see through.
-    rows = ((0.0, 700.0, 9, 0.6), (140.0, 660.0, 8, 0.55), (270.0, 560.0, 7, 0.5), (400.0, 400.0, 5, 0.45), (510.0, 220.0, 3, 0.4))
+    rows = ((0.0, 700.0, 9, 0.6), (140.0, 680.0, 8, 0.55), (280.0, 640.0, 8, 0.5), (420.0, 560.0, 7, 0.48), (560.0, 460.0, 6, 0.45), (690.0, 340.0, 5, 0.42), (810.0, 180.0, 3, 0.4))
     for layer, up, half_width, count, scale in [(layer, *row) for layer in (0, 1) for row in rows]:
         for index in range(count):
             d = -half_width + 2.0 * half_width * index / (count - 1) + rng.uniform(-30.0, 30.0)
@@ -979,6 +1106,9 @@ def build_cave(materials):
             size = scale * rng.uniform(0.85, 1.1)
             rubble.append(mesh_actor(path, x, y, ground + up - 40.0 - base_height_offset(unreal.load_asset(path), size), folder, (size, size, size), rng.uniform(0, 360), materials["cracked"], "RockPile"))
     wall = actors_of("CrackedWall")[0]
+    # As tall as the tunnel now, so nothing can pass above it.
+    wall.set_actor_location(unreal.Vector(*road.point(CAVE_WALL_S), ground + TUNNEL_HIGH / 2.0), False, False)
+    wall.set_actor_scale3d(unreal.Vector(0.5, 14.0, TUNNEL_HIGH / 100.0))
     wall.set_editor_property("rubble_actors", rubble)
     # Boulders fly out, not cubes. This mesh has simple collision, which a physics body needs.
     wall.set_editor_property("debris_mesh", unreal.load_asset(mesh("SM_RockPack_Rock_04")))
@@ -987,52 +1117,196 @@ def build_cave(materials):
 
     x, y = road.point(CAVE_WALL_S - 300.0)
     point_light(x, y, ground + 350.0, unreal.LinearColor(1.0, 0.55, 0.2, 1.0), 12.0, 1000.0, folder)
-    for s in (14800.0, 15150.0):
+
+
+def rock_pad(s, d, radius, materials, folder="Cavern", top=PAD_TOP):
+    """A rock column out of the water. A hidden cylinder is the smooth floor, and the rock is only what you see."""
+    x, y = road.point(s, d)
+    solid = spawn(unreal.StaticMeshActor, x, y, top - 100.0, "PadFloor", folder)
+    solid.set_actor_scale3d(unreal.Vector(radius / 50.0, radius / 50.0, 2.0))
+    solid.static_mesh_component.set_static_mesh(unreal.load_asset("/Engine/BasicShapes/Cylinder"))
+    solid.static_mesh_component.set_collision_profile_name("BlockAll")
+    hide_component(solid.static_mesh_component)
+    size = radius / 100.0 * 1.04
+    mesh_actor(WORLD_MESHES["island"], x, y, top, folder, (size, size, (top - CAVERN_FLOOR) / 160.0), s, materials["moss"], "RockPad")
+
+
+def tilting_log(s, d, counterweight, materials, folder="Cavern"):
+    """A log on a rooted stump, as in picture 2. It rests with its near end level with the pad before it, and its far end in the air."""
+    drop = LOG_HALF * math.sin(math.radians(LOG_TILT))
+    x, y = road.point(s, d)
+    actor = spawn(unreal.TiltingLog, x, y, PAD_TOP + drop, "TiltingLog", folder, road.yaw(s))
+    actor.set_editor_property("half_length", LOG_HALF)
+    actor.set_editor_property("half_width", 180.0)
+    actor.set_editor_property("max_tilt_degrees", LOG_TILT)
+    actor.set_editor_property("counterweight_kg_cm", counterweight)
+    actor.set_editor_property("tilt_response", 0.008)
+    log_mesh = actor.get_editor_property("log_mesh")
+    log_mesh.set_static_mesh(unreal.load_asset(WORLD_MESHES["log"]))
+    log_mesh.set_material(0, materials["bark"])
+    log_mesh.set_relative_scale3d(unreal.Vector(LOG_HALF * 2.0 / 800.0, 180.0 / 45.0, 1.5))
+    log_mesh.set_relative_location(unreal.Vector(-LOG_HALF, 0.0, -68.0), False, False)
+    mesh_actor(WORLD_MESHES["pivot"], x, y, PAD_TOP + drop - 140.0, folder, (1.0, 1.0, (PAD_TOP + drop - 140.0 - CAVERN_FLOOR) / 500.0), road.yaw(s), materials["bark"], "LogStump")
+    # The hub, as a ring on each side of the log.
+    for side in (-1.0, 1.0):
+        hx, hy = road.point(s, d + side * 195.0)
+        mesh_actor(WORLD_MESHES["ring"], hx, hy, PAD_TOP + drop - 70.0, folder, (0.22, 0.22, 0.22), road.yaw(s) + 90.0, materials["plate"], "LogHub")
+
+
+def build_cavern(materials):
+    """Behind the gate: a dome over dark water, with a parkour route looping around a shaft of sun from the roof."""
+    folder = "Cavern"
+    rng = random.Random(SEED + 9)
+    centre_s, half_s, half_d = CAVERN
+    dome = mesh_actor(build_cavern_dome(), 0.0, 0.0, 0.0, folder, material=materials["moss"], label="CavernDome")
+    dome.static_mesh_component.set_collision_profile_name("BlockAll")
+    mesh_actor(build_vines(), 0.0, 0.0, 0.0, folder, material=materials["vine"], label="Vines")
+
+    # Falling in means a fresh try from the checkpoint. The volume sits just under the surface, so the ball goes in with a splash of water around it.
+    x, y = road.point(centre_s)
+    water = unreal.load_asset("/Game/Stylized_PBR_Nature/Terrain/M_Water_Basic")
+    mesh_actor("/Engine/BasicShapes/Plane", x, y, CAVERN_WATER, folder, (half_s * 2.2 / 100.0, half_d * 2.2 / 100.0, 1.0), road.yaw(centre_s), water, "CavernWater")
+    kill_volume(x, y, CAVERN_WATER - 260.0, half_s * 1.05, half_d * 1.05, 200.0, road.yaw(centre_s))
+
+    # The route.
+    for s, d, radius in PADS:
+        rock_pad(s, d, radius, materials)
+    crumbling_class = unreal.load_class(None, "/Script/Assignment1.CrumblingPlatform")
+    for s, d in CRUMBLING:
+        x, y = road.point(s, d)
+        ledge = spawn(crumbling_class, x, y, PAD_TOP - 15.0, "CrumblingLedge", folder, road.yaw(s))
+        ledge.get_component_by_class(unreal.StaticMeshComponent).set_material(0, materials["rock"])
+    moving_class = unreal.load_class(None, "/Script/Assignment1.MovingPlatform")
+    x, y = road.point(MOVING[0], MOVING[1])
+    platform = spawn(moving_class, x, y, PAD_TOP - 15.0, "MovingPlatform", folder)
+    platform.get_component_by_class(unreal.SplineComponent).set_location_at_spline_point(1, unreal.Vector(*road.point(MOVING[2], MOVING[3]), PAD_TOP - 15.0), unreal.SplineCoordinateSpace.WORLD)
+    platform.get_component_by_class(unreal.StaticMeshComponent).set_material(0, materials["planks"])
+    # A ball rolls freely on a moving floor, so it drifts back unless the player rolls along with it. Slow and wide makes that easy.
+    platform.get_component_by_class(unreal.StaticMeshComponent).set_relative_scale3d(unreal.Vector(5.0, 5.0, 0.3))
+    platform.set_editor_property("speed", 130.0)
+    tilting_log(LOG_ONE[0], LOG_ONE[1], LOG_EASY_COUNTERWEIGHT, materials)
+    tilting_log(LOG_TWO[0], LOG_TWO[1], LOG_HEAVY_COUNTERWEIGHT, materials)
+    # A low bough at the heavy log's far end. Seed can't tip the log, so it meets the bough, and would otherwise fly off the raised end
+    # and land on the next pad. Stone tips the log and rolls under. The hidden wall runs from just above the ball to the roof, right across the dome.
+    bough_s = LOG_TWO[0] + LOG_HALF - 10.0
+    x0, y0 = road.point(bough_s, -1300.0)
+    x1, y1 = road.point(bough_s, -3300.0)
+    invisible_wall(x0, y0, x1, y1, PAD_TOP + 115.0, CAVERN_FLOOR + CAVERN_HIGH + 200.0, folder)
+    bough_x, bough_y = road.point(bough_s, -1250.0)
+    mesh_actor(WORLD_MESHES["log"], bough_x, bough_y, PAD_TOP + 190.0, folder, (1.1, 1.3, 1.3), road.yaw(bough_s) + 90.0, materials["bark"], "LowBough")
+    for start, end in BRIDGES:
+        x0, y0 = road.point(*start)
+        x1, y1 = road.point(*end)
+        bridge = spawn(unreal.StaticMeshActor, (x0 + x1) / 2.0, (y0 + y1) / 2.0, PAD_TOP - 100.0, "RockBridge", folder, math.degrees(math.atan2(y1 - y0, x1 - x0)))
+        bridge.set_actor_scale3d(unreal.Vector(math.hypot(x1 - x0, y1 - y0) / 100.0 + 2.0, 5.0, 2.0))
+        bridge.static_mesh_component.set_static_mesh(unreal.load_asset("/Engine/BasicShapes/Cube"))
+        bridge.static_mesh_component.set_material(0, materials["moss"])
+        bridge.static_mesh_component.set_collision_profile_name("BlockAll")
+
+    # The ridges that keep the route in order.
+    ridge_rock = mesh("SM_RockPack_Cliff_07_B")
+    for (s0, d0), (s1, d1) in RIDGES:
+        x0, y0 = road.point(s0, d0)
+        x1, y1 = road.point(s1, d1)
+        invisible_wall(x0, y0, x1, y1, CAVERN_FLOOR, CAVERN_FLOOR + CAVERN_HIGH + 200.0, folder)
+        count = int(math.hypot(x1 - x0, y1 - y0) / 420.0) + 1
+        for index in range(count + 1):
+            t = index / count
+            scale = rng.uniform(0.8, 1.15)
+            mesh_actor(ridge_rock, lerp(x0, x1, t), lerp(y0, y1, t), CAVERN_FLOOR - 60.0 - base_height_offset(unreal.load_asset(ridge_rock), scale), folder, (scale, scale, scale), rng.uniform(0, 360), label="RidgeRock")
+
+    # Giant roots across the dome, and rock and waterfalls around its foot. Nothing here is solid.
+    for s, turn, scale, up in ((20300.0, 20.0, 2.1, 300.0), (21700.0, -25.0, 2.3, 250.0), (20700.0, 70.0, 1.8, 350.0)):
         x, y = road.point(s)
-        point_light(x, y, ground + 420.0, unreal.LinearColor(0.15, 0.95, 0.85, 1.0), 12.0, 1000.0, folder)
+        mesh_actor(WORLD_MESHES["root_arch"], x, y, CAVERN_FLOOR + up, folder, (scale, scale, scale * 0.9), road.yaw(s) + turn, materials["bark"], "CavernRoot")
+    for step in range(16):
+        phi = 2.0 * math.pi * step / 16.0
+        s = centre_s + half_s * 0.97 * math.cos(phi)
+        d = half_d * 0.97 * math.sin(phi)
+        if abs(d) < 1000.0:
+            continue
+        x, y = road.point(s, d)
+        scale = rng.uniform(1.1, 1.6)
+        mesh_actor(ridge_rock, x, y, CAVERN_FLOOR - 50.0 - base_height_offset(unreal.load_asset(ridge_rock), scale), folder, (scale, scale, scale), rng.uniform(0, 360), label="CavernShore")
+    for s, d, high, yaw in ((20200.0, 2850.0, 1100.0, 0.0), (21750.0, 2750.0, 1300.0, -20.0), (20900.0, -2950.0, 1200.0, 10.0)):
+        x, y = road.point(s, d)
+        fall = mesh_actor("/Engine/BasicShapes/Plane", x, y, CAVERN_WATER + high / 2.0, folder, (high / 100.0, 3.0, 1.0), road.yaw(s) + yaw, materials["waterfall"], "Waterfall", pitch=90.0)
+        fall.static_mesh_component.set_cast_shadow(False)
+
+    # Jungle growth wherever there is rock to hold it.
+    plants = Scatter("Cavern_Plants", 7000, 9000, shadows=False)
+    jungle = ["SM_Fern", "SM_Fern", "SM_Clover", "SM_Fol_Plant_1", "SM_Fol_Plant_5", "SM_Fol_Plant_9", "SM_Fol_Plant_14", "SM_Fol_Grass_Clump_3"]
+    for pad_s, pad_d, radius in PADS:
+        for _ in range(14):
+            angle, distance = rng.uniform(0.0, 2.0 * math.pi), radius * rng.uniform(0.72, 1.0)
+            x, y = road.point(pad_s + math.cos(angle) * distance, pad_d + math.sin(angle) * distance)
+            plants.add(mesh(rng.choice(jungle)), x, y, PAD_TOP, rng.uniform(0.9, 1.5), rng, sink=2.0)
+    for s0, s1 in TUNNELS:
+        for side in (-1.0, 1.0):
+            d0, d1 = (610.0, 790.0) if side > 0 else (-790.0, -610.0)
+            for x, y, s in along_road(s0 + 150.0, s1 - 50.0, d0, d1, 95.0, rng):
+                ground_s, ground_d = road.project(x, y)
+                plants.add(mesh(rng.choice(jungle)), x, y, road_height(ground_s, ground_d, x, y), rng.uniform(0.8, 1.3), rng, sink=2.0)
+    plants.build()
+
+    # Sun through the hole: a real light, shafts you can see, and dust drifting in them.
+    x, y = road.point(centre_s)
+    top = CAVERN_FLOOR + CAVERN_HIGH
+    sun = spawn(unreal.SpotLight, x, y, top + 200.0, "CavernSun", folder, 0.0, -90.0)
+    component = sun.get_component_by_class(unreal.SpotLightComponent)
+    component.set_mobility(unreal.ComponentMobility.MOVABLE)
+    component.set_intensity_units(unreal.LightUnits.CANDELAS)
+    component.set_intensity(9000.0)
+    component.set_light_color(unreal.LinearColor(1.0, 0.82, 0.55, 1.0))
+    component.set_attenuation_radius(4000.0)
+    component.set_inner_cone_angle(14.0)
+    component.set_outer_cone_angle(24.0)
+    component.set_cast_shadows(True)
+    for width, pitch, yaw, high in ((1.0, 0.0, 0.0, 1.0), (0.55, 4.0, 40.0, 0.92), (0.45, -5.0, 200.0, 0.85)):
+        shaft = mesh_actor(WORLD_MESHES["shaft"], x, y, top + 60.0, folder, (width, width, high), yaw, materials["sun_shaft"], "SunShaft", pitch=pitch)
+        shaft.static_mesh_component.set_cast_shadow(False)
+    niagara("/Game/FreeParticle_SoftTofu/Niagara/NS_Sparkling_Noise", x, y, PAD_TOP + 300.0, folder, 8.0)
+    rock_pad(centre_s, 0.0, 300.0, materials, top=PAD_TOP - 120.0)
+
+    # Soft green bounce, as if the light came through leaves, and lanterns to mark the way.
+    for s, d in ((20300.0, 1600.0), (21500.0, 1500.0), (20300.0, -1500.0), (21500.0, -1500.0), (21000.0, 0.0)):
+        x, y = road.point(s, d)
+        point_light(x, y, 1100.0, unreal.LinearColor(0.5, 1.0, 0.4, 1.0), 38.0, 2600.0, folder)
+    for s, d in ((19650.0, 450.0), (19650.0, -450.0), (20100.0, 1180.0), (21580.0, 1180.0), (20100.0, -1180.0), (20100.0, -1830.0), (21700.0, -1830.0), (22330.0, 450.0), (22330.0, -450.0)):
+        x, y = road.point(s, d)
+        post = mesh_actor(WORLD_MESHES["log"], x, y, PAD_TOP - 20.0, folder, (0.3, 0.28, 0.28), rng.uniform(0, 360), materials["bark"], "LanternPost", pitch=90.0)
+        post.static_mesh_component.set_cast_shadow(False)
+        globe = mesh_actor("/Engine/BasicShapes/Sphere", x, y, PAD_TOP + 240.0, folder, (0.3, 0.3, 0.3), material=materials["lantern"], label="Lantern")
+        globe.static_mesh_component.set_render_custom_depth(True)
+        globe.static_mesh_component.set_custom_depth_stencil_value(ls_world_common.FULL_COLOUR_STENCIL)
+        point_light(x, y, PAD_TOP + 240.0, unreal.LinearColor(1.0, 0.6, 0.25, 1.0), 26.0, 750.0, folder)
 
 
 def rootwood_hollow(materials):
-    """Zone 1-2, built to match its concept picture: a dark hollow of roots, with a still pool to one side and teal light along the road."""
+    """Zone 1-2: a closed cave of roots and teal light, a gate, then the great cavern, then another tunnel out to daylight."""
     folder = "Zone 1-2"
     rng = random.Random(SEED + 7)
     build_cave(materials)
+    build_cavern(materials)
 
-    # Great roots arching over the road. They have no collision and clear the highest jump, so they are only scenery.
-    arches = [(13200.0, -12.0, 1.0)]
-    s = 15450.0
-    while s < 23000.0:
-        arches.append((s, rng.uniform(-16.0, 16.0), rng.uniform(0.95, 1.15)))
-        s += rng.uniform(520.0, 780.0)
-    for s, turn, scale in arches:
+    # Great roots arching overhead, made narrower to fit the tunnels. They have no collision and clear the highest jump.
+    arches = []
+    for s0, s1 in ((15450.0, 19050.0), (22600.0, 25700.0)):
+        s = s0
+        while s < s1:
+            arches.append(s)
+            s += rng.uniform(520.0, 780.0)
+    for s in arches:
         x, y = road.point(s)
-        mesh_actor(WORLD_MESHES["root_arch"], x, y, level(s) - 10.0, folder, (scale, scale, scale), road.yaw(s) + turn, materials["bark"], "RootArch")
+        mesh_actor(WORLD_MESHES["root_arch"], x, y, level(s) - 10.0, folder, (1.0, TUNNEL_HALF / 1300.0, 0.95), road.yaw(s) + rng.uniform(-8.0, 8.0), materials["bark"], "RootArch")
 
-    # Giant dead trees looming behind the walls.
-    for s, d, scale, yaw in ((17500.0, -3000.0, 0.8, 120.0), (21000.0, 3100.0, 0.75, 250.0), (13600.0, -2700.0, 0.65, 10.0)):
-        rest_on_ground(WORLD_MESHES["tree"], s, d, 30.0, folder, scale, yaw, materials["bark"], "HollowTree")
-
-    # Rocks along the pool's edge, as in picture 2.
-    rim = Scatter("Pool_Rim", 9000, 12000, material=materials["moss"])
-    for x, y, s in along_road(POOL[0], POOL[1], 720.0, 900.0, 170.0, rng):
-        rim.add(mesh(rng.choice(["SM_S_Rock_02", "SM_R_Rock_01", "SM_R_Rock_03"])), x, y, POOL_BED + 240.0, rng.uniform(0.16, 0.3), rng, tilt=8.0)
-    rim.build()
-
-    # The still pool, and waterfalls feeding it from the far bank.
-    s = (POOL[0] + POOL[1]) / 2.0
-    x, y = road.point(s, 2100.0)
-    water = unreal.load_asset("/Game/Stylized_PBR_Nature/Terrain/M_Water_Basic")
-    mesh_actor("/Engine/BasicShapes/Plane", x, y, POOL_WATER, folder, ((POOL[1] - POOL[0] + 400.0) / 100.0, 36.0, 1.0), road.yaw(s), water, "Pool")
-    for s, d, high in ((16300.0, 3000.0, 900.0), (17900.0, 3050.0, 1100.0)):
-        rest_on_ground(mesh("SM_RockPack_Cliff_07_B"), s, d + 350.0, 100.0, folder, 1.4, road.yaw(s), label="PoolCliff")
-        x, y = road.point(s, d)
-        fall = mesh_actor("/Engine/BasicShapes/Plane", x, y, POOL_WATER + high / 2.0, folder, (high / 100.0, 2.6, 1.0), road.yaw(s), materials["waterfall"], "Waterfall", pitch=90.0)
-        fall.static_mesh_component.set_cast_shadow(False)
-
-    # Picture 2's tilted log on a stump. It does nothing, as the game has no seesaw.
-    rest_on_ground(mesh("SM_R_Rock_03"), 17100.0, 1700.0, 60.0, folder, 0.7, 40.0, materials["moss"], "LogRest")
-    x, y = road.point(17100.0, 1700.0)
-    mesh_actor(WORLD_MESHES["log"], x - 380.0, y + 150.0, POOL_WATER + 60.0, folder, (1.2, 1.2, 1.2), road.yaw(17100.0) + 30.0, materials["bark"], "TiltedLog", pitch=12.0)
+    # Without the sky, the tunnels would be black. Teal light from the mushrooms keeps the road readable.
+    for s0, s1 in TUNNELS:
+        s = s0 + 600.0
+        while s < s1:
+            x, y = road.point(s)
+            point_light(x, y, level(s) + 500.0, unreal.LinearColor(0.2, 0.95, 0.75, 1.0), 5.0, 1100.0, folder)
+            s += 900.0
 
     # Log chutes guide each block onto its plate and stop it just past. A block pushed against a wall could never be pulled back, which would
     # leave the gate shut for good. A chute is just wider than the ball, so the ball can't slip past the block, and its mouth flares to guide the ball in.
@@ -1053,19 +1327,24 @@ def rootwood_hollow(materials):
     chute_log(plate_s - 150.0, -430.0, plate_s + 150.0, -430.0)
     chute_log(18130.0, -150.0, 18130.0, 150.0)
 
-    # A frame of logs around the plank gate.
+    # A frame of logs around the plank gate, and planks above it up to the roof.
     s = to_road(14800.0)
     for side in (-1, 1):
         x, y = road.point(s, side * 730.0)
         mesh_actor(WORLD_MESHES["log"], x, y, level(s) - 40.0, folder, (1.5, 1.5, 1.2), rng.uniform(0, 360), materials["bark"], "GatePost", pitch=90.0)
     x, y = road.point(s, -900.0)
     mesh_actor(WORLD_MESHES["log"], x, y, level(s) + 660.0, folder, (2.3, 1.4, 1.4), road.yaw(s) + 90.0, materials["bark"], "GateLintel")
+    x, y = road.point(s - 70.0)
+    mesh_actor("/Engine/BasicShapes/Cube", x, y, level(s) + 830.0, folder, (0.2, 16.4, 3.6), road.yaw(s), materials["planks"], "GateTop")
 
-    # Dark inside, with a slight teal cast. Three boxes, because a box can't bend with the road.
-    for s0, s1 in ((14300.0, 19700.0), (19500.0, 21000.0), (20800.0, 23200.0)):
+    # A grade for each stretch, as a box can't bend with the road. Inside, auto exposure already brightens the picture, so these only add the mood.
+    tint = unreal.LinearColor(0.72, 0.92, 0.9, 1.0)
+    for s0, s1, tone, exposure in ((14300.0, 19550.0, tint, -0.4), (22250.0, 23800.0, tint, -0.4), (23600.0, 25900.0, tint, -0.4)):
         middle = (s0 + s1) / 2.0
         x, y = road.point(middle)
-        zone_grade(x, y, level(middle) + 800.0, (s1 - s0) / 2.0 + 200.0, 2000.0, 2000.0, road.yaw(middle), -1.5, unreal.LinearColor(0.72, 0.9, 0.92, 1.0), "HollowGrade")
+        zone_grade(x, y, level(middle) + 800.0, (s1 - s0) / 2.0 + 200.0, 1400.0, 1600.0, road.yaw(middle), exposure, tone, "TunnelGrade")
+    x, y = road.point(CAVERN[0])
+    zone_grade(x, y, 1100.0, CAVERN[1], CAVERN[2], 1300.0, road.yaw(CAVERN[0]), -0.2, unreal.LinearColor(0.92, 1.0, 0.8, 1.0), "CavernGrade")
 
 
 def rock_set_pieces():
@@ -1078,20 +1357,19 @@ def rock_set_pieces():
         x, y = road.point(s, d)
         return mesh_actor(path, x, y, terrain_height(x, y) + height_offset - base_height_offset(loaded, scale), folder, (scale, scale, scale), yaw)
 
-    # Rootwood Hollow: high walls either side of the whole zone, so it feels like a canyon among old roots.
+    # The road to the cave: high walls on either side.
     rng = random.Random(SEED + 2)
     s = 13000.0
-    while s < 22800.0:
+    while s < 14200.0:
         for side in (-1, 1):
-            in_cave = CAVE[0] - 300.0 < s < CAVE[1] + 200.0
-            over_pool = side > 0 and POOL[0] - 200.0 < s < POOL[1] + 200.0
-            if not in_cave and not over_pool:
-                rock(rng.choice(["SM_RockPack_Cliff_07_B", "SM_RockPack_Cliff_07_D", "SM_S_Rock_10", "SM_S_Rock_04"]),
-                     s + rng.uniform(-150, 150), side * rng.uniform(1350, 1800), -40.0, rng.uniform(0.8, 1.3), rng.uniform(0, 360))
-        s += 850.0
+            rock(rng.choice(["SM_RockPack_Cliff_07_B", "SM_RockPack_Cliff_07_D", "SM_S_Rock_10", "SM_S_Rock_04"]),
+                 s + rng.uniform(-150, 150), side * rng.uniform(1350, 1800), -40.0, rng.uniform(0.8, 1.3), rng.uniform(0, 360))
+        s += 600.0
 
     # Rock under each lip of a gap, so the chasm has a real edge and not a sheer cut in the ground.
     for gap0, gap1 in GAPS:
+        if (gap0, gap1) == CAVERN_GAP:
+            continue
         for lip, direction in ((gap0, 1.0), (gap1, -1.0)):
             cliff = mesh("SM_RockPack_Cliff_07_D")
             bounds = unreal.load_asset(cliff).get_bounds()
@@ -1139,7 +1417,8 @@ def build_boundaries():
             following = s + 400.0
             # The right-hand wall has openings where a side area leads to a hidden petal.
             middle = (s + following) / 2.0
-            if side < 0 or not any(abs(middle - s0) < half + 200.0 for s0, half, _, _ in POCKETS):
+            over_cavern = CAVERN_GAP[0] < middle < CAVERN_GAP[1]
+            if not over_cavern and (side < 0 or not any(abs(middle - s0) < half + 200.0 for s0, half, _, _ in POCKETS)):
                 invisible_wall(*road.point(s, side * (EDGE + 50.0)), *road.point(following, side * (EDGE + 50.0)), bottom, top)
             s = following
     invisible_wall(*road.point(-50.0, -EDGE - 50.0), *road.point(-50.0, EDGE + 50.0), bottom, top)
@@ -1168,7 +1447,7 @@ def build_boundaries():
 
     # Each gap gets its own kill volume, closer than the level's big one, so a fall resets quickly.
     for gap0, gap1 in GAPS:
-        if (gap0, gap1) != ISLAND_CHAIN:
+        if (gap0, gap1) not in (ISLAND_CHAIN, CAVERN_GAP):
             s = (gap0 + gap1) / 2.0
             x, y = road.point(s)
             kill_volume(x, y, level(s) - 750.0, (gap1 - gap0) / 2.0 + 100.0, 2000.0, yaw=road.yaw(s))
@@ -1205,6 +1484,8 @@ def build_guides(materials):
         if name in ("BP_CheckpointShrine_C", "BP_FormFlower_Stone_C", "CrackedWall", "Gate", "LevelGoal", "BP_GoldenPetal_C"):
             point_light(location.x, location.y, location.z + 300.0, warm, 90.0 if name == "LevelGoal" else 30.0, 1400.0)
     for gap0, gap1 in GAPS:
+        if (gap0, gap1) == CAVERN_GAP:
+            continue
         x, y = road.point(gap1 + 150.0)
         point_light(x, y, level(gap1) + 300.0, warm, 45.0, 1500.0)
 
@@ -1231,10 +1512,14 @@ def build_preview_cameras():
                camera("Preview_1_1_E", 10000.0, 0.0, 200.0, 12120.0, 0.0, 500.0),   # Up the stairs to the gate.
                camera("Preview_1_1_F", 2800.0, -1200.0, 300.0, 4000.0, -3400.0, 500.0),   # Waterfalls.
                camera("Preview_1_2_D", 13500.0, 0.0, 240.0, 14500.0, 0.0, 300.0),   # The blocked cave.
-               camera("Preview_1_2_E", 14720.0, -150.0, 170.0, 15300.0, 80.0, 180.0),   # Inside the tunnel.
+               camera("Preview_1_2_E", 14900.0, -150.0, 170.0, 16000.0, 80.0, 180.0),   # Inside the tunnel.
                camera("Preview_1_2_F", 15250.0, 300.0, 330.0, 15720.0, -100.0, 0.0),   # The first plate.
-               camera("Preview_1_2_H", 16800.0, -300.0, 230.0, 17900.0, 1900.0, -100.0),   # Plate and pool, like picture 2.
                camera("Preview_1_2_G", 18300.0, 300.0, 210.0, 19200.0, 0.0, 250.0),   # The plank gate.
+               camera("Preview_1_2_H", 19450.0, 0.0, 320.0, 21000.0, 0.0, 200.0),   # The cavern from its entrance.
+               camera("Preview_1_2_I", 20000.0, 650.0, 300.0, 20950.0, 1000.0, 60.0),   # The first tilting log.
+               camera("Preview_1_2_J", 21700.0, 300.0, 420.0, 20700.0, -700.0, 250.0),   # Toward the sun shaft.
+               camera("Preview_1_2_K", 20050.0, -1350.0, 240.0, 21000.0, -1650.0, 120.0),   # The second tilting log.
+               camera("Preview_1_2_L", 23300.0, -200.0, 200.0, 24500.0, 0.0, 150.0),   # The thorn tunnel.
                camera("Preview_Route", 20000.0, -18000.0, 22000.0, 20000.0, 0.0, 0.0)]
     for name, s0, s1 in ZONES[1:]:
         middle = (s0 + s1) / 2.0
@@ -1255,7 +1540,7 @@ def check_layout():
             # 14 degrees is the steepest ramp the greybox already has.
             assert slope < 0.26, "too steep at s = {}: {:.2f}".format(s, slope)
     for s0, s1, _ in BENDS:
-        for gap0, gap1 in [(3300.0, 4100.0), (14000.0, 16000.0), (16600.0, 19500.0), (MARSH[0], MARSH[1])]:
+        for gap0, gap1 in [(3300.0, 4100.0), (14000.0, 16000.0), (16600.0, 22500.0), (MARSH[0], MARSH[1])]:
             assert s1 <= gap0 or s0 >= gap1, "a bend overlaps a section that must stay straight: {}".format((s0, s1))
     for i in range(0, int(ROAD_LENGTH), 300):
         for j in range(i + 4000, int(ROAD_LENGTH), 300):

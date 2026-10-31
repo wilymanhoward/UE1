@@ -429,6 +429,8 @@ To tune a form, open `BP_SeedBall` and expand **Tuning > Forms > Form Data**. **
 
 The road now winds and has hills, and the level has extra challenges. The first rerun replaces the old straight version of `L_Level1_World`. To change the route, edit the tables at the top of the script. The build stops with a clear message if a change breaks a layout rule.
 
+To change how a tilting log behaves, select it under **World > Cavern** and change **Counterweight Kg Cm** or **Tilt Response** under **Tuning**. A rerun resets these, so make lasting changes in `build_world_level1.py`.
+
 To jump to a preview, find `Preview_1_1_A` and the others under **World > Preview Cameras** in the Outliner, right-click one and choose **Pilot**. Click **Eject** at the top of the viewport when you are done.
 
 To tune the withered look, select `RestorationDriver` in the Outliner. Changes to generated actors or the sky are replaced on the next rerun, so make those in the script. Changes to anything outside the `World` folder stay, apart from the materials and meshes the script assigns.
