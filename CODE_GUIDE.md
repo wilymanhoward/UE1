@@ -257,7 +257,7 @@ Each rubric area, with what to show and where it is.
 43. **Why the marsh's mist is sheets and not fog volumes.** Local Fog Volumes only start 20 m from the camera, which leaves the air around the ball clear. Three thin translucent sheets of drifting noise sit just above the water instead. The mesh's U sets how thick the mist is at each point, and Depth Fade softens the line where a sheet meets a root.
 44. **How one material draws a blob's body, goo and eyes.** `build_blob` stores the part in each vertex's U (0 body, 0.5 goo, 1 eye), and `M_LS_Blob` turns that into dark skin, a purple glow or a white glow. It needs only one material slot and no textures. The eyes are fixed to look back down the road, because `AWitherBlob` doesn't turn as it moves.
 45. **Why the water is a generated mesh.** The road bends under the swamp, and overlapping planes would double up their transparency. `build_swamp_water` makes one sheet from a grid, keeping only the squares near the swamp's low ground, so it can't spill into the cavern or the thorn pits.
-37. **Why the world starts at saturation 0.** `RestorationDriver` starts Level 1 fully black and white, so `WitheredSaturation` must be 0. A higher value keeps too much of the sunset's colour and the effect stops reading. Things with stencil 1 keep their colour, which now includes the start of the road, as in the concept art.
+37. **Why the world starts at saturation 0.** `RestorationDriver` starts Level 1 fully black and white, so `WitheredSaturation` must be 0. A higher value keeps too much of the sunset's colour and the effect stops reading. Only things the player must find have stencil 1 and keep their colour.
 
 ## Suggested explanation order
 1. `SeedFormTypes.h`: what a form is.

@@ -56,6 +56,9 @@ def open_world_map(source_map, world_map):
     world = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_editor_world()
     if not unreal.EditorLoadingAndSavingUtils.save_map(world, path):
         raise RuntimeError("Last Seed world: could not save " + path)
+    # Save As leaves the source map open, and the build must never touch that. Saving the level later would overwrite the backup.
+    if not level_subsystem.load_level(path):
+        raise RuntimeError("Last Seed world: could not open " + path)
     return path
 
 

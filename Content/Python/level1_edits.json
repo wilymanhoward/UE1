@@ -1,0 +1,1580 @@
+{
+"remove": [
+{
+"label": "Dressing",
+"cls": "StaticMeshActor",
+"at": [
+2191.0,
+2209.9,
+-96.0
+]
+},
+{
+"label": "Dressing",
+"cls": "StaticMeshActor",
+"at": [
+131.2,
+-1717.3,
+51.9
+]
+},
+{
+"label": "Dressing",
+"cls": "StaticMeshActor",
+"at": [
+4341.2,
+-863.5,
+107.9
+]
+},
+{
+"label": "Dressing",
+"cls": "StaticMeshActor",
+"at": [
+163.0,
+-2566.9,
+51.5
+]
+},
+{
+"label": "Dressing",
+"cls": "StaticMeshActor",
+"at": [
+360.7,
+-1992.4,
+52.5
+]
+},
+{
+"label": "Dressing",
+"cls": "StaticMeshActor",
+"at": [
+2805.8,
+-1402.9,
+74.1
+]
+},
+{
+"label": "Dressing",
+"cls": "StaticMeshActor",
+"at": [
+745.5,
+2454.0,
+124.2
+]
+},
+{
+"label": "Dressing",
+"cls": "StaticMeshActor",
+"at": [
+1656.7,
+2654.0,
+39.8
+]
+},
+{
+"label": "Dressing",
+"cls": "StaticMeshActor",
+"at": [
+518.7,
+1828.0,
+-85.7
+]
+},
+{
+"label": "Dressing",
+"cls": "StaticMeshActor",
+"at": [
+946.4,
+1585.3,
+79.0
+]
+},
+{
+"label": "Dressing",
+"cls": "StaticMeshActor",
+"at": [
+1081.3,
+2255.0,
+23.4
+]
+},
+{
+"label": "Dressing",
+"cls": "StaticMeshActor",
+"at": [
+813.4,
+1639.2,
+218.6
+]
+},
+{
+"label": "Dressing",
+"cls": "StaticMeshActor",
+"at": [
+2065.0,
+-1067.6,
+26.6
+]
+},
+{
+"label": "Dressing",
+"cls": "StaticMeshActor",
+"at": [
+282.0,
+1748.4,
+157.0
+]
+},
+{
+"label": "Dressing",
+"cls": "StaticMeshActor",
+"at": [
+6511.7,
+3890.5,
+2.7
+]
+},
+{
+"label": "Dressing",
+"cls": "StaticMeshActor",
+"at": [
+4912.4,
+-521.1,
+-113.2
+]
+},
+{
+"label": "Dressing",
+"cls": "StaticMeshActor",
+"at": [
+4525.6,
+-30.9,
+81.3
+]
+},
+{
+"label": "Dressing",
+"cls": "StaticMeshActor",
+"at": [
+4484.3,
+-88.7,
+13.3
+]
+},
+{
+"label": "Dressing",
+"cls": "StaticMeshActor",
+"at": [
+4883.5,
+-327.0,
+-28.7
+]
+},
+{
+"label": "Dressing",
+"cls": "StaticMeshActor",
+"at": [
+4619.0,
+392.6,
+47.0
+]
+},
+{
+"label": "Dressing",
+"cls": "StaticMeshActor",
+"at": [
+4456.0,
+-1395.0,
+-7.9
+]
+},
+{
+"label": "Dressing",
+"cls": "StaticMeshActor",
+"at": [
+6162.5,
+2932.7,
+60.6
+]
+},
+{
+"label": "Dressing",
+"cls": "StaticMeshActor",
+"at": [
+3041.3,
+3130.7,
+-117.3
+]
+},
+{
+"label": "Dressing",
+"cls": "StaticMeshActor",
+"at": [
+4714.8,
+99.6,
+45.0
+]
+},
+{
+"label": "Dressing",
+"cls": "StaticMeshActor",
+"at": [
+12480.2,
+-520.4,
+452.2
+]
+},
+{
+"label": "Dressing",
+"cls": "StaticMeshActor",
+"at": [
+12711.6,
+-1400.5,
+284.7
+]
+},
+{
+"label": "Dressing",
+"cls": "StaticMeshActor",
+"at": [
+10574.1,
+1653.7,
+278.8
+]
+},
+{
+"label": "Dressing",
+"cls": "StaticMeshActor",
+"at": [
+11064.0,
+3411.6,
+411.0
+]
+},
+{
+"label": "Dressing",
+"cls": "StaticMeshActor",
+"at": [
+12541.4,
+-433.9,
+400.1
+]
+},
+{
+"label": "Dressing",
+"cls": "StaticMeshActor",
+"at": [
+12876.3,
+-986.0,
+401.7
+]
+},
+{
+"label": "Dressing",
+"cls": "StaticMeshActor",
+"at": [
+26507.4,
+4409.2,
+351.6
+]
+},
+{
+"label": "Dressing",
+"cls": "StaticMeshActor",
+"at": [
+23315.6,
+6787.9,
+422.7
+]
+},
+{
+"label": "Dressing",
+"cls": "StaticMeshActor",
+"at": [
+27467.8,
+4229.6,
+365.3
+]
+},
+{
+"label": "Dressing",
+"cls": "StaticMeshActor",
+"at": [
+26084.1,
+3927.8,
+312.5
+]
+},
+{
+"label": "Dressing",
+"cls": "StaticMeshActor",
+"at": [
+26170.8,
+3247.0,
+459.1
+]
+},
+{
+"label": "Dressing",
+"cls": "StaticMeshActor",
+"at": [
+24099.5,
+5970.7,
+286.7
+]
+},
+{
+"label": "Dressing",
+"cls": "StaticMeshActor",
+"at": [
+30755.7,
+9909.8,
+347.8
+]
+},
+{
+"label": "Dressing",
+"cls": "StaticMeshActor",
+"at": [
+29429.0,
+8987.2,
+290.3
+]
+},
+{
+"label": "Dressing",
+"cls": "StaticMeshActor",
+"at": [
+30554.5,
+10198.3,
+338.0
+]
+},
+{
+"label": "Dressing",
+"cls": "StaticMeshActor",
+"at": [
+25752.2,
+10879.2,
+361.3
+]
+},
+{
+"label": "Dressing",
+"cls": "StaticMeshActor",
+"at": [
+27594.2,
+12200.3,
+411.9
+]
+},
+{
+"label": "Dressing",
+"cls": "StaticMeshActor",
+"at": [
+25741.5,
+11163.5,
+349.6
+]
+},
+{
+"label": "Dressing",
+"cls": "StaticMeshActor",
+"at": [
+39282.5,
+13060.4,
+254.7
+]
+},
+{
+"label": "Dressing",
+"cls": "StaticMeshActor",
+"at": [
+37892.4,
+13973.9,
+428.7
+]
+},
+{
+"label": "Dressing",
+"cls": "StaticMeshActor",
+"at": [
+38391.9,
+9829.5,
+415.6
+]
+},
+{
+"label": "Dressing",
+"cls": "StaticMeshActor",
+"at": [
+37005.5,
+14277.8,
+416.0
+]
+},
+{
+"label": "Dressing",
+"cls": "StaticMeshActor",
+"at": [
+38659.3,
+10875.9,
+354.3
+]
+},
+{
+"label": "Dressing",
+"cls": "StaticMeshActor",
+"at": [
+39277.6,
+13883.5,
+436.8
+]
+},
+{
+"label": "FencePost",
+"cls": "StaticMeshActor",
+"at": [
+18894.5,
+1846.8,
+170.0
+]
+},
+{
+"label": "FencePost",
+"cls": "StaticMeshActor",
+"at": [
+19358.1,
+1971.1,
+170.0
+]
+},
+{
+"label": "FencePost",
+"cls": "StaticMeshActor",
+"at": [
+19821.8,
+2095.3,
+170.0
+]
+},
+{
+"label": "FencePost",
+"cls": "StaticMeshActor",
+"at": [
+20285.4,
+2219.5,
+170.0
+]
+},
+{
+"label": "FencePost",
+"cls": "StaticMeshActor",
+"at": [
+20749.1,
+2343.8,
+170.0
+]
+},
+{
+"label": "FencePost",
+"cls": "StaticMeshActor",
+"at": [
+20980.9,
+2405.9,
+170.0
+]
+},
+{
+"label": "FencePost",
+"cls": "StaticMeshActor",
+"at": [
+20980.9,
+2405.9,
+170.0
+]
+},
+{
+"label": "FencePost",
+"cls": "StaticMeshActor",
+"at": [
+21219.4,
+2211.0,
+170.0
+]
+},
+{
+"label": "FencePost",
+"cls": "StaticMeshActor",
+"at": [
+18270.4,
+2321.5,
+170.0
+]
+},
+{
+"label": "FencePost",
+"cls": "StaticMeshActor",
+"at": [
+18734.0,
+2445.7,
+170.0
+]
+},
+{
+"label": "FencePost",
+"cls": "StaticMeshActor",
+"at": [
+19197.7,
+2569.9,
+170.0
+]
+},
+{
+"label": "FencePost",
+"cls": "StaticMeshActor",
+"at": [
+19661.3,
+2694.2,
+170.0
+]
+},
+{
+"label": "FencePost",
+"cls": "StaticMeshActor",
+"at": [
+20124.9,
+2818.4,
+170.0
+]
+},
+{
+"label": "FencePost",
+"cls": "StaticMeshActor",
+"at": [
+20588.6,
+2942.6,
+170.0
+]
+},
+{
+"label": "FencePost",
+"cls": "StaticMeshActor",
+"at": [
+20820.4,
+3004.8,
+170.0
+]
+},
+{
+"label": "FencePost",
+"cls": "StaticMeshActor",
+"at": [
+18031.8,
+2516.4,
+170.0
+]
+},
+{
+"label": "FencePost",
+"cls": "StaticMeshActor",
+"at": [
+18270.4,
+2321.5,
+170.0
+]
+},
+{
+"label": "FencePost",
+"cls": "StaticMeshActor",
+"at": [
+20820.4,
+3004.8,
+170.0
+]
+},
+{
+"label": "FencePost",
+"cls": "StaticMeshActor",
+"at": [
+20929.6,
+3292.8,
+170.0
+]
+},
+{
+"label": "FenceRail",
+"cls": "StaticMeshActor",
+"at": [
+18430.8,
+1722.6,
+520.0
+]
+},
+{
+"label": "FenceRail",
+"cls": "StaticMeshActor",
+"at": [
+18430.8,
+1722.6,
+665.0
+]
+},
+{
+"label": "FenceRail",
+"cls": "StaticMeshActor",
+"at": [
+20980.9,
+2405.9,
+520.0
+]
+},
+{
+"label": "FenceRail",
+"cls": "StaticMeshActor",
+"at": [
+20980.9,
+2405.9,
+665.0
+]
+},
+{
+"label": "FenceRail",
+"cls": "StaticMeshActor",
+"at": [
+18270.4,
+2321.5,
+520.0
+]
+},
+{
+"label": "FenceRail",
+"cls": "StaticMeshActor",
+"at": [
+18270.4,
+2321.5,
+665.0
+]
+},
+{
+"label": "FenceRail",
+"cls": "StaticMeshActor",
+"at": [
+18031.8,
+2516.4,
+520.0
+]
+},
+{
+"label": "FenceRail",
+"cls": "StaticMeshActor",
+"at": [
+18031.8,
+2516.4,
+665.0
+]
+},
+{
+"label": "FenceRail",
+"cls": "StaticMeshActor",
+"at": [
+20820.4,
+3004.8,
+520.0
+]
+},
+{
+"label": "FenceRail",
+"cls": "StaticMeshActor",
+"at": [
+20820.4,
+3004.8,
+665.0
+]
+},
+{
+"label": "GateRing",
+"cls": "StaticMeshActor",
+"at": [
+11093.6,
+694.3,
+1300.0
+]
+},
+{
+"label": "GoalRing",
+"cls": "StaticMeshActor",
+"at": [
+39529.4,
+11564.2,
+1100.0
+]
+},
+{
+"label": "GoldenPetal",
+"cls": "BP_GoldenPetal_C",
+"at": [
+5283.2,
+3678.2,
+152.4
+]
+},
+{
+"label": "GuideLight",
+"cls": "PointLight",
+"at": [
+34025.4,
+12854.1,
+780.0
+]
+},
+{
+"label": "Guide_Mushrooms_SM_Caesars_Mushroom_01",
+"cls": "Actor",
+"at": [
+0.0,
+0.0,
+0.0
+]
+},
+{
+"label": "Lantern",
+"cls": "StaticMeshActor",
+"at": [
+18450.1,
+1727.8,
+725.0
+]
+},
+{
+"label": "Lantern",
+"cls": "StaticMeshActor",
+"at": [
+18289.7,
+2326.6,
+725.0
+]
+},
+{
+"label": "Lantern",
+"cls": "StaticMeshActor",
+"at": [
+18913.8,
+1852.0,
+725.0
+]
+},
+{
+"label": "Lantern",
+"cls": "StaticMeshActor",
+"at": [
+18753.3,
+2450.9,
+725.0
+]
+},
+{
+"label": "Lantern",
+"cls": "StaticMeshActor",
+"at": [
+19377.4,
+1976.2,
+725.0
+]
+},
+{
+"label": "Lantern",
+"cls": "StaticMeshActor",
+"at": [
+19217.0,
+2575.1,
+725.0
+]
+},
+{
+"label": "Lantern",
+"cls": "StaticMeshActor",
+"at": [
+19841.1,
+2100.5,
+725.0
+]
+},
+{
+"label": "Lantern",
+"cls": "StaticMeshActor",
+"at": [
+19680.6,
+2699.3,
+725.0
+]
+},
+{
+"label": "Lantern",
+"cls": "StaticMeshActor",
+"at": [
+20304.7,
+2224.7,
+725.0
+]
+},
+{
+"label": "Lantern",
+"cls": "StaticMeshActor",
+"at": [
+20144.3,
+2823.6,
+725.0
+]
+},
+{
+"label": "Lantern",
+"cls": "StaticMeshActor",
+"at": [
+20768.4,
+2348.9,
+725.0
+]
+},
+{
+"label": "Lantern",
+"cls": "StaticMeshActor",
+"at": [
+20607.9,
+2947.8,
+725.0
+]
+},
+{
+"label": "Lantern",
+"cls": "StaticMeshActor",
+"at": [
+20980.9,
+2405.9,
+725.0
+]
+},
+{
+"label": "Lantern",
+"cls": "StaticMeshActor",
+"at": [
+20820.4,
+3004.8,
+725.0
+]
+},
+{
+"label": "LogHub",
+"cls": "StaticMeshActor",
+"at": [
+18957.5,
+1920.7,
+466.8
+]
+},
+{
+"label": "LogHub",
+"cls": "StaticMeshActor",
+"at": [
+20293.7,
+2806.7,
+466.8
+]
+},
+{
+"label": "NS_Sparkling_Noise",
+"cls": "NiagaraActor",
+"at": [
+19625.6,
+2363.7,
+750.0
+]
+},
+{
+"label": "RockPad",
+"cls": "StaticMeshActor",
+"at": [
+19625.6,
+2363.7,
+445.0
+]
+},
+{
+"label": "RouteFloor",
+"cls": "StaticMeshActor",
+"at": [
+18384.4,
+2031.1,
+350.0
+]
+},
+{
+"label": "RouteFloor",
+"cls": "StaticMeshActor",
+"at": [
+19625.6,
+2363.7,
+350.0
+]
+},
+{
+"label": "RouteFloor",
+"cls": "StaticMeshActor",
+"at": [
+18891.5,
+2167.0,
+336.0
+]
+},
+{
+"label": "RouteFloor",
+"cls": "StaticMeshActor",
+"at": [
+20359.7,
+2560.4,
+336.0
+]
+},
+{
+"label": "SecretLedge",
+"cls": "StaticMeshActor",
+"at": [
+5283.2,
+3678.2,
+22.4
+]
+},
+{
+"label": "Vines",
+"cls": "StaticMeshActor",
+"at": [
+0.0,
+0.0,
+0.0
+]
+}
+],
+"change": [
+{
+"label": "GateStone",
+"cls": "StaticMeshActor",
+"from": [
+11715.9,
+72.0,
+322.1
+],
+"loc": [
+12011.3,
+206.5,
+322.1
+],
+"rot": [
+0.0,
+0.0,
+-157.7
+],
+"scale": [
+5.2,
+5.2,
+5.2
+]
+},
+{
+"label": "GateStone",
+"cls": "StaticMeshActor",
+"from": [
+10471.3,
+1316.5,
+322.1
+],
+"loc": [
+11001.9,
+1648.3,
+322.1
+],
+"rot": [
+0.0,
+0.0,
+-141.3
+],
+"scale": [
+5.2,
+5.2,
+5.2
+]
+},
+{
+"label": "HeartTree",
+"cls": "StaticMeshActor",
+"from": [
+4315.8,
+-1591.1,
+796.2
+],
+"loc": [
+4315.8,
+-1591.1,
+526.2
+],
+"rot": [
+15.6,
+-12.7,
+38.3
+],
+"scale": [
+1.0,
+1.0,
+1.0
+]
+},
+{
+"label": "LifeNote",
+"cls": "BP_LifeNote_C",
+"from": [
+19625.6,
+2363.7,
+530.0
+],
+"loc": [
+19625.6,
+2363.7,
+730.0
+],
+"rot": [
+0.0,
+0.0,
+15.0
+],
+"scale": [
+1.0,
+1.0,
+1.0
+]
+},
+{
+"label": "LifeNote",
+"cls": "BP_LifeNote_C",
+"from": [
+34929.4,
+11025.8,
+680.0
+],
+"loc": [
+34929.4,
+11025.8,
+890.0
+],
+"rot": [
+0.0,
+0.0,
+15.0
+],
+"scale": [
+1.0,
+1.0,
+1.0
+]
+},
+{
+"label": "RootArch",
+"cls": "StaticMeshActor",
+"from": [
+14232.9,
+1220.8,
+440.0
+],
+"loc": [
+14232.9,
+1220.8,
+440.0
+],
+"rot": [
+0.0,
+0.0,
+-7.2
+],
+"scale": [
+1.25,
+0.788,
+1.188
+]
+},
+{
+"label": "RootArch",
+"cls": "StaticMeshActor",
+"from": [
+14856.9,
+1167.9,
+440.0
+],
+"loc": [
+14856.9,
+1167.9,
+440.0
+],
+"rot": [
+0.0,
+0.0,
+-5.1
+],
+"scale": [
+1.25,
+0.788,
+1.188
+]
+},
+{
+"label": "RootArch",
+"cls": "StaticMeshActor",
+"from": [
+15508.5,
+1260.5,
+440.0
+],
+"loc": [
+15508.5,
+1260.5,
+440.0
+],
+"rot": [
+0.0,
+0.0,
+10.7
+],
+"scale": [
+1.25,
+0.788,
+1.188
+]
+},
+{
+"label": "RootArch",
+"cls": "StaticMeshActor",
+"from": [
+16026.9,
+1399.4,
+440.0
+],
+"loc": [
+16026.9,
+1399.4,
+440.0
+],
+"rot": [
+0.0,
+0.0,
+9.9
+],
+"scale": [
+1.25,
+0.788,
+1.188
+]
+},
+{
+"label": "RootArch",
+"cls": "StaticMeshActor",
+"from": [
+16703.5,
+1580.7,
+440.0
+],
+"loc": [
+16703.5,
+1580.7,
+440.0
+],
+"rot": [
+0.0,
+0.0,
+14.1
+],
+"scale": [
+1.25,
+0.788,
+1.188
+]
+},
+{
+"label": "RootArch",
+"cls": "StaticMeshActor",
+"from": [
+17278.0,
+1734.6,
+440.0
+],
+"loc": [
+17278.0,
+1734.6,
+440.0
+],
+"rot": [
+0.0,
+0.0,
+21.3
+],
+"scale": [
+1.25,
+0.788,
+1.188
+]
+},
+{
+"label": "RootArch",
+"cls": "StaticMeshActor",
+"from": [
+21170.4,
+2780.4,
+440.0
+],
+"loc": [
+21170.4,
+2780.4,
+440.0
+],
+"rot": [
+0.0,
+0.0,
+18.6
+],
+"scale": [
+1.25,
+0.788,
+1.188
+]
+},
+{
+"label": "RootArch",
+"cls": "StaticMeshActor",
+"from": [
+21690.7,
+3046.8,
+405.3
+],
+"loc": [
+21690.7,
+3046.8,
+405.3
+],
+"rot": [
+0.0,
+0.0,
+37.7
+],
+"scale": [
+1.25,
+0.788,
+1.188
+]
+},
+{
+"label": "RootArch",
+"cls": "StaticMeshActor",
+"from": [
+22170.6,
+3554.7,
+332.3
+],
+"loc": [
+22170.6,
+3554.7,
+332.3
+],
+"rot": [
+0.0,
+0.0,
+60.1
+],
+"scale": [
+1.25,
+0.788,
+1.188
+]
+},
+{
+"label": "RootArch",
+"cls": "StaticMeshActor",
+"from": [
+22616.2,
+3998.4,
+330.0
+],
+"loc": [
+22616.2,
+3998.4,
+330.0
+],
+"rot": [
+0.0,
+0.0,
+37.0
+],
+"scale": [
+1.25,
+0.788,
+1.188
+]
+},
+{
+"label": "RootArch",
+"cls": "StaticMeshActor",
+"from": [
+23280.7,
+4345.6,
+330.0
+],
+"loc": [
+23280.7,
+4345.6,
+330.0
+],
+"rot": [
+0.0,
+0.0,
+23.0
+],
+"scale": [
+1.25,
+0.788,
+1.188
+]
+},
+{
+"label": "SM_S_Rock_10",
+"cls": "StaticMeshActor",
+"from": [
+11062.5,
+2498.9,
+1678.1
+],
+"loc": [
+11742.5,
+2418.9,
+498.1
+],
+"rot": [
+0.0,
+0.0,
+-26.7
+],
+"scale": [
+1.106,
+1.106,
+1.106
+]
+},
+{
+"label": "SM_S_Rock_10",
+"cls": "StaticMeshActor",
+"from": [
+12402.3,
+-128.1,
+1854.8
+],
+"loc": [
+12402.3,
+2271.9,
+764.8
+],
+"rot": [
+12.8,
+59.7,
+19.0
+],
+"scale": [
+1.011,
+1.011,
+1.011
+]
+},
+{
+"label": "SunShaft",
+"cls": "StaticMeshActor",
+"from": [
+19625.6,
+2363.7,
+2240.0
+],
+"loc": [
+19625.6,
+2363.7,
+2530.0
+],
+"rot": [
+0.0,
+-5.0,
+-160.0
+],
+"scale": [
+0.45,
+0.45,
+0.85
+]
+},
+{
+"label": "SwampMist",
+"cls": "StaticMeshActor",
+"from": [
+0.0,
+0.0,
+110.0
+],
+"loc": [
+0.0,
+0.0,
+20.0
+],
+"rot": [
+0.0,
+0.0,
+0.0
+],
+"scale": [
+1.0,
+1.0,
+1.0
+]
+},
+{
+"label": "Tutorial",
+"cls": "TutorialTrigger",
+"from": [
+15130.2,
+1177.9,
+650.0
+],
+"loc": [
+14282.8,
+1216.4,
+650.0
+],
+"rot": [
+0.0,
+0.0,
+-5.0
+],
+"scale": [
+1.5,
+3.0,
+1.5
+]
+}
+],
+"add": [
+{
+"label": "SM_RockPack_RockGroups_01_A",
+"mesh": "SM_RockPack_RockGroups_01_A",
+"loc": [
+18810.0,
+2330.0,
+170.0
+],
+"rot": [
+0.0,
+0.0,
+0.0
+],
+"scale": [
+1.0,
+1.0,
+1.0
+]
+},
+{
+"label": "SM_RockPack_RockGroups_01_A2",
+"mesh": "SM_RockPack_RockGroups_01_A",
+"loc": [
+18820.0,
+2080.0,
+170.0
+],
+"rot": [
+0.0,
+0.0,
+0.0
+],
+"scale": [
+1.0,
+1.0,
+1.0
+]
+},
+{
+"label": "SM_RockPack_RockGroups_01_A3",
+"mesh": "SM_RockPack_RockGroups_01_A",
+"loc": [
+18930.0,
+2180.0,
+170.0
+],
+"rot": [
+0.0,
+0.0,
+0.0
+],
+"scale": [
+1.0,
+1.0,
+1.0
+]
+},
+{
+"label": "SM_RockPack_RockGroups_01_A4",
+"mesh": "SM_RockPack_RockGroups_01_A",
+"loc": [
+20480.0,
+2530.0,
+170.0
+],
+"rot": [
+0.0,
+0.0,
+0.0
+],
+"scale": [
+1.0,
+1.0,
+1.0
+]
+},
+{
+"label": "SM_RockPack_RockGroups_01_A5",
+"mesh": "SM_RockPack_RockGroups_01_A",
+"loc": [
+20370.0,
+2430.0,
+170.0
+],
+"rot": [
+0.0,
+0.0,
+0.0
+],
+"scale": [
+1.0,
+1.0,
+1.0
+]
+},
+{
+"label": "SM_RockPack_RockGroups_01_A6",
+"mesh": "SM_RockPack_RockGroups_01_A",
+"loc": [
+20360.0,
+2680.0,
+170.0
+],
+"rot": [
+0.0,
+0.0,
+0.0
+],
+"scale": [
+1.0,
+1.0,
+1.0
+]
+}
+]
+}

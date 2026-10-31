@@ -429,6 +429,8 @@ To tune a form, open `BP_SeedBall` and expand **Tuning > Forms > Form Data**. **
 
 The road now winds and has hills, and the level has extra challenges. The first rerun replaces the old straight version of `L_Level1_World`. To change the route, edit the tables at the top of the script. The build stops with a clear message if a change breaks a layout rule.
 
+Hand edits to `L_Level1_World` are recorded in `Content/Python/level1_edits.json`, which every rebuild applies. Anything changed by hand after the last recording is lost on the next rebuild, so have it recorded first.
+
 To change how a tilting log behaves, select it under **World > Cavern** and change **Counterweight Kg Cm** or **Tilt Response** under **Tuning**. A rerun resets these, so make lasting changes in `build_world_level1.py`.
 
 To change the marsh's mist, edit `MIST_LAYERS` at the top of the script and the `0.36` opacity in `M_LS_Mist` under `build_materials`, then rerun. The giant trees, decks and post pads are listed in `thornmire_marsh`, with their spot along the road and to its side.

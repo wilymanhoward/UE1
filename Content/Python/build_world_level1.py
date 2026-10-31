@@ -12,7 +12,9 @@
 # Requires: Python Editor Script Plugin. Run with Tools > Execute Python Script.
 
 import importlib
+import json
 import math
+import os
 import random
 
 import unreal
@@ -1115,10 +1117,10 @@ def scatter_rings(materials):
 
 
 def living_start():
-    """Picture 1's foreground: grass and flowers that stay in colour, thinning out as the road leaves the start."""
+    """Picture 1's foreground: grass and flowers, thinning out as the road leaves the start. They are grey until the notes bring colour back, like the rest of the world."""
     rng = random.Random(SEED + 4)
-    plants = Scatter("Living_Grass", 5000, 7000, shadows=False, stencil=True)
-    flowers = Scatter("Living_Flowers", 5000, 7000, shadows=False, stencil=True)
+    plants = Scatter("Living_Grass", 5000, 7000, shadows=False)
+    flowers = Scatter("Living_Flowers", 5000, 7000, shadows=False)
     for side in (-1, 1):
         d0, d1 = (LANE - 260.0, ROAD_SIDE + 500.0) if side > 0 else (-ROAD_SIDE - 500.0, -LANE + 260.0)
         for x, y, s in along_road(0, 6490, d0, d1, 62.0, rng):
@@ -1769,6 +1771,44 @@ def check_layout():
             assert math.hypot(a[0] - b[0], a[1] - b[1]) > ROAD_SIDE * 2.0, "the road runs into itself at {} and {}".format(i, j)
 
 
+def apply_hand_edits():
+    """Repeats what was moved, deleted or added by hand in the editor, so a rebuild keeps it. level1_edits.json lists each one against where the build puts it."""
+    edits = json.load(open(os.path.join(unreal.Paths.project_content_dir(), "Python", "level1_edits.json"), encoding="utf-8"))
+    actors = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
+    live = list(actors.get_all_level_actors())
+
+    def take(label, class_name, at):
+        for actor in live:
+            location = actor.get_actor_location()
+            if actor.get_actor_label() == label and actor.get_class().get_name() == class_name and math.dist((location.x, location.y, location.z), at) < 5.0:
+                live.remove(actor)
+                return actor
+        return None
+
+    missing = 0
+    for edit in edits["remove"]:
+        actor = take(edit["label"], edit["cls"], edit["at"])
+        if actor:
+            actors.destroy_actor(actor)
+    for edit in edits["change"]:
+        actor = take(edit["label"], edit["cls"], edit["from"])
+        if not actor:
+            missing += 1
+            continue
+        actor.set_actor_location(unreal.Vector(*edit["loc"]), False, False)
+        actor.set_actor_rotation(unreal.Rotator(*edit["rot"]), False)
+        actor.set_actor_scale3d(unreal.Vector(*edit["scale"]))
+    for edit in edits["add"]:
+        # What was added by hand has no build tag, so in the map it was made in, it survives a rebuild by itself.
+        if take(edit["label"], "StaticMeshActor", edit["loc"]):
+            continue
+        added = spawn(unreal.StaticMeshActor, *edit["loc"], edit["label"], "Hand Edits")
+        added.set_actor_rotation(unreal.Rotator(*edit["rot"]), False)
+        added.set_actor_scale3d(unreal.Vector(*edit["scale"]))
+        added.static_mesh_component.set_static_mesh(unreal.load_asset(mesh(edit["mesh"])))
+    unreal.log("Last Seed world: hand edits applied: {} removed, {} changed ({} not found), {} added".format(len(edits["remove"]), len(edits["change"]), missing, len(edits["add"])))
+
+
 def main():
     global WORLD_MESHES
     check_layout()
@@ -1790,9 +1830,6 @@ def main():
         path = build_road_mesh(s0, s1, index)
         piece = mesh_actor(path, 0.0, 0.0, 0.0, "Road", material=materials["living"] if living else materials["terrain"], label="Road")
         piece.static_mesh_component.set_collision_profile_name("BlockAll")
-        if living:
-            piece.static_mesh_component.set_render_custom_depth(True)
-            piece.static_mesh_component.set_custom_depth_stencil_value(ls_world_common.FULL_COLOUR_STENCIL)
 
     build_island_chain(materials)
     dress_greybox(materials, added)
@@ -1815,6 +1852,7 @@ def main():
     driver.set_editor_property("withered_tint", unreal.LinearColor(1.05, 0.9, 0.78, 1.0))
 
     cameras = build_preview_cameras()
+    apply_hand_edits()
     report(world_path)
     take_preview_screenshots(cameras)
 
