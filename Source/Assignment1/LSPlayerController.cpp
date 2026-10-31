@@ -2,18 +2,32 @@
 
 #include "LSPlayerController.h"
 
+#include "Blueprint/UserWidget.h"
 #include "Camera/PlayerCameraManager.h"
 #include "Engine/Engine.h"
 #include "Engine/LocalPlayer.h"
+#include "EngineUtils.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputAction.h"
 #include "InputMappingContext.h"
 #include "InputModifiers.h"
+#include "Kismet/GameplayStatics.h"
+#include "LevelGoal.h"
+#include "LevelSequence.h"
+#include "LevelSequenceActor.h"
+#include "LevelSequencePlayer.h"
 #include "LSGameInstance.h"
 #include "LSGameMode.h"
+#include "LSHUDWidget.h"
+#include "LSMainMenuWidget.h"
+#include "LSPauseMenuWidget.h"
+#include "LSResultsWidget.h"
+#include "LSStoryCardWidget.h"
 #include "RestorationSubsystem.h"
 #include "SeedBall.h"
+#include "Sound/SoundClass.h"
+#include "Sound/SoundMix.h"
 
 namespace
 {
@@ -55,6 +69,34 @@ void ALSPlayerController::BeginPlay()
 		PlayerCameraManager->ViewPitchMin = MinCameraPitch;
 		PlayerCameraManager->ViewPitchMax = MaxCameraPitch;
 	}
+
+	if (VolumeMix)
+	{
+		UGameplayStatics::PushSoundMixModifier(this, VolumeMix);
+	}
+	ApplyVolumeSettings();
+
+	const ALSGameMode* GameMode = GetLSGameMode();
+	if (GameMode && GameMode->IsMenuLevel())
+	{
+		if (MainMenuClass)
+		{
+			OpenMenu(CreateWidget<ULSMainMenuWidget>(this, MainMenuClass));
+		}
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Last Seed: assign Main Menu Class on the player controller."));
+		}
+	}
+	else if (HUDClass)
+	{
+		HUD = CreateWidget<ULSHUDWidget>(this, HUDClass);
+		HUD->AddToViewport();
+		if (ASeedBall* Ball = GetBall())
+		{
+			HUD->SetBall(Ball);
+		}
+	}
 }
 
 void ALSPlayerController::OnPossess(APawn* InPawn)
@@ -62,6 +104,18 @@ void ALSPlayerController::OnPossess(APawn* InPawn)
 	Super::OnPossess(InPawn);
 
 	SetControlRotation(FRotator(InitialCameraPitch, InPawn->GetActorRotation().Yaw, 0.f));
+
+	// The engine may possess the pawn before or after BeginPlay, so the HUD connects in both places.
+	ASeedBall* Ball = Cast<ASeedBall>(InPawn);
+	if (HUD && Ball)
+	{
+		HUD->SetBall(Ball);
+	}
+}
+
+ALSGameMode* ALSPlayerController::GetLSGameMode() const
+{
+	return GetWorld()->GetAuthGameMode<ALSGameMode>();
 }
 
 void ALSPlayerController::SetupInputComponent()
@@ -221,29 +275,242 @@ void ALSPlayerController::HandleCycleForm(const FInputActionValue& Value)
 
 void ALSPlayerController::HandleTogglePause()
 {
-	// shortcut: pauses with no menu, Phase 7 replaces this with ULSPauseMenuWidget.
-	SetPause(!IsPaused());
+	// This key can close the pause menu, but must not close results or story cards, which have their own buttons.
+	if (ActiveMenu)
+	{
+		if (ActiveMenu->IsA<ULSPauseMenuWidget>())
+		{
+			CloseMenu();
+		}
+		return;
+	}
+
+	if (bStoryPlaying)
+	{
+		return;
+	}
+
+	if (PauseMenuClass)
+	{
+		OpenMenu(CreateWidget<ULSPauseMenuWidget>(this, PauseMenuClass));
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Last Seed: assign Pause Menu Class on the player controller."));
+	}
+}
+
+void ALSPlayerController::OpenMenu(UUserWidget* Menu)
+{
+	ActiveMenu = Menu;
+	// Above the HUD, which uses the default order of 0.
+	Menu->AddToViewport(1);
+	SetHUDVisible(false);
+
+	// Game and UI, not UI only, because UI only would block the Pause key that closes the pause menu.
+	FInputModeGameAndUI InputMode;
+	InputMode.SetHideCursorDuringCapture(false);
+	SetInputMode(InputMode);
+	bShowMouseCursor = true;
+
+	// Stops the ball, blobs, storm and timer. Widgets still work while the game is paused.
+	SetPause(true);
+}
+
+void ALSPlayerController::CloseMenu()
+{
+	if (ActiveMenu)
+	{
+		ActiveMenu->RemoveFromParent();
+		ActiveMenu = nullptr;
+	}
+
+	SetHUDVisible(true);
+	SetInputMode(FInputModeGameOnly());
+	bShowMouseCursor = false;
+	SetPause(false);
+}
+
+void ALSPlayerController::SetHUDVisible(bool bVisible)
+{
+	if (HUD)
+	{
+		// The HUD only displays information, so it should never catch mouse clicks.
+		HUD->SetVisibility(bVisible ? ESlateVisibility::SelfHitTestInvisible : ESlateVisibility::Collapsed);
+	}
+}
+
+void ALSPlayerController::SetGameplayInputEnabled(bool bEnabled)
+{
+	UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer());
+	if (Subsystem)
+	{
+		if (bEnabled)
+		{
+			Subsystem->AddMappingContext(GameplayContext, 0);
+		}
+		else
+		{
+			Subsystem->RemoveMappingContext(GameplayContext);
+		}
+	}
+
+	if (ASeedBall* Ball = GetBall(); Ball && !bEnabled)
+	{
+		// The key's release may never arrive while the context is removed, so the ball would keep the last direction.
+		Ball->SetMoveInput(FVector2D::ZeroVector);
+		Ball->JumpReleased();
+	}
+}
+
+void ALSPlayerController::PlayStory(ULevelSequence* Sequence, const TArray<FText>& Cards, TFunction<void()> OnFinished)
+{
+	// A new story replaces one still playing, such as the ball reaching the goal during a cutscene.
+	if (bStoryPlaying)
+	{
+		FinishStory();
+	}
+
+	AfterStory = MoveTemp(OnFinished);
+	bStoryPlaying = true;
+	SetGameplayInputEnabled(false);
+	SetHUDVisible(false);
+	if (ALSGameMode* GameMode = GetLSGameMode())
+	{
+		// A cutscene can't play while paused, so the timer is stopped separately.
+		GameMode->SetTimerRunning(false);
+	}
+
+	if (Sequence)
+	{
+		ALevelSequenceActor* SequenceActor = nullptr;
+		ULevelSequencePlayer* SequencePlayer = ULevelSequencePlayer::CreateLevelSequencePlayer(this, Sequence, FMovieSceneSequencePlaybackSettings(), SequenceActor);
+		if (SequencePlayer)
+		{
+			StorySequenceActor = SequenceActor;
+			SequencePlayer->OnFinished.AddDynamic(this, &ALSPlayerController::HandleSequenceFinished);
+			SequencePlayer->Play();
+			return;
+		}
+	}
+	else if (!Cards.IsEmpty() && StoryCardClass)
+	{
+		ULSStoryCardWidget* CardWidget = CreateWidget<ULSStoryCardWidget>(this, StoryCardClass);
+		CardWidget->ShowCards(Cards);
+		CardWidget->OnFinished.AddDynamic(this, &ALSPlayerController::HandleStoryCardsFinished);
+		OpenMenu(CardWidget);
+		return;
+	}
+
+	// Nothing could be played, so carry on straight away.
+	FinishStory();
+}
+
+void ALSPlayerController::HandleStoryCardsFinished()
+{
+	CloseMenu();
+	FinishStory();
+}
+
+void ALSPlayerController::HandleSequenceFinished()
+{
+	FinishStory();
+}
+
+void ALSPlayerController::FinishStory()
+{
+	bStoryPlaying = false;
+
+	if (StorySequenceActor)
+	{
+		StorySequenceActor->Destroy();
+		StorySequenceActor = nullptr;
+	}
+
+	SetGameplayInputEnabled(true);
+	SetHUDVisible(true);
+	if (ALSGameMode* GameMode = GetLSGameMode())
+	{
+		GameMode->SetTimerRunning(true);
+	}
+
+	// Moved out first, because the callback may start another story, which sets AfterStory again.
+	const TFunction<void()> Callback = MoveTemp(AfterStory);
+	AfterStory = nullptr;
+	if (Callback)
+	{
+		Callback();
+	}
+}
+
+void ALSPlayerController::ShowResults(const FLSLevelResult& Result)
+{
+	if (ResultsClass)
+	{
+		ULSResultsWidget* Results = CreateWidget<ULSResultsWidget>(this, ResultsClass);
+		Results->ShowResult(Result);
+		OpenMenu(Results);
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Last Seed: assign Results Class on the player controller. Stars: %d"), Result.Stars);
+	}
+}
+
+void ALSPlayerController::RestartFromCheckpoint()
+{
+	CloseMenu();
+	if (ASeedBall* Ball = GetBall())
+	{
+		Ball->Die();
+	}
+}
+
+void ALSPlayerController::ReturnToMainMenu()
+{
+	if (MainMenuLevel.IsNull())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Last Seed: assign Main Menu Level on the player controller."));
+		return;
+	}
+	UGameplayStatics::OpenLevelBySoftObjectPtr(this, MainMenuLevel);
+}
+
+void ALSPlayerController::ApplyVolumeSettings()
+{
+	const ULSGameInstance* GameInstance = GetGameInstance<ULSGameInstance>();
+	if (!GameInstance || !VolumeMix)
+	{
+		return;
+	}
+
+	// A fade time of 0 makes a slider take effect at once. Child classes follow their parent.
+	if (MusicClass)
+	{
+		UGameplayStatics::SetSoundMixClassOverride(this, VolumeMix, MusicClass, GameInstance->GetMusicVolume(), 1.f, 0.f, true);
+	}
+	if (SfxClass)
+	{
+		UGameplayStatics::SetSoundMixClassOverride(this, VolumeMix, SfxClass, GameInstance->GetSfxVolume(), 1.f, 0.f, true);
+	}
 }
 
 void ALSPlayerController::ShowPrompt(const FText& Message, float Duration)
 {
-	// shortcut: debug text, not visible in Shipping builds, Phase 7 sends this to ULSHUDWidget.
-	GEngine->AddOnScreenDebugMessage(-1, Duration, FColor::Yellow, Message.ToString());
-}
-
-void ALSPlayerController::ShowRestorationStatus()
-{
-	// shortcut: temporary text, Phase 7 shows this on the HUD and removes this function.
-	const URestorationSubsystem* Restoration = GetWorld()->GetSubsystem<URestorationSubsystem>();
-	const FString Status = FString::Printf(TEXT("Life Notes %d/%d - Restoration %d%%"),
-		Restoration->GetNotesCollected(), Restoration->GetNotesTotal(), FMath::RoundToInt(Restoration->GetRestoration() * 100.f));
-	ShowPrompt(FText::FromString(Status), StatusPromptDuration);
+	if (HUD)
+	{
+		HUD->ShowPrompt(Message, Duration);
+	}
+	else
+	{
+		// shortcut: debug text until WBP_HUD is assigned, not visible in Shipping builds.
+		GEngine->AddOnScreenDebugMessage(-1, Duration, FColor::Yellow, Message.ToString());
+	}
 }
 
 void ALSPlayerController::LSDrainRestoration(float Amount)
 {
 	GetWorld()->GetSubsystem<URestorationSubsystem>()->DrainRestoration(Amount);
-	ShowRestorationStatus();
 }
 
 void ALSPlayerController::LSDeleteSave()
@@ -272,8 +539,14 @@ void ALSPlayerController::LSKillBall()
 
 void ALSPlayerController::LSCompleteLevel()
 {
-	if (ALSGameMode* GameMode = GetWorld()->GetAuthGameMode<ALSGameMode>())
+	ALSGameMode* GameMode = GetLSGameMode();
+	TActorIterator<ALevelGoal> Goal(GetWorld());
+	if (GameMode && Goal)
 	{
-		GameMode->CompleteLevel();
+		GameMode->CompleteLevel(*Goal);
+	}
+	else
+	{
+		ShowPrompt(FText::FromString(TEXT("LSCompleteLevel needs a LevelGoal in the level.")), 5.f);
 	}
 }

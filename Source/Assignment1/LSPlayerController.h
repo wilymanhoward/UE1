@@ -1,22 +1,35 @@
 // Last Seed - turns player input into commands for the ball.
 //
 // Purpose: builds every Enhanced Input action and the mapping context in code at runtime, so no input
-// assets are needed. It then forwards input to the possessed ASeedBall. Phase 7 adds widgets and
-// game/UI input mode switching.
+// assets are needed, and forwards input to the possessed ASeedBall. It also owns every widget, switches between
+// game and UI input, plays story sequences and cards, and applies the volume settings.
 // Design pattern: command-style forwarding. The controller knows the keys, the ball knows the behaviour.
-// Connections: spawned by ALSGameMode. Calls the input functions on ASeedBall and unlocks forms through
-// ULSGameInstance for the test commands.
+// Connections: spawned by ALSGameMode. Calls the input functions on ASeedBall. Creates ULSHUDWidget,
+// ULSMainMenuWidget, ULSPauseMenuWidget, ULSResultsWidget and ULSStoryCardWidget. Reads ULSGameInstance.
 
 #pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
+#include "LSLevelTypes.h"
 #include "SeedFormTypes.h"
 #include "LSPlayerController.generated.h"
 
+class ALevelSequenceActor;
+class ALSGameMode;
 class ASeedBall;
 class UInputAction;
 class UInputMappingContext;
+class ULevelSequence;
+class ULSHUDWidget;
+class ULSMainMenuWidget;
+class ULSPauseMenuWidget;
+class ULSResultsWidget;
+class ULSStoryCardWidget;
+class USoundClass;
+class USoundMix;
+class UUserWidget;
+class UWorld;
 struct FInputActionInstance;
 struct FInputActionValue;
 
@@ -30,10 +43,28 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "UI")
 	void ShowPrompt(const FText& Message, float Duration);
 
-	/** Shows the note count and restoration percentage. */
-	void ShowRestorationStatus();
+	/**
+	 * Plays Sequence if it is set, or otherwise shows Cards, with gameplay input off. OnFinished runs afterward,
+	 * and runs straight away if there is nothing to play.
+	 */
+	void PlayStory(ULevelSequence* Sequence, const TArray<FText>& Cards, TFunction<void()> OnFinished = nullptr);
 
-	/** Console test command: drains restoration by Amount (0 to 1), as a Wither Blob will in Phase 5. */
+	/** Opens the results screen. */
+	void ShowResults(const FLSLevelResult& Result);
+
+	/** Closes the open menu and returns to the game. */
+	void CloseMenu();
+
+	/** The pause menu's Restart button: returns the ball to its last checkpoint. */
+	void RestartFromCheckpoint();
+
+	/** Opens the main menu level. */
+	void ReturnToMainMenu();
+
+	/** Sends the volumes stored in ULSGameInstance to the sound classes. */
+	void ApplyVolumeSettings();
+
+	/** Console test command: drains restoration by Amount (0 to 1), as a Wither Blob does. */
 	UFUNCTION(Exec)
 	void LSDrainRestoration(float Amount);
 
@@ -49,7 +80,7 @@ public:
 	UFUNCTION(Exec)
 	void LSKillBall();
 
-	/** Console test command: completes the level, which starts the finale music. */
+	/** Console test command: completes the level as if the ball had reached the Level Goal, which must be placed. */
 	UFUNCTION(Exec)
 	void LSCompleteLevel();
 
@@ -57,6 +88,42 @@ protected:
 	virtual void BeginPlay() override;
 	virtual void SetupInputComponent() override;
 	virtual void OnPossess(APawn* InPawn) override;
+
+	/** Assign WBP_HUD. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "UI")
+	TSubclassOf<ULSHUDWidget> HUDClass;
+
+	/** Assign WBP_MainMenu. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "UI")
+	TSubclassOf<ULSMainMenuWidget> MainMenuClass;
+
+	/** Assign WBP_PauseMenu. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "UI")
+	TSubclassOf<ULSPauseMenuWidget> PauseMenuClass;
+
+	/** Assign WBP_Results. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "UI")
+	TSubclassOf<ULSResultsWidget> ResultsClass;
+
+	/** Assign WBP_StoryCard. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "UI")
+	TSubclassOf<ULSStoryCardWidget> StoryCardClass;
+
+	/** Opened by the pause menu's Main Menu button and after the credits. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "UI")
+	TSoftObjectPtr<UWorld> MainMenuLevel;
+
+	/** Assign SM_Volume. The sliders do nothing without this and the two sound classes. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Audio")
+	TObjectPtr<USoundMix> VolumeMix;
+
+	/** Assign SC_Music. The music slider controls every sound using this class. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Audio")
+	TObjectPtr<USoundClass> MusicClass;
+
+	/** Assign SC_SFX. The SFX slider controls every sound using this class. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Audio")
+	TObjectPtr<USoundClass> SfxClass;
 
 	/** Multiplies mouse and gamepad look speed. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tuning")
@@ -82,11 +149,19 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tuning")
 	float MaxCameraPitch = 30.f;
 
-	/** Seconds the restoration status message stays on screen. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tuning", meta = (ClampMin = "0"))
-	float StatusPromptDuration = 3.f;
-
 private:
+	void OpenMenu(UUserWidget* Menu);
+	void SetGameplayInputEnabled(bool bEnabled);
+	void SetHUDVisible(bool bVisible);
+	void FinishStory();
+	ALSGameMode* GetLSGameMode() const;
+
+	UFUNCTION()
+	void HandleStoryCardsFinished();
+
+	UFUNCTION()
+	void HandleSequenceFinished();
+
 	void CreateInputObjects();
 	void BindInputActions();
 
@@ -100,6 +175,19 @@ private:
 	void HandleTogglePause();
 
 	ASeedBall* GetBall() const;
+
+	UPROPERTY(Transient)
+	TObjectPtr<ULSHUDWidget> HUD;
+
+	// The menu on screen now, or null during play.
+	UPROPERTY(Transient)
+	TObjectPtr<UUserWidget> ActiveMenu;
+
+	UPROPERTY(Transient)
+	TObjectPtr<ALevelSequenceActor> StorySequenceActor;
+
+	TFunction<void()> AfterStory;
+	bool bStoryPlaying = false;
 
 	// UPROPERTY keeps these runtime-created objects alive: otherwise garbage collection would delete them.
 	UPROPERTY(Transient)

@@ -3,9 +3,7 @@
 #include "LifeNote.h"
 
 #include "Engine/World.h"
-#include "LSPlayerController.h"
 #include "RestorationSubsystem.h"
-#include "SeedBall.h"
 
 ALifeNote::ALifeNote()
 {
@@ -18,9 +16,4 @@ ALifeNote::ALifeNote()
 void ALifeNote::OnCollected(ASeedBall* Ball)
 {
 	GetWorld()->GetSubsystem<URestorationSubsystem>()->ReportNoteCollected(GetActorLocation());
-
-	if (ALSPlayerController* PlayerController = Ball->GetController<ALSPlayerController>())
-	{
-		PlayerController->ShowRestorationStatus();
-	}
 }

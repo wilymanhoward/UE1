@@ -32,7 +32,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Storm")
 	void StartRising(ASeedBall* Ball);
 
-	/** Stops the storm for good. Phase 7 calls this when the level is complete. */
+	/** Stops the storm for good. Runs when ALSGameMode reports that the level is complete. */
 	UFUNCTION(BlueprintCallable, Category = "Storm")
 	void StopRising();
 

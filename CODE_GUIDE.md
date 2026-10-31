@@ -29,19 +29,38 @@ The player is the last glowing seed of a dead Heart Tree. This guide explains ea
 ### `ALSPlayerController`: input
 - `CreateInputObjects` builds all actions and the mapping context with `NewObject`, so no input assets are needed.
 - `BindInputActions` connects actions to small handlers that forward to the ball.
-- `HandleTogglePause` is a placeholder until the Phase 7 pause menu.
-- Test commands: `LSUnlockAllForms`, `LSKillBall`.
+- `OpenMenu` and `CloseMenu` are the one place that switches input mode, the mouse cursor, the pause state and the HUD.
+- `PlayStory` plays a sequence or text cards with gameplay input off, then runs a callback.
+- `ShowPrompt` is the single route for player messages, and goes to the HUD.
+- `ApplyVolumeSettings` sends the saved volumes to the sound classes through a sound mix.
+- Test commands: `LSUnlockAllForms`, `LSKillBall`, `LSDeleteSave`, `LSDrainRestoration <amount>`, and `LSCompleteLevel`.
 - **Pattern:** command-style forwarding. The controller knows the keys, the ball knows the behaviour.
 
-- `ShowPrompt` is the single route for player messages. It shows debug text until the Phase 7 HUD exists.
-- Extra test commands: `LSDeleteSave`, `LSDrainRestoration <amount>`, and `LSCompleteLevel`.
-- `ShowRestorationStatus` displays the note count until the Phase 7 HUD exists.
-
 ### `ULSGameInstance` and `ULSSaveGame`: persistent data
-The game instance stores `UnlockedForms` and the last shrine reached. It survives level changes, so Level 2 keeps forms unlocked in Level 1. `SaveProgress` copies those values into a `ULSSaveGame` and writes it to disk, and `Init` loads them at startup. **Pattern:** memento (the save object is a plain snapshot).
+The game instance stores `UnlockedForms`, a `FLSLevelRecord` of best scores per level, and the volumes. It survives level changes, so Level 2 keeps forms unlocked in Level 1. `RecordLevelResult` keeps the best of each value, `SaveProgress` copies everything into a `ULSSaveGame` and writes it to disk, and `Init` loads it at startup. **Pattern:** memento (the save object is a plain snapshot).
 
 ### `ALSGameMode`: level rules
-Sets the default pawn and controller, and counts Golden Petals. `CompleteLevel` fires `OnLevelCompleted` once, which the music listens to. Phase 7 adds the rest.
+| Function | What it does |
+|---|---|
+| `Tick` | Adds to the level timer. It doesn't tick while paused, so menus and text cards don't count |
+| `RestartPlayer` | Listens to the new ball's `OnDied` to count deaths |
+| `BuildResult` | Fills in `FLSLevelResult`, including each star condition and the star count |
+| `CompleteLevel` | Saves the result, fires `OnLevelCompleted`, plays the ending, then opens the results |
+| `ContinueAfterResults` | Opens the next level, or plays the credits and returns to the menu after the last level |
+
+**Pattern:** observer (`OnLevelCompleted`).
+
+### `ALevelGoal` and `AStoryTrigger`: placed flow actors
+`ALevelGoal` ends the level, and holds the settings that differ per level, such as par time and next level, because all levels share one game mode Blueprint. `AStoryTrigger` calls `PlayStory` once, when entered or at the start of the level.
+
+### UI widgets
+Each is a C++ base class with `meta = (BindWidget)` properties, and the layout lives in a Blueprint child. A missing or misnamed widget is a compile error in the Widget Blueprint, not a crash in play.
+- `ULSHUDWidget`: form, notes, petals, timer, restoration bar and a fading prompt. **Pattern:** observer.
+- `ULSMainMenuWidget`: Play, Level Select with Level 2 locked, Controls and Quit.
+- `ULSPauseMenuWidget`: Resume, Restart, Controls, volume sliders and Main Menu.
+- `ULSResultsWidget`: stars, stats and which conditions were met.
+- `ULSStoryCardWidget`: one card at a time, then `OnFinished`.
+- `ULSControlsWidget`: one controls list, placed inside both menus.
 
 ### `ILSInteractable`: the interaction contract
 `OnBallOverlap(Ball)` and `OnBallHit(Ball, ImpactVelocity)`, both defaulting to no action. `ASeedBall::HandleBeginOverlap` and `HandleHit` cast whatever they touched to this interface and call it. **Pattern:** interface / polymorphism. The ball never casts to a pickup or a volume, so new world objects don't change the ball.
@@ -55,7 +74,7 @@ Sets the default pawn and controller, and counts Golden Petals. `CompleteLevel` 
 **Pattern:** template method. The base class fixes the order of the steps, and children fill in one step.
 
 ### `ACheckpointShrine`: respawn points
-On first touch it sets the ball's checkpoint, records and saves it, locks in the current restoration, turns on the glow and plays effects. It then ignores further touches.
+On first touch it sets the ball's checkpoint, locks in the current restoration, turns on the glow and plays effects. It then ignores further touches. Checkpoints last for the current run only, because collected notes aren't saved.
 
 ### `ALSVolumeBase`, `AKillVolume`, `ATutorialTrigger`: volumes
 `ALSVolumeBase` creates the invisible overlap box. `AKillVolume` calls `Die`. `ATutorialTrigger` shows its message once.
@@ -155,6 +174,10 @@ Looping sounds use a `UAudioComponent`, so an attenuation can be assigned: `Roll
 22. **Why all stems start at the beginning.** A stem started at its milestone would begin from its first beat, out of time with the others. Starting them together and only changing volume keeps them in sync, which is why they need **Play When Silent**.
 23. **Why the stems use the fade and not the volume multiplier.** The final volume is the multiplier times the fade level. If the multiplier were set near zero, fading "up to 1" would still be near silent, so the multiplier stays at 1.
 24. **`AirFallSpeed`.** By the frame the ball counts as grounded, physics may already have stopped it, so the landing volume uses the speed from the last frame in the air. `Respawn` clears it so a fatal fall doesn't play a landing at the checkpoint.
+25. **Why menus use Game and UI input.** UI-only input would stop the Pause key reaching the controller, so it couldn't close the pause menu. Gameplay keys are still safe, because Enhanced Input ignores them while paused unless an action sets `bTriggerWhenPaused`.
+26. **Why text cards pause the game but cutscenes don't.** A sequence can't play while paused, so a cutscene removes the input context and stops the timer. Text cards simply pause, which also freezes the blobs and storm.
+27. **Why results are saved before the ending plays.** A player who quits during the ending has still finished the level.
+28. **Why the first best time needs a check.** A new record's time starts at 0, so `Min` would keep 0 forever. The first finish copies the time across.
 
 ## Suggested explanation order
 1. `SeedFormTypes.h`: what a form is.
@@ -178,3 +201,7 @@ Looping sounds use a `UAudioComponent`, so an attenuation can be assigned: `Roll
 19. `AWitheringStorm`: three events from two classes driving one chase.
 20. `UAdaptiveMusicComponent`: the same milestone event that grows plants brings in the music.
 21. `ASeedBall::UpdateRollAudio`: form data choosing the sound, and speed shaping it.
+22. `ALSGameMode::CompleteLevel`, then `BuildResult`: the level-complete flow and the star rules.
+23. `ALSPlayerController::OpenMenu` and `PlayStory`: input modes, pausing and story.
+24. `ULSHUDWidget`: `BindWidget`, and a display that only listens.
+25. `ULSGameInstance::RecordLevelResult`, then `ULSMainMenuWidget`: how saved data unlocks Level 2.

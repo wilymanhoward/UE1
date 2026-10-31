@@ -9,6 +9,7 @@
 #include "Engine/World.h"
 #include "GameFramework/PlayerController.h"
 #include "LSDefaultMeshes.h"
+#include "LSGameMode.h"
 #include "RestorationSubsystem.h"
 #include "SeedBall.h"
 
@@ -44,6 +45,11 @@ void AWitheringStorm::BeginPlay()
 	SavedZ = StartZ;
 
 	GetWorld()->GetSubsystem<URestorationSubsystem>()->OnNoteCollected.AddDynamic(this, &AWitheringStorm::HandleNoteCollected);
+
+	if (ALSGameMode* GameMode = GetWorld()->GetAuthGameMode<ALSGameMode>())
+	{
+		GameMode->OnLevelCompleted.AddDynamic(this, &AWitheringStorm::StopRising);
+	}
 }
 
 void AWitheringStorm::StartRising(ASeedBall* Ball)

@@ -24,18 +24,36 @@ void ULSGameInstance::UnlockAllForms()
 	UnlockForm(ESeedForm::Dandelion);
 }
 
-void ULSGameInstance::SetLastCheckpoint(const FString& LevelName, const FVector& Location)
+void ULSGameInstance::RecordLevelResult(FName LevelName, const FLSLevelResult& Result)
 {
-	LastLevelName = LevelName;
-	LastCheckpointLocation = Location;
+	// Checked before FindOrAdd, which would make the level look finished. A first time of 0 must not count as a best.
+	const bool bFirstFinish = !IsLevelFinished(LevelName);
+
+	FLSLevelRecord& Record = LevelRecords.FindOrAdd(LevelName);
+	Record.BestStars = FMath::Max(Record.BestStars, Result.Stars);
+	Record.BestPetals = FMath::Max(Record.BestPetals, Result.PetalsCollected);
+	Record.BestTimeSeconds = bFirstFinish ? Result.TimeSeconds : FMath::Min(Record.BestTimeSeconds, Result.TimeSeconds);
+
+	SaveProgress();
+}
+
+int32 ULSGameInstance::GetTotalPetals() const
+{
+	int32 Total = 0;
+	for (const TPair<FName, FLSLevelRecord>& Entry : LevelRecords)
+	{
+		Total += Entry.Value.BestPetals;
+	}
+	return Total;
 }
 
 void ULSGameInstance::SaveProgress()
 {
 	ULSSaveGame* Save = Cast<ULSSaveGame>(UGameplayStatics::CreateSaveGameObject(ULSSaveGame::StaticClass()));
 	Save->UnlockedForms = UnlockedForms;
-	Save->LastLevelName = LastLevelName;
-	Save->LastCheckpointLocation = LastCheckpointLocation;
+	Save->LevelRecords = LevelRecords;
+	Save->MusicVolume = MusicVolume;
+	Save->SfxVolume = SfxVolume;
 
 	if (!UGameplayStatics::SaveGameToSlot(Save, SaveSlotName, SaveUserIndex))
 	{
@@ -51,8 +69,9 @@ void ULSGameInstance::LoadProgress()
 	{
 		// Append, not replace, so Seed stays unlocked even if a save file is damaged.
 		UnlockedForms.Append(Save->UnlockedForms);
-		LastLevelName = Save->LastLevelName;
-		LastCheckpointLocation = Save->LastCheckpointLocation;
+		LevelRecords = Save->LevelRecords;
+		MusicVolume = Save->MusicVolume;
+		SfxVolume = Save->SfxVolume;
 	}
 }
 
@@ -60,6 +79,7 @@ void ULSGameInstance::DeleteProgress()
 {
 	UGameplayStatics::DeleteGameInSlot(SaveSlotName, SaveUserIndex);
 	UnlockedForms = { ESeedForm::Seed };
-	LastLevelName.Reset();
-	LastCheckpointLocation = FVector::ZeroVector;
+	LevelRecords.Reset();
+	MusicVolume = 1.f;
+	SfxVolume = 1.f;
 }

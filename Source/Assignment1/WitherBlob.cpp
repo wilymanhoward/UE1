@@ -7,7 +7,6 @@
 #include "Engine/World.h"
 #include "Kismet/GameplayStatics.h"
 #include "LSDefaultMeshes.h"
-#include "LSPlayerController.h"
 #include "RestorationSubsystem.h"
 #include "SeedBall.h"
 #include "Sound/SoundBase.h"
@@ -169,9 +168,4 @@ void AWitherBlob::HandleBallContact(ASeedBall* Ball)
 
 	UGameplayStatics::PlaySoundAtLocation(this, ContactSound, GetActorLocation());
 	PlayContactEffect();
-
-	if (ALSPlayerController* PlayerController = Ball->GetController<ALSPlayerController>())
-	{
-		PlayerController->ShowRestorationStatus();
-	}
 }

@@ -15,6 +15,9 @@ class ASSIGNMENT1_API AGoldenPetal : public ALSPickupBase
 {
 	GENERATED_BODY()
 
+public:
+	AGoldenPetal();
+
 protected:
 	virtual void OnCollected(ASeedBall* Ball) override;
 };

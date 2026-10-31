@@ -7,7 +7,6 @@
 #include "Components/StaticMeshComponent.h"
 #include "Engine/World.h"
 #include "Kismet/GameplayStatics.h"
-#include "LSGameInstance.h"
 #include "NiagaraFunctionLibrary.h"
 #include "RestorationSubsystem.h"
 #include "SeedBall.h"
@@ -40,12 +39,6 @@ void ACheckpointShrine::OnBallOverlap(ASeedBall* Ball)
 
 	const FVector RespawnLocation = GetActorLocation() + FVector(0.f, 0.f, RespawnHeight);
 	Ball->SetCheckpoint(RespawnLocation);
-
-	if (ULSGameInstance* GameInstance = GetGameInstance<ULSGameInstance>())
-	{
-		GameInstance->SetLastCheckpoint(UGameplayStatics::GetCurrentLevelName(this), RespawnLocation);
-		GameInstance->SaveProgress();
-	}
 
 	GetWorld()->GetSubsystem<URestorationSubsystem>()->LockInRestoration();
 

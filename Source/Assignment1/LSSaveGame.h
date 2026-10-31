@@ -1,6 +1,6 @@
 // Last Seed - the data written to disk.
 //
-// Purpose: holds the fields of a save file. Phase 7 adds best stars, times, petals and volume settings.
+// Purpose: holds the fields of a save file: unlocked forms, best scores per level, and volume settings.
 // Design pattern: memento. It is a snapshot of ULSGameInstance's state, with no logic of its own.
 // Connections: created and read only by ULSGameInstance.
 
@@ -8,6 +8,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/SaveGame.h"
+#include "LSLevelTypes.h"
 #include "SeedFormTypes.h"
 #include "LSSaveGame.generated.h"
 
@@ -21,11 +22,15 @@ public:
 	UPROPERTY()
 	TSet<ESeedForm> UnlockedForms;
 
-	/** Name of the level containing the last activated shrine. */
+	/** Best scores, by level name. A level is in this map once it has been finished. */
 	UPROPERTY()
-	FString LastLevelName;
+	TMap<FName, FLSLevelRecord> LevelRecords;
 
-	/** Respawn location of the last activated shrine. */
+	/** Music volume from 0 to 1. */
 	UPROPERTY()
-	FVector LastCheckpointLocation = FVector::ZeroVector;
+	float MusicVolume = 1.f;
+
+	/** Sound effect volume from 0 to 1. */
+	UPROPERTY()
+	float SfxVolume = 1.f;
 };

@@ -155,7 +155,7 @@ Both work as soon as they are placed, using an engine sphere and cube. Create Bl
 
 ### Level design rules
 - **Blobs:** they move in straight lines, so keep patrol routes free of walls. They stop at drops larger than **Max Drop Height**, so ledges are safe places.
-- **Storm:** set **Max Rise Distance** so its top stops below the end of the climb. Phase 7 stops it when the level is complete.
+- **Storm:** set **Max Rise Distance** so its top stops below the end of the climb. It also stops when the level is complete.
 
 ## Phase 6
 
@@ -214,6 +214,160 @@ Without attenuation, every wind volume is heard across the whole level.
 3. Save, and assign it to **Attenuation Settings** on **Wind Audio**.
 
 Increase these for very large wind volumes, because the distance is measured from the centre of the volume.
+
+## Phase 7
+
+Do these in order. Until a widget is assigned, the game still runs without that screen and writes a warning to the Output Log.
+
+### 1. How to create a widget
+Use these steps for each widget in step 2:
+
+1. In `Content/UI`, right-click and choose **User Interface > Widget Blueprint**.
+2. In the window that opens, expand **All Classes**, search for the **Parent class** and select it.
+3. Name it as listed and double-click to open it.
+4. From the **Palette** panel, drag in a **Canvas Panel**, then drag the listed widgets onto it.
+5. Select each widget and, at the top of **Details**, rename it to the exact name listed. Tick **Is Variable** if it isn't ticked.
+6. Click **Compile**. If a name is wrong or missing, the Compiler Results panel names the widget it needs.
+
+Names are case sensitive. Put a **Text** inside each button so it has a label. For a **panel**, drag in a **Vertical Box** and put the listed widgets inside it.
+
+### 2. The widgets
+Create them in this order, because the menus contain `WBP_Controls`.
+
+**`WBP_Controls`** (parent `LSControlsWidget`)
+
+| Type | Name |
+|---|---|
+| Text | `ControlsText` |
+| Button | `BackButton` |
+
+**`WBP_HUD`** (parent `LSHUDWidget`)
+
+| Type | Name | Concept art position |
+|---|---|---|
+| Image | `FormIcon` | Top left |
+| Text | `FormNameText` | Top left, beside the icon |
+| Text | `NotesText` | Top right |
+| Text | `TimerText` | Top right, below the notes |
+| Text | `PetalsText` | Top right, below the timer |
+| Progress Bar | `RestorationBar` | Bottom centre, with a "Restoration" label above it |
+| Text | `PromptText` | Centre, lower third |
+
+Then click **Class Defaults**, and under **HUD > Form Icons** add one entry per form with its icon texture.
+
+**`WBP_MainMenu`** (parent `LSMainMenuWidget`)
+
+| Type | Name | Inside |
+|---|---|---|
+| Vertical Box | `MainPanel` | |
+| Button | `PlayButton` | `MainPanel` |
+| Button | `LevelSelectButton` | `MainPanel` |
+| Button | `ControlsButton` | `MainPanel` |
+| Button | `QuitButton` | `MainPanel` |
+| Text | `TotalPetalsText` | `MainPanel` |
+| Vertical Box | `LevelSelectPanel` | |
+| Button | `Level1Button` | `LevelSelectPanel` |
+| Text | `Level1BestText` | `LevelSelectPanel` |
+| Button | `Level2Button` | `LevelSelectPanel` |
+| Text | `Level2BestText` | `LevelSelectPanel` |
+| Button | `LevelSelectBackButton` | `LevelSelectPanel` |
+| `WBP_Controls` | `ControlsPanel` | |
+
+Then click **Class Defaults**, and set **Levels > Level 1** and **Level 2** once those level files exist.
+
+**`WBP_PauseMenu`** (parent `LSPauseMenuWidget`)
+
+| Type | Name | Inside |
+|---|---|---|
+| Vertical Box | `MainPanel` | |
+| Button | `ResumeButton` | `MainPanel` |
+| Button | `RestartButton` | `MainPanel` |
+| Button | `ControlsButton` | `MainPanel` |
+| Slider | `MusicSlider` | `MainPanel` |
+| Slider | `SfxSlider` | `MainPanel` |
+| Button | `MainMenuButton` | `MainPanel` |
+| `WBP_Controls` | `ControlsPanel` | |
+
+**`WBP_Results`** (parent `LSResultsWidget`)
+
+| Type | Name | Shows |
+|---|---|---|
+| Image | `Star1`, `Star2`, `Star3` | Tinted gold when earned. Use a white star texture |
+| Text | `TimeText` | Time |
+| Text | `NotesText` | Notes |
+| Text | `PetalsText` | Petals |
+| Text | `DeathsText` | Deaths |
+| Text | `NotesConditionText` | All Life Notes: Done or Missed |
+| Text | `ParConditionText` | Under the par time: Done or Missed |
+| Text | `PetalsConditionText` | Enough petals: Done or Missed |
+| Button | `NextButton` | |
+| Button | `RetryButton` | |
+
+The values are numbers only, so add your own labels, such as a **Text** reading "Time", beside them.
+
+**`WBP_StoryCard`** (parent `LSStoryCardWidget`)
+
+| Type | Name |
+|---|---|
+| Text | `CardText` |
+| Button | `NextButton` |
+
+Give `CardText` **Auto Wrap Text**, and a dark full-screen **Image** behind it.
+
+### 3. Volume assets
+In `Content/Audio`:
+
+1. Right-click and choose **Audio > Classes > Sound Class**. Make `SC_Music` and `SC_SFX`.
+2. Right-click and choose **Audio > Mix > Sound Mix**. Make `SM_Volume`.
+3. Open each music stem and finale track, and set **Sound Class** to `SC_Music`.
+4. Set **Sound Class** to `SC_SFX` on every other sound. To change many at once, select them, right-click, and choose **Asset Actions > Bulk Edit via Property Matrix**.
+
+### 4. `BP_LSPlayerController`
+1. Create a Blueprint with parent class `LSPlayerController`.
+2. In **Class Defaults**, set these:
+
+| Setting | Value |
+|---|---|
+| **UI > HUD Class** | `WBP_HUD` |
+| **UI > Main Menu Class** | `WBP_MainMenu` |
+| **UI > Pause Menu Class** | `WBP_PauseMenu` |
+| **UI > Results Class** | `WBP_Results` |
+| **UI > Story Card Class** | `WBP_StoryCard` |
+| **UI > Main Menu Level** | `L_MainMenu`, once it exists (step 5) |
+| **Audio > Volume Mix** | `SM_Volume` |
+| **Audio > Music Class** | `SC_Music` |
+| **Audio > Sfx Class** | `SC_SFX` |
+
+3. Open `BP_LSGameMode` and set **Player Controller Class** to `BP_LSPlayerController`.
+
+### 5. Main menu level
+1. Choose **File > New Level > Empty Level** and save it as `L_MainMenu`.
+2. Create `BP_LSMenuGameMode`, with parent class `BP_LSGameMode`. In **Class Defaults**, tick **Level > Menu Level** and set **Default Pawn Class** to **None**.
+3. In `L_MainMenu`, open **Window > World Settings** and set **GameMode Override** to `BP_LSMenuGameMode`.
+4. The empty level will look black, so give the menu a full-screen **Image** behind its buttons.
+5. In **Edit > Project Settings > Maps & Modes**, set **Game Default Map** to `L_MainMenu`.
+6. In **Project Settings > Packaging > List of maps to include in a packaged build**, add every level. Levels are opened by code, so a packaged game won't include them otherwise.
+
+### 6. Set these on each level
+**Level Goal** (one per level, from **Place Actors**). Scale it across the finish. Without one, a level can't end.
+
+| Setting | Level 1 | Level 2 |
+|---|---|---|
+| **Next Level** | Level 2's file | Leave empty |
+| **Par Time Seconds** | 300 | 300 |
+| **Required Petals** | 2 | 2 |
+| **Ending Sequence** or **Ending Cards** | Forest blooms, spirit light points to the mountain | Seed plants at the summit, new Heart Tree grows |
+| **Credits Cards** | Leave empty | The moral, then your credits |
+
+**Story Trigger** (from **Place Actors**). Set a **Sequence**, or add **Cards**, one entry per card. For the opening, tick **Play On Start**.
+
+Text you can use:
+- **Opening:** `The Heart Tree is dead. Its last seed falls into a world without colour or sound.`
+- **Level 1 ending:** `The forest blooms again. A spirit light drifts toward the frozen mountain.`
+- **Level 2 credits:** `Even the smallest seed can bring a world back to life.`
+
+### Level sequences
+These are optional, as text cards work without them. Create one with **Cinematics > Level Sequence**, and add a **Camera Cut** track so it takes over the view.
 
 ## Input
 No input assets are required. All input is built in `ALSPlayerController`.

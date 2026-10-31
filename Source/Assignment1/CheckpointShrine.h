@@ -1,9 +1,9 @@
 // Last Seed - a respawn point that lights up when the ball reaches it.
 //
-// Purpose: sets the ball's respawn location, turns on its glow and saves progress. It works only once.
+// Purpose: sets the ball's respawn location, turns on its glow and locks in restoration. It works only once.
 // Design pattern: none. It is a plain implementer of the ILSInteractable interface.
 // Connections: touched by ASeedBall through ILSInteractable. Calls ASeedBall::SetCheckpoint and
-// ULSGameInstance::SaveProgress.
+// URestorationSubsystem::LockInRestoration.
 
 #pragma once
 
