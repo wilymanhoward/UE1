@@ -18,6 +18,8 @@ class ASSIGNMENT1_API AStormTrigger : public ALSVolumeBase
 	GENERATED_BODY()
 
 public:
+	AStormTrigger();
+
 	virtual void OnBallOverlap(ASeedBall* Ball) override;
 
 protected:
