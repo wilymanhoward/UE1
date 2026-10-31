@@ -95,7 +95,7 @@ PAD_TOP = 450.0  # The same height as the road either side of the cavern.
 # The parkour route, in order. Rock pads are (s, d, radius).
 # One straight fenced walkway down the middle, as this is the first level: floor, log, sunlit floor, log, floor.
 ROUTE_FLOORS = [(19680.0, 19750.0), (20730.0, 21270.0), (22250.0, 22320.0)]
-ROUTE_FENCE = 310.0  # The fence's middle. Its hidden wall is 100 thick, which leaves a walkway 520 wide.
+ROUTE_FENCE = 310.0  # How far the fence stands from the middle of the walkway.
 LOGS = [20240.0, 21760.0]
 SUN_PAD_RADIUS = 620.0  # The rock under the sun shaft, which the walkway crosses.
 LOG_HALF = 500.0
@@ -1276,8 +1276,7 @@ def tilting_log(s, d, counterweight, materials, folder="Cavern"):
 
 
 def route_fence(x0, y0, x1, y1, materials, folder="Cavern"):
-    """Two rails on posts, with a hidden wall on the same line, so the player can see why the ball stopped. The wall runs higher than the posts, as a fast ball can leave a log's raised end."""
-    invisible_wall(x0, y0, x1, y1, PAD_TOP - 60.0, PAD_TOP + 450.0, folder)
+    """Two rails on posts, for looks only. Nothing stops the ball at the walkway's edge, so a fall means the water and the checkpoint."""
     length = math.hypot(x1 - x0, y1 - y0)
     yaw = math.degrees(math.atan2(y1 - y0, x1 - x0))
     for up in (70.0, 215.0):
