@@ -7,7 +7,7 @@ Everything you need to create or assign in the editor. Updated every phase.
 The game runs before you do any of this: the default game mode spawns a plain sphere ball with the default values. Do these steps when you want separate visuals and tuning for each form.
 
 ### 1. Physical materials
-Create in `Content/Physics` (right-click > Physics > Physical Material):
+`Content/Python/ls_import_player_assets.py` now creates these three in `Content/LastSeed/Physics`, plus the player's materials and meshes, and assigns them all to `BP_SeedBall`. See **World build > Stage 2**. You only need sections 1 to 3 if you want to make your own. The values it uses:
 
 | Asset | Friction | Friction Combine | Restitution |
 |---|---|---|---|
@@ -23,8 +23,8 @@ Create `M_Seed`, `M_Stone` and `M_Dandelion`. Solid gold, grey and white are eno
 ### 3. `BP_SeedBall`
 1. Create a Blueprint with parent class `SeedBall` in `Content/Blueprints`.
 2. In Class Defaults, expand **Tuning > Forms > Form Data**. For each of the 3 entries, assign **Mesh**, **Material** and **Physical Material**.
-3. Custom meshes need simple sphere collision: in the Static Mesh editor use **Collision > Add Sphere Simplified Collision**. Otherwise the ball will not roll smoothly.
-4. If your mesh's radius isn't 50 cm, set **Tuning > Movement > Ball Radius** to match.
+3. Form meshes are only visual and need no collision. The hidden 50 cm sphere does the physics, so model them with a 50 cm radius around their centre.
+4. If you scale the physics sphere, set **Tuning > Movement > Ball Radius** to match.
 5. Optional: implement the events **Play Form Switch Effect**, **Play Death Effect**, **Play Slam Start Effect** and **Play Slam Land Effect**.
 
 ### 4. `BP_LSGameMode`
@@ -407,6 +407,19 @@ In `BP_LSPlayerController`, tick **Dev > Enable Dev Cheats** to use these. Untic
 2. Pick `Content/Python/ls_asset_inventory.py` and click **Open**.
 3. Wait for `Last Seed inventory: ... assets written` in **Output Log**. Open **Window > Output Log** if you can't see it.
 4. Open `Saved/LS_AssetInventory.csv` in the project folder with Excel.
+
+### Stage 2: player model
+`Content/Python/ls_import_player_assets.py` generates the meshes, imports them and fills in `BP_SeedBall`. Nothing needs assigning by hand, and it is safe to rerun.
+
+1. In Unreal, choose **Tools > Execute Python Script**.
+2. Pick `Content/Python/ls_import_player_assets.py` and click **Open**.
+3. Wait for `Last Seed player assets: assigned everything` in **Output Log**.
+4. Press **Play**. The ball is gold with a sprout. Type `LSUnlockAllForms` in the console (the **`** key), then press **2** for Stone and **3** for Dandelion.
+
+To tune a form, open `BP_SeedBall` and expand **Tuning > Forms > Form Data**. **Glow Color** and **Glow Brightness** set its light, and **Glow Effect** sets its particles. A rerun of the script resets the art fields, but not **Roll Sound** or the movement numbers.
+
+### EngineWire (optional AI editor control)
+`Plugins/EngineWire` is a third-party plugin (0.6.0, MIT) that lets an AI assistant control the open editor. It loads in the editor only and is not part of the packaged game or this git repo. The project opens normally without it. To remove it, close the editor and delete that folder. The status bar shows `MCP :3000 (0)` while it is running.
 
 ## Input
 No input assets are required. All input is built in `ALSPlayerController`.

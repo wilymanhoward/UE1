@@ -3,6 +3,8 @@ Binaries/
 DerivedDataCache/
 Intermediate/
 Saved/
+Plugins/EngineWire/
+Content/LastSeed/SourceMeshes/
 *.sln
 *.VC.db
 *.opensdf

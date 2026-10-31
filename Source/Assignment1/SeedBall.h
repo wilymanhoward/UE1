@@ -9,7 +9,8 @@
 // Connections: ALSPlayerController calls the input functions below. ULSGameInstance says which forms are
 // unlocked. Everything the ball touches is told through ILSInteractable. Hazards, water and wind read
 // GetCurrentFormData() and push the ball through AddExternalAcceleration and Knockback. It plays its own
-// sounds, including a rolling loop chosen by the active form's data.
+// sounds, including a rolling loop chosen by the active form's data. What the player sees is separate from
+// the physics: the sphere is hidden once a form has a mesh, and the visual meshes have no collision.
 
 #pragma once
 
@@ -20,6 +21,8 @@
 
 class UAudioComponent;
 class UCameraComponent;
+class UNiagaraComponent;
+class UPointLightComponent;
 class USoundBase;
 class USpringArmComponent;
 class UStaticMeshComponent;
@@ -142,6 +145,22 @@ protected:
 	/** Root and physics body. Rolling, jumping and form data all act on this component. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	TObjectPtr<UStaticMeshComponent> BallMesh;
+
+	/** Shows the active form's Mesh. It turns with the physics body, so it looks like it is rolling. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	TObjectPtr<UStaticMeshComponent> RollingVisual;
+
+	/** Shows the active form's UprightMesh. It follows the ball's position but not its rotation. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	TObjectPtr<UStaticMeshComponent> UprightVisual;
+
+	/** Lights the ground around the ball with the active form's colour. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	TObjectPtr<UPointLightComponent> GlowLight;
+
+	/** Plays the active form's GlowEffect. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	TObjectPtr<UNiagaraComponent> GlowParticles;
 
 	/** Keeps the camera behind the ball, with lag and wall collision. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
@@ -279,6 +298,7 @@ private:
 	void OnExitForm(ESeedForm OldForm);
 	void OnEnterForm(ESeedForm NewForm);
 	void ApplyFormData(const FSeedFormData& Data);
+	void ApplyFormVisuals(const FSeedFormData& Data);
 
 	void Respawn();
 

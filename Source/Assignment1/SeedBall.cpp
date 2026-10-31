@@ -4,6 +4,7 @@
 
 #include "Camera/CameraComponent.h"
 #include "Components/AudioComponent.h"
+#include "Components/PointLightComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/CollisionProfile.h"
 #include "Engine/StaticMesh.h"
@@ -13,6 +14,8 @@
 #include "LSGameInstance.h"
 #include "LSInteractable.h"
 #include "Materials/MaterialInterface.h"
+#include "NiagaraComponent.h"
+#include "NiagaraSystem.h"
 #include "PhysicalMaterials/PhysicalMaterial.h"
 #include "Sound/SoundBase.h"
 #include "TimerManager.h"
@@ -45,6 +48,34 @@ ASeedBall::ASeedBall()
 		BallMesh->SetStaticMesh(SphereMesh.Object);
 	}
 
+	// The stencil value tells the withering post-process (see ARestorationDriver) to leave the player in full colour.
+	constexpr int32 FullColourStencil = 1;
+
+	RollingVisual = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("RollingVisual"));
+	RollingVisual->SetupAttachment(BallMesh);
+	RollingVisual->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	RollingVisual->SetRenderCustomDepth(true);
+	RollingVisual->SetCustomDepthStencilValue(FullColourStencil);
+
+	UprightVisual = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("UprightVisual"));
+	UprightVisual->SetupAttachment(BallMesh);
+	// Modelled around the ball's centre with no offset, so its top stays on top wherever the ball has turned.
+	UprightVisual->SetUsingAbsoluteRotation(true);
+	UprightVisual->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	UprightVisual->SetRenderCustomDepth(true);
+	UprightVisual->SetCustomDepthStencilValue(FullColourStencil);
+
+	GlowLight = CreateDefaultSubobject<UPointLightComponent>(TEXT("GlowLight"));
+	GlowLight->SetupAttachment(BallMesh);
+	GlowLight->SetIntensityUnits(ELightUnits::Candelas);
+	GlowLight->SetAttenuationRadius(600.f);
+	// The light sits inside the ball. With shadows on, the ball's own mesh would block it.
+	GlowLight->SetCastShadows(false);
+
+	GlowParticles = CreateDefaultSubobject<UNiagaraComponent>(TEXT("GlowParticles"));
+	GlowParticles->SetupAttachment(BallMesh);
+	GlowParticles->SetUsingAbsoluteRotation(true);
+
 	SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
 	SpringArm->SetupAttachment(BallMesh);
 	// The ball spins constantly. The arm follows its position but takes rotation only from the controller.
@@ -76,6 +107,8 @@ ASeedBall::ASeedBall()
 	Stone.GravityScale = 1.3f;
 	Stone.bBuoyancyEnabled = false;
 	Stone.bCanSlam = true;
+	Stone.GlowColor = FLinearColor(1.f, 0.6f, 0.2f);
+	Stone.GlowBrightness = 12.f;
 	FormData.Add(ESeedForm::Stone, Stone);
 
 	FSeedFormData Dandelion;
@@ -89,6 +122,8 @@ ASeedBall::ASeedBall()
 	Dandelion.GravityScale = 0.6f;
 	Dandelion.bFragile = true;
 	Dandelion.bCanGlide = true;
+	Dandelion.GlowColor = FLinearColor(1.f, 0.9f, 0.65f);
+	Dandelion.GlowBrightness = 25.f;
 	FormData.Add(ESeedForm::Dandelion, Dandelion);
 }
 
@@ -432,18 +467,8 @@ void ASeedBall::OnEnterForm(ESeedForm NewForm)
 
 void ASeedBall::ApplyFormData(const FSeedFormData& Data)
 {
-	// Changing the mesh recreates the physics body and loses its velocity, so save it and restore it after.
-	const FVector LinearVelocity = BallMesh->GetPhysicsLinearVelocity();
-	const FVector AngularVelocity = BallMesh->GetPhysicsAngularVelocityInRadians();
+	ApplyFormVisuals(Data);
 
-	if (Data.Mesh)
-	{
-		BallMesh->SetStaticMesh(Data.Mesh);
-	}
-	if (Data.Material)
-	{
-		BallMesh->SetMaterial(0, Data.Material);
-	}
 	// SetSound restarts the loop if one is playing, so the new form's sound takes over straight away.
 	RollAudio->SetSound(Data.RollSound);
 	BallMesh->SetPhysMaterialOverride(Data.PhysicalMaterial);
@@ -451,9 +476,26 @@ void ASeedBall::ApplyFormData(const FSeedFormData& Data)
 	BallMesh->SetLinearDamping(Data.LinearDamping);
 	BallMesh->SetAngularDamping(Data.AngularDamping);
 	BallMesh->SetPhysicsMaxAngularVelocityInDegrees(Data.MaxAngularSpeed);
+}
 
-	BallMesh->SetPhysicsLinearVelocity(LinearVelocity);
-	BallMesh->SetPhysicsAngularVelocityInRadians(AngularVelocity);
+void ASeedBall::ApplyFormVisuals(const FSeedFormData& Data)
+{
+	RollingVisual->SetStaticMesh(Data.Mesh);
+	RollingVisual->SetMaterial(0, Data.Material);
+	UprightVisual->SetStaticMesh(Data.UprightMesh);
+	UprightVisual->SetMaterial(0, Data.UprightMaterial);
+
+	// Hiding the sphere does not affect its physics. A form with no mesh yet stays playable as the plain sphere.
+	BallMesh->SetVisibility(Data.Mesh == nullptr);
+
+	GlowLight->SetLightColor(Data.GlowColor);
+	GlowLight->SetIntensity(Data.GlowBrightness);
+
+	GlowParticles->SetAsset(Data.GlowEffect);
+	if (Data.GlowEffect)
+	{
+		GlowParticles->Activate(true);
+	}
 }
 
 void ASeedBall::FellOutOfWorld(const UDamageType& DamageType)

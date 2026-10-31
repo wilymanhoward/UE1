@@ -7,6 +7,8 @@
 #include "Engine/PostProcessVolume.h"
 #include "Engine/World.h"
 #include "Kismet/KismetMaterialLibrary.h"
+#include "Materials/MaterialInstanceDynamic.h"
+#include "Materials/MaterialInterface.h"
 #include "Materials/MaterialParameterCollection.h"
 #include "RestorationSubsystem.h"
 
@@ -16,6 +18,7 @@ namespace
 	const FName RestorationParameter(TEXT("Restoration"));
 	const FName LastNoteLocationParameter(TEXT("LastNoteLocation"));
 	const FName LocalBloomRadiusParameter(TEXT("LocalBloomRadius"));
+	const FName SaturationParameter(TEXT("Saturation"));
 }
 
 ARestorationDriver::ARestorationDriver()
@@ -42,6 +45,12 @@ void ARestorationDriver::BeginPlay()
 		Settings.bOverride_ColorSaturation = true;
 		Settings.bOverride_ColorContrast = true;
 		Settings.bOverride_ColorGain = true;
+
+		if (UMaterialInterface* WitherMaterial = WitherPostMaterial.LoadSynchronous())
+		{
+			WitherPostInstance = UMaterialInstanceDynamic::Create(WitherMaterial, this);
+			PostProcessVolume->AddOrUpdateBlendable(WitherPostInstance, 1.f);
+		}
 	}
 
 	// Without this, the level would show its normal colours for a moment before turning grey.
@@ -87,7 +96,15 @@ void ARestorationDriver::ApplyVisuals()
 		FPostProcessSettings& Settings = PostProcessVolume->Settings;
 		const float Saturation = FMath::Lerp(WitheredSaturation, RestoredSaturation, Alpha);
 		const float Contrast = FMath::Lerp(WitheredContrast, RestoredContrast, Alpha);
-		Settings.ColorSaturation = FVector4(Saturation, Saturation, Saturation, 1.f);
+		if (WitherPostInstance)
+		{
+			WitherPostInstance->SetScalarParameterValue(SaturationParameter, Saturation);
+			Settings.ColorSaturation = FVector4(1.f, 1.f, 1.f, 1.f);
+		}
+		else
+		{
+			Settings.ColorSaturation = FVector4(Saturation, Saturation, Saturation, 1.f);
+		}
 		Settings.ColorContrast = FVector4(Contrast, Contrast, Contrast, 1.f);
 		Settings.ColorGain = FVector4(FMath::Lerp(WitheredTint, RestoredTint, Alpha));
 	}

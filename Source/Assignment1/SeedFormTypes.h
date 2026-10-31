@@ -12,6 +12,7 @@
 #include "SeedFormTypes.generated.h"
 
 class UMaterialInterface;
+class UNiagaraSystem;
 class UPhysicalMaterial;
 class USoundBase;
 class UStaticMesh;
@@ -31,13 +32,25 @@ struct FSeedFormData
 {
 	GENERATED_BODY()
 
-	/** Mesh for this form. It needs simple sphere collision. Leave empty to keep the current mesh. */
+	/** Visible mesh that rolls with the ball. It has no collision. Leave empty to show the plain physics sphere. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Assets")
 	TObjectPtr<UStaticMesh> Mesh = nullptr;
 
-	/** Material for this form. Leave empty to keep the current material. */
+	/** Material for Mesh. Leave empty to use the mesh's own material. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Assets")
 	TObjectPtr<UMaterialInterface> Material = nullptr;
+
+	/** Visible mesh that stays upright while the ball rolls, such as the Seed's sprout. Model it around the ball's centre. Can be empty. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Assets")
+	TObjectPtr<UStaticMesh> UprightMesh = nullptr;
+
+	/** Material for UprightMesh. Leave empty to use the mesh's own material. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Assets")
+	TObjectPtr<UMaterialInterface> UprightMaterial = nullptr;
+
+	/** Particles that play around this form. Leave empty for none. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Assets")
+	TObjectPtr<UNiagaraSystem> GlowEffect = nullptr;
 
 	/** Surface friction and bounciness of this form, for example high friction for Stone on ice. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Assets")
@@ -46,6 +59,14 @@ struct FSeedFormData
 	/** Looping sound while this form rolls. Its volume and pitch follow speed. Leave empty for no rolling sound. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Assets")
 	TObjectPtr<USoundBase> RollSound = nullptr;
+
+	/** Colour of the light this form gives off. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tuning")
+	FLinearColor GlowColor = FLinearColor(1.f, 0.72f, 0.3f);
+
+	/** Brightness of that light in candelas. 0 turns it off. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tuning", meta = (ClampMin = "0"))
+	float GlowBrightness = 40.f;
 
 	/** Mass in kg. Pressure plates and pushable blocks react to this value. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tuning", meta = (ClampMin = "0.1"))

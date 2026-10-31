@@ -5,7 +5,8 @@
 // A subsystem can't hold editor-assigned assets or level references, which is why this is a separate actor.
 // Design pattern: observer. It reads and listens to URestorationSubsystem, and the subsystem never knows it exists.
 // Connections: reads URestorationSubsystem. Writes to the UMaterialParameterCollection that all world
-// materials read, plus the APostProcessVolume and AExponentialHeightFog assigned to it.
+// materials read, plus the APostProcessVolume and AExponentialHeightFog assigned to it. The volume's own saturation
+// would grey the player too, so when WitherPostMaterial exists, that material does the greying and skips the player.
 
 #pragma once
 
@@ -15,6 +16,8 @@
 
 class AExponentialHeightFog;
 class APostProcessVolume;
+class UMaterialInstanceDynamic;
+class UMaterialInterface;
 class UMaterialParameterCollection;
 class URestorationSubsystem;
 
@@ -42,6 +45,10 @@ protected:
 	/** Thins out as the world recovers. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Restoration")
 	TObjectPtr<AExponentialHeightFog> HeightFog;
+
+	/** Post-process material with a Saturation parameter that leaves stencil 1 in full colour. If missing, the volume's saturation is used. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Restoration")
+	TSoftObjectPtr<UMaterialInterface> WitherPostMaterial = TSoftObjectPtr<UMaterialInterface>(FSoftObjectPath(TEXT("/Game/LastSeed/Materials/M_LS_WitherPost.M_LS_WitherPost")));
 
 	/** How quickly the visuals catch up with the real value. Higher is faster. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tuning", meta = (ClampMin = "0.1"))
@@ -96,6 +103,10 @@ private:
 	/** The world's restoration rules. Read each frame. */
 	UPROPERTY(Transient)
 	TObjectPtr<URestorationSubsystem> Restoration;
+
+	/** This level's copy of WitherPostMaterial, updated as the world recovers. Empty if the asset is missing. */
+	UPROPERTY(Transient)
+	TObjectPtr<UMaterialInstanceDynamic> WitherPostInstance;
 
 	// What is on screen now. It chases the real value, which jumps with each note.
 	float DisplayedRestoration = 0.f;

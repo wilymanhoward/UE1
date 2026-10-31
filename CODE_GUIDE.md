@@ -6,7 +6,7 @@ The player is the last glowing seed of a dead Heart Tree. This guide explains ea
 
 ### `SeedFormTypes.h`: form data
 - `ESeedForm`: Seed, Stone, Dandelion.
-- `FSeedFormData`: every value that makes a form different (mesh, mass, damping, torque, jump, wind response, gravity scale, and the ability flags).
+- `FSeedFormData`: every value that makes a form different (rolling and upright meshes, glow, mass, damping, torque, jump, wind response, gravity scale, and the ability flags).
 - **Pattern:** data-driven design. Slam and glide check `bCanSlam` and `bCanGlide`, not "is this Stone?".
 
 ### `ASeedBall`: the player pawn
@@ -20,7 +20,8 @@ The player is the last glowing seed of a dead Heart Tree. This guide explains ea
 | `ApplyGlide` | While falling with jump held: small lift and a clamped fall speed |
 | `SlamPressed` | Strong downward impulse in the air, for forms with `bCanSlam` |
 | `TrySwitchForm` | The state transition: guards, `OnExitForm`, `OnEnterForm`, effect hook, delegate |
-| `ApplyFormData` | Applies a form to the physics body, saving velocity because a mesh swap would lose it |
+| `ApplyFormData` | Applies a form's mass, damping and friction to the physics body. The sphere itself never changes, so a switch can't lose velocity |
+| `ApplyFormVisuals` | Shows the form's rolling and upright meshes, light colour and particles. None of them have collision |
 | `Die` / `Respawn` | Freeze and hide, then teleport to the checkpoint with velocity zeroed |
 | `UpdateRollAudio` | Sets the roll loop's volume and pitch from speed as a fraction of the form's top speed |
 
@@ -121,7 +122,7 @@ Each frame it adds drag against the velocity, plus upward buoyancy that grows wi
 **Patterns:** subsystem and observer.
 
 ### `ARestorationDriver`: what the player sees
-`Tick` moves `DisplayedRestoration` smoothly toward the real value. `ApplyVisuals` writes it to the material parameter collection, the post-process volume and the fog. `HandleNoteCollected` sets `LastNoteLocation` and restarts the local bloom radius. **Pattern:** observer.
+`Tick` moves `DisplayedRestoration` smoothly toward the real value. `ApplyVisuals` writes it to the material parameter collection, the post-process volume and the fog. `HandleNoteCollected` sets `LastNoteLocation` and restarts the local bloom radius. If `M_LS_WitherPost` exists, `BeginPlay` adds it to the volume and saturation goes through that material, which leaves the player in full colour. If not, the volume's own saturation is used. **Pattern:** observer.
 
 ### `ARestorableActor`: plants that grow back
 Hidden at the start. It starts growing when restoration reaches its threshold or a note is collected nearby. `Tick` scales it with a bounce curve, and only runs while growing. **Pattern:** observer.
@@ -154,6 +155,12 @@ An editor script, so it isn't part of the game. Helpers such as `floor`, `ramp` 
 
 ### `Content/Python/ls_asset_inventory.py`: what the Fab packs contain
 An editor script that writes every mesh, material, Niagara system and cloud asset to a CSV, with its size and a category guessed from its name. The world scripts choose assets from this list, which is why they can scale scenery correctly. It only reads.
+
+### `Content/Python/ls_generate_player_meshes.py`: the player's models
+A standalone script using only the standard library. It builds each model from maths and writes it as an OBJ file. The Seed's ridges come from the angle around the ball. Stone's plates are Voronoi cells: each point belongs to its nearest random centre, and the cracks are where two centres are almost equally near. The Dandelion is many thin stalks with small tufts, spread evenly with a Fibonacci spiral. `check_mesh` stops the script if any part would stick out past the 50 cm ball.
+
+### `Content/Python/ls_import_player_assets.py`: the player's art
+An editor script that imports the OBJ files, builds the materials node by node, creates the physical materials and fills in `BP_SeedBall`'s form data. Rerunning it rebuilds each asset in place. The materials need no textures, because the UVs carry masks: on the Stone, U says how much of a crack a point is, and the material turns that into glowing gold.
 
 ### Dev cheats
 `bEnableDevCheats` on `ALSPlayerController` adds F1, F2 and F3 to the mapping context. F3 collects real notes through `OnBallOverlap`, so the count and stars stay correct.
@@ -228,13 +235,16 @@ Each rubric area, with what to show and where it is.
 26. **Why text cards pause the game but cutscenes don't.** A sequence can't play while paused, so a cutscene removes the input context and stops the timer. Text cards simply pause, which also freezes the blobs and storm.
 27. **Why results are saved before the ending plays.** A player who quits during the ending has still finished the level.
 28. **Why the first best time needs a check.** A new record's time starts at 0, so `Min` would keep 0 forever. The first finish copies the time across.
+29. **Why the visuals are separate from the physics sphere.** A bumpy mesh on the physics body would make the ball bounce on its own bumps, and swapping meshes would rebuild the body and lose its speed. A hidden perfect sphere does the physics, so all three forms roll the same way, and the art can change freely.
+30. **How the sprout stays upright on a rolling ball.** `UprightVisual` uses absolute rotation, so it ignores the ball's spin. The mesh is modelled around the ball's centre with no offset, so there is no position for the spin to swing around.
+31. **How the player stays in colour in a grey world.** Post-process saturation greys every pixel, including the player. Instead, the ball's meshes write stencil value 1, and `M_LS_WitherPost` greys only the pixels without it. This needs `r.CustomDepth=3` in `DefaultEngine.ini`, which turns on the stencil.
 
 ## Suggested explanation order
 1. `SeedFormTypes.h`: what a form is.
 2. `ALSPlayerController::CreateInputObjects`: input built in code.
 3. `ASeedBall::Tick`: a readable overview of each frame.
 4. Rolling, then the jump timers.
-5. `TrySwitchForm` and `ApplyFormData`: the state pattern.
+5. `TrySwitchForm`, `ApplyFormData` and `ApplyFormVisuals`: the state pattern, with physics and art kept apart.
 6. Slam and glide: abilities driven by data flags.
 7. `Die`, `Respawn` and the delegates: the observer pattern.
 8. `ILSInteractable` and `ASeedBall::HandleBeginOverlap`: the interface.
