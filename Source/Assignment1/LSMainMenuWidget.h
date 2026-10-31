@@ -30,18 +30,23 @@ protected:
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UWidget> MainPanel;
 
+	/** Opens the furthest unlocked level. */
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UButton> PlayButton;
 
+	/** Opens the level select panel. */
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UButton> LevelSelectButton;
 
+	/** Opens the controls list. */
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UButton> ControlsButton;
 
+	/** Closes the game. */
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UButton> QuitButton;
 
+	/** Best Golden Petals across all levels. */
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UTextBlock> TotalPetalsText;
 
@@ -49,18 +54,23 @@ protected:
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UWidget> LevelSelectPanel;
 
+	/** Opens Level 1. */
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UButton> Level1Button;
 
+	/** Opens Level 2. Disabled until Level 1 is finished. */
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UButton> Level2Button;
 
+	/** Best scores for Level 1. */
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UTextBlock> Level1BestText;
 
+	/** Best scores for Level 2, or a locked message. */
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UTextBlock> Level2BestText;
 
+	/** Returns to the main panel. */
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UButton> LevelSelectBackButton;
 

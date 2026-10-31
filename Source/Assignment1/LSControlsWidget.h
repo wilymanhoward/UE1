@@ -31,9 +31,11 @@ public:
 protected:
 	virtual void NativeOnInitialized() override;
 
+	/** Shows the list of controls. Filled in by code. */
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UTextBlock> ControlsText;
 
+	/** Closes the list. */
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UButton> BackButton;
 

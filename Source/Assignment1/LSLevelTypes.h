@@ -16,36 +16,47 @@ struct FLSLevelResult
 {
 	GENERATED_BODY()
 
+	/** Time taken, in seconds. */
 	UPROPERTY(BlueprintReadOnly, Category = "Result")
 	float TimeSeconds = 0.f;
 
+	/** Time to beat for the third star, in seconds. */
 	UPROPERTY(BlueprintReadOnly, Category = "Result")
 	float ParTimeSeconds = 0.f;
 
+	/** Times the ball died. */
 	UPROPERTY(BlueprintReadOnly, Category = "Result")
 	int32 Deaths = 0;
 
+	/** Life Notes collected. */
 	UPROPERTY(BlueprintReadOnly, Category = "Result")
 	int32 NotesCollected = 0;
 
+	/** Life Notes in the level. */
 	UPROPERTY(BlueprintReadOnly, Category = "Result")
 	int32 NotesTotal = 0;
 
+	/** Golden Petals collected. */
 	UPROPERTY(BlueprintReadOnly, Category = "Result")
 	int32 PetalsCollected = 0;
 
+	/** Golden Petals in the level. */
 	UPROPERTY(BlueprintReadOnly, Category = "Result")
 	int32 PetalsTotal = 0;
 
+	/** Golden Petals needed for the third star. */
 	UPROPERTY(BlueprintReadOnly, Category = "Result")
 	int32 PetalsRequired = 0;
 
+	/** True if every Life Note was collected. */
 	UPROPERTY(BlueprintReadOnly, Category = "Result")
 	bool bAllNotes = false;
 
+	/** True if the time beat the par time. */
 	UPROPERTY(BlueprintReadOnly, Category = "Result")
 	bool bUnderPar = false;
 
+	/** True if enough Golden Petals were collected. */
 	UPROPERTY(BlueprintReadOnly, Category = "Result")
 	bool bEnoughPetals = false;
 
@@ -60,12 +71,15 @@ struct FLSLevelRecord
 {
 	GENERATED_BODY()
 
+	/** Most stars earned. */
 	UPROPERTY(BlueprintReadOnly, Category = "Record")
 	int32 BestStars = 0;
 
+	/** Fastest time, in seconds. */
 	UPROPERTY(BlueprintReadOnly, Category = "Record")
 	float BestTimeSeconds = 0.f;
 
+	/** Most Golden Petals collected in one run. */
 	UPROPERTY(BlueprintReadOnly, Category = "Record")
 	int32 BestPetals = 0;
 };

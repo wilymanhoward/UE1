@@ -93,6 +93,7 @@ private:
 
 	void ApplyVisuals();
 
+	/** The world's restoration rules. Read each frame. */
 	UPROPERTY(Transient)
 	TObjectPtr<URestorationSubsystem> Restoration;
 

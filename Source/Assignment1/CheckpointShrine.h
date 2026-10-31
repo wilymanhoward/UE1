@@ -28,6 +28,9 @@ public:
 
 	virtual void OnBallOverlap(ASeedBall* Ball) override;
 
+	/** True once the ball has reached this shrine. */
+	bool IsActivated() const { return bActivated; }
+
 protected:
 	/** Change the mesh material here to make the shrine itself glow. */
 	UFUNCTION(BlueprintImplementableEvent, Category = "Checkpoint")

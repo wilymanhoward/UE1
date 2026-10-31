@@ -29,24 +29,31 @@ protected:
 	virtual void NativeOnInitialized() override;
 	virtual void NativeConstruct() override;
 
+	/** First star: finishing the level. */
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UImage> Star1;
 
+	/** Second star: all Life Notes. */
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UImage> Star2;
 
+	/** Third star: all Life Notes, under par, and enough petals. */
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UImage> Star3;
 
+	/** Time taken. */
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UTextBlock> TimeText;
 
+	/** Life Notes collected and total. */
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UTextBlock> NotesText;
 
+	/** Golden Petals collected and total. */
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UTextBlock> PetalsText;
 
+	/** Times the ball died. */
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UTextBlock> DeathsText;
 
@@ -62,9 +69,11 @@ protected:
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UTextBlock> PetalsConditionText;
 
+	/** Continues to the next level or the credits. */
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UButton> NextButton;
 
+	/** Plays this level again. */
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UButton> RetryButton;
 

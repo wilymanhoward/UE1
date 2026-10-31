@@ -4,6 +4,7 @@
 
 #include "Blueprint/UserWidget.h"
 #include "Camera/PlayerCameraManager.h"
+#include "CheckpointShrine.h"
 #include "Engine/Engine.h"
 #include "Engine/LocalPlayer.h"
 #include "EngineUtils.h"
@@ -17,6 +18,7 @@
 #include "LevelSequence.h"
 #include "LevelSequenceActor.h"
 #include "LevelSequencePlayer.h"
+#include "LifeNote.h"
 #include "LSGameInstance.h"
 #include "LSGameMode.h"
 #include "LSHUDWidget.h"
@@ -190,6 +192,18 @@ void ALSPlayerController::CreateInputObjects()
 	PauseAction->bTriggerWhenPaused = true;
 	Context->MapKey(PauseAction, EKeys::Escape);
 	Context->MapKey(PauseAction, EKeys::Gamepad_Special_Right);
+
+	if (bEnableDevCheats)
+	{
+		DevUnlockFormsAction = MakeAction(this, EInputActionValueType::Boolean);
+		Context->MapKey(DevUnlockFormsAction, EKeys::F1);
+
+		DevNextCheckpointAction = MakeAction(this, EInputActionValueType::Boolean);
+		Context->MapKey(DevNextCheckpointAction, EKeys::F2);
+
+		DevCollectNotesAction = MakeAction(this, EInputActionValueType::Boolean);
+		Context->MapKey(DevCollectNotesAction, EKeys::F3);
+	}
 }
 
 void ALSPlayerController::BindInputActions()
@@ -209,6 +223,13 @@ void ALSPlayerController::BindInputActions()
 	Input->BindAction(SelectDandelionAction, ETriggerEvent::Started, this, &ALSPlayerController::HandleSelectForm, ESeedForm::Dandelion);
 	Input->BindAction(CycleFormAction, ETriggerEvent::Started, this, &ALSPlayerController::HandleCycleForm);
 	Input->BindAction(PauseAction, ETriggerEvent::Started, this, &ALSPlayerController::HandleTogglePause);
+
+	if (bEnableDevCheats)
+	{
+		Input->BindAction(DevUnlockFormsAction, ETriggerEvent::Started, this, &ALSPlayerController::HandleDevUnlockForms);
+		Input->BindAction(DevNextCheckpointAction, ETriggerEvent::Started, this, &ALSPlayerController::HandleDevNextCheckpoint);
+		Input->BindAction(DevCollectNotesAction, ETriggerEvent::Started, this, &ALSPlayerController::HandleDevCollectNotes);
+	}
 }
 
 ASeedBall* ALSPlayerController::GetBall() const
@@ -297,6 +318,60 @@ void ALSPlayerController::HandleTogglePause()
 	else
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Last Seed: assign Pause Menu Class on the player controller."));
+	}
+}
+
+void ALSPlayerController::HandleDevUnlockForms()
+{
+	LSUnlockAllForms();
+	ShowPrompt(FText::FromString(TEXT("Dev: all forms unlocked")), 2.f);
+}
+
+void ALSPlayerController::HandleDevNextCheckpoint()
+{
+	ASeedBall* Ball = GetBall();
+	if (!Ball)
+	{
+		return;
+	}
+
+	// The nearest shrine not reached yet is normally the next one along the path.
+	const ACheckpointShrine* Nearest = nullptr;
+	double NearestDistance = TNumericLimits<double>::Max();
+	for (TActorIterator<ACheckpointShrine> It(GetWorld()); It; ++It)
+	{
+		const double Distance = FVector::DistSquared(It->GetActorLocation(), Ball->GetActorLocation());
+		if (!It->IsActivated() && Distance < NearestDistance)
+		{
+			Nearest = *It;
+			NearestDistance = Distance;
+		}
+	}
+
+	if (Nearest)
+	{
+		// Slightly above, so the ball drops onto the ground and doesn't start inside it.
+		Ball->TeleportBall(Nearest->GetActorLocation() + FVector(0.f, 0.f, 100.f));
+	}
+	else
+	{
+		ShowPrompt(FText::FromString(TEXT("Dev: no checkpoints left")), 2.f);
+	}
+}
+
+void ALSPlayerController::HandleDevCollectNotes()
+{
+	ASeedBall* Ball = GetBall();
+	if (!Ball)
+	{
+		return;
+	}
+
+	// Real notes are collected, so the count, restoration and stars all stay correct.
+	int32 Remaining = 5;
+	for (TActorIterator<ALifeNote> It(GetWorld()); It && Remaining > 0; ++It, --Remaining)
+	{
+		It->OnBallOverlap(Ball);
 	}
 }
 

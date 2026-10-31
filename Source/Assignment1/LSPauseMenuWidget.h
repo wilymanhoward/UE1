@@ -31,21 +31,27 @@ protected:
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UWidget> MainPanel;
 
+	/** Closes the menu and continues. */
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UButton> ResumeButton;
 
+	/** Returns the ball to its last checkpoint. */
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UButton> RestartButton;
 
+	/** Opens the controls list. */
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UButton> ControlsButton;
 
+	/** Leaves the level for the main menu. */
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UButton> MainMenuButton;
 
+	/** Music volume from 0 to 1. */
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<USlider> MusicSlider;
 
+	/** Sound effect volume from 0 to 1. */
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<USlider> SfxSlider;
 

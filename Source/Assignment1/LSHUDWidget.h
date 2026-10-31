@@ -34,24 +34,31 @@ protected:
 	virtual void NativeConstruct() override;
 	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 
+	/** Icon of the active form. */
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UImage> FormIcon;
 
+	/** Name of the active form. */
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UTextBlock> FormNameText;
 
+	/** Life Notes collected and total. */
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UTextBlock> NotesText;
 
+	/** Golden Petals collected. */
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UTextBlock> PetalsText;
 
+	/** Level time. */
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UTextBlock> TimerText;
 
+	/** How restored the world is. */
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UProgressBar> RestorationBar;
 
+	/** Tutorial and prompt messages. Fades out by itself. */
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UTextBlock> PromptText;
 

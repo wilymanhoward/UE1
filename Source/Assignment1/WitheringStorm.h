@@ -88,6 +88,7 @@ private:
 	void SetStormZ(float NewZ);
 	void UpdateCloseEffects(float DeltaSeconds);
 
+	/** The ball being chased. Set when the storm starts. */
 	UPROPERTY(Transient)
 	TObjectPtr<ASeedBall> TargetBall;
 

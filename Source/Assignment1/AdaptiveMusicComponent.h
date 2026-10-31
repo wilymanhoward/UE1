@@ -58,10 +58,11 @@ private:
 
 	void FadeInStem(int32 StemIndex);
 
-	// Same order as Stems. An entry is null if that stem has no sound.
+	/** The playing stems, kept so they can be faded. Same order as Stems, and an entry is null if that stem has no sound. */
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<UAudioComponent>> StemAudio;
 
+	/** The playing finale. Set once the finale has started. */
 	UPROPERTY(Transient)
 	TObjectPtr<UAudioComponent> FinaleAudio;
 };

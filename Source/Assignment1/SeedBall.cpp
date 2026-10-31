@@ -326,6 +326,13 @@ void ASeedBall::SetCheckpoint(const FVector& Location)
 	OnCheckpointSet.Broadcast(Location);
 }
 
+void ASeedBall::TeleportBall(const FVector& Location)
+{
+	SetActorLocation(Location, false, nullptr, ETeleportType::TeleportPhysics);
+	BallMesh->SetPhysicsLinearVelocity(FVector::ZeroVector);
+	BallMesh->SetPhysicsAngularVelocityInRadians(FVector::ZeroVector);
+}
+
 void ASeedBall::SetMoveInput(const FVector2D& Input)
 {
 	MoveInput = Input;

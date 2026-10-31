@@ -89,6 +89,10 @@ protected:
 	virtual void SetupInputComponent() override;
 	virtual void OnPossess(APawn* InPawn) override;
 
+	/** Turns on F1 (unlock all forms), F2 (teleport to the next checkpoint) and F3 (collect 5 notes). Untick before submitting. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Dev")
+	bool bEnableDevCheats = false;
+
 	/** Assign WBP_HUD. */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "UI")
 	TSubclassOf<ULSHUDWidget> HUDClass;
@@ -173,16 +177,21 @@ private:
 	void HandleSelectForm(const FInputActionInstance& Instance, ESeedForm Form);
 	void HandleCycleForm(const FInputActionValue& Value);
 	void HandleTogglePause();
+	void HandleDevUnlockForms();
+	void HandleDevNextCheckpoint();
+	void HandleDevCollectNotes();
 
 	ASeedBall* GetBall() const;
 
+	/** The in-game display. Null in the menu level, or if no HUD Class is assigned. */
 	UPROPERTY(Transient)
 	TObjectPtr<ULSHUDWidget> HUD;
 
-	// The menu on screen now, or null during play.
+	/** The menu on screen now, or null during play. */
 	UPROPERTY(Transient)
 	TObjectPtr<UUserWidget> ActiveMenu;
 
+	/** Plays the current cutscene. Destroyed when it ends. */
 	UPROPERTY(Transient)
 	TObjectPtr<ALevelSequenceActor> StorySequenceActor;
 
@@ -190,33 +199,55 @@ private:
 	bool bStoryPlaying = false;
 
 	// UPROPERTY keeps these runtime-created objects alive: otherwise garbage collection would delete them.
+	/** Maps every key to its action. Created in code. */
 	UPROPERTY(Transient)
 	TObjectPtr<UInputMappingContext> GameplayContext;
 
+	/** Rolling input. */
 	UPROPERTY(Transient)
 	TObjectPtr<UInputAction> MoveAction;
 
+	/** Camera input. */
 	UPROPERTY(Transient)
 	TObjectPtr<UInputAction> LookAction;
 
+	/** Jump and glide input. */
 	UPROPERTY(Transient)
 	TObjectPtr<UInputAction> JumpAction;
 
+	/** Ground slam input. */
 	UPROPERTY(Transient)
 	TObjectPtr<UInputAction> SlamAction;
 
+	/** Switches to Seed. */
 	UPROPERTY(Transient)
 	TObjectPtr<UInputAction> SelectSeedAction;
 
+	/** Switches to Stone Shell. */
 	UPROPERTY(Transient)
 	TObjectPtr<UInputAction> SelectStoneAction;
 
+	/** Switches to Dandelion. */
 	UPROPERTY(Transient)
 	TObjectPtr<UInputAction> SelectDandelionAction;
 
+	/** Moves to the next or previous form. */
 	UPROPERTY(Transient)
 	TObjectPtr<UInputAction> CycleFormAction;
 
+	/** Opens and closes the pause menu. */
 	UPROPERTY(Transient)
 	TObjectPtr<UInputAction> PauseAction;
+
+	/** F1 cheat. Only created when dev cheats are on. */
+	UPROPERTY(Transient)
+	TObjectPtr<UInputAction> DevUnlockFormsAction;
+
+	/** F2 cheat. Only created when dev cheats are on. */
+	UPROPERTY(Transient)
+	TObjectPtr<UInputAction> DevNextCheckpointAction;
+
+	/** F3 cheat. Only created when dev cheats are on. */
+	UPROPERTY(Transient)
+	TObjectPtr<UInputAction> DevCollectNotesAction;
 };

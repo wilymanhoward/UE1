@@ -369,6 +369,35 @@ Text you can use:
 ### Level sequences
 These are optional, as text cards work without them. Create one with **Cinematics > Level Sequence**, and add a **Camera Cut** track so it takes over the view.
 
+## Phase 8
+
+### 1. Level script
+`Content/Python/build_greybox.py` builds a playable layout of all 6 zones, and dresses them with your Fab trees, rocks and plants. It needs the **Python Editor Script Plugin**.
+
+1. Create `PM_Ice` first (Phase 3), so Level 2's ice is slippery.
+2. Choose **File > New Level > Basic**, and save it as `L_Level1`. Do the same for `L_Level2`. The names must contain `Level1` or `Level2`.
+3. With a level open, choose **Tools > Execute Python Script** and pick `build_greybox.py`. It takes a moment.
+4. Check **Output Log** for lines starting `Last Seed greybox`, which list anything it skipped.
+5. Save the level. In `L_Level1`, select `LevelGoal` and set **Next Level** to `L_Level2`.
+6. In `WBP_MainMenu`, set **Level 1** and **Level 2**.
+
+Running it again deletes and rebuilds only what it created, along with any **Floor** actor and **Player Start** in the level. **Anything else you add stays, but any change you made to its actors is lost**, so finish using the script before polishing by hand.
+
+The script uses your Blueprint children from `Content/Blueprint` if they exist, and the C++ classes if not. Create `BP_LifeNote`, `BP_GoldenPetal` and the others first, or those pickups will have no mesh.
+
+The water is a plain white surface until you add a water material. Fab scenery has no collision, so the ball rolls through it. To make a large tree solid, select it and set **Collision Presets** to `BlockAll`.
+
+Fab materials don't use `MF_WitherBlend`, so keep the `RestorationDriver`'s **Withered Saturation** at its default of 0.15. That greys the whole screen, so the Fab scenery looks withered too.
+
+### 2. Dev cheats
+In `BP_LSPlayerController`, tick **Dev > Enable Dev Cheats** to use these. Untick it before you submit.
+
+| Key | Effect |
+|---|---|
+| F1 | Unlocks all forms |
+| F2 | Teleports to the nearest shrine not yet reached |
+| F3 | Collects 5 Life Notes |
+
 ## Input
 No input assets are required. All input is built in `ALSPlayerController`.
 

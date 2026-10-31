@@ -33,9 +33,11 @@ protected:
 	virtual void NativeOnInitialized() override;
 	virtual void NativeConstruct() override;
 
+	/** The current card. */
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UTextBlock> CardText;
 
+	/** Shows the next card, or finishes after the last one. */
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UButton> NextButton;
 

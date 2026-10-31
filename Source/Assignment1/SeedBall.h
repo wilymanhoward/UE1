@@ -87,6 +87,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Seed|Death")
 	void SetCheckpoint(const FVector& Location);
 
+	/** Moves the ball straight to Location and stops it. Used by the dev cheats. */
+	void TeleportBall(const FVector& Location);
+
 	// --- Forces from the world, called by wind, water and hazards ---
 
 	/** Adds acceleration in cm/s^2 for this frame. Mass does not affect it, so callers scale it by form data. */

@@ -78,6 +78,7 @@ private:
 	FLSLevelResult BuildResult(const ALevelGoal* Goal) const;
 	ALSPlayerController* GetLSPlayerController() const;
 
+	/** The goal that ended the level. Its settings are read again after the results. */
 	UPROPERTY(Transient)
 	TObjectPtr<ALevelGoal> CompletedGoal;
 

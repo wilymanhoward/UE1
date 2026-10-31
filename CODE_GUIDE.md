@@ -149,6 +149,53 @@ Looping sounds use a `UAudioComponent`, so an attenuation can be assigned: `Roll
 - `ASeedBall::AddExternalAcceleration` and `Knockback` are how the world pushes the ball.
 - `LSDefaultMeshes.h` supplies engine meshes, so actors are visible as soon as they are placed.
 
+### `Content/Python/build_greybox.py`: the level builder
+An editor script, so it isn't part of the game. Helpers such as `floor`, `ramp` and `note` keep each zone function readable, and the spacing comes from the ball's real speed and jump height. Every actor gets a tag, so a rerun replaces only its own work. `dress_mesh` reads a mesh's bounds to scale it to a target height and rest it on the ground.
+
+### Dev cheats
+`bEnableDevCheats` on `ALSPlayerController` adds F1, F2 and F3 to the mapping context. F3 collects real notes through `OnBallOverlap`, so the count and stars stay correct.
+
+## How to explain this in my video
+Each rubric area, with what to show and where it is.
+
+### Complexity
+| Show | Where |
+|---|---|
+| Forms as a data-driven state pattern | `FSeedFormData`, then `ASeedBall::TrySwitchForm` |
+| An interface in place of casting | `ILSInteractable`, `ASeedBall::HandleBeginOverlap` |
+| A world subsystem holding the rules | `URestorationSubsystem` |
+| Delegates, with several listeners on one event | `OnMilestoneReached`, used by plants and music |
+| An AI state machine | `AWitherBlob::UpdateState` |
+| Physics | `ASeedBall::ApplyMovement`, and point 11 below on why the block needs no push code |
+
+### Engagement
+| Show | Where |
+|---|---|
+| Stars and their conditions | `ALSGameMode::BuildResult`, then the results screen |
+| Hidden Golden Petals | `AGoldenPetal`, and a petal found in play |
+| The storm chase | `AWitheringStorm::Tick` and `HandleNoteCollected` |
+
+### Clarity
+| Show | Where |
+|---|---|
+| Tutorial triggers | `ATutorialTrigger`, and a prompt fading on the HUD |
+| The HUD | `ULSHUDWidget`, and how `BindWidget` links C++ to the layout |
+| The controls menu | `ULSControlsWidget`, a single list used by both menus |
+
+### Music
+| Show | Where |
+|---|---|
+| Adaptive stems | `UAdaptiveMusicComponent::BeginPlay` and `HandleMilestoneReached`, then collect notes in play so the layers are heard |
+| Why stems stay in sync | Point 22 below |
+| The finale | `PlayFinale`, listening to `OnLevelCompleted` |
+
+### Storyline
+| Show | Where |
+|---|---|
+| Story triggers | `AStoryTrigger`, then `ALSPlayerController::PlayStory` |
+| Endings and credits | `ALevelGoal`, then `ALSGameMode::CompleteLevel` and `ContinueAfterResults` |
+| The story told through the world | `ARestorationDriver` and `ARestorableActor`, colour returning as notes are collected |
+
 ## Points worth explaining
 1. **The camera does not spin with the ball.** The spring arm uses absolute rotation and control rotation.
 2. **Why `bAccelChange = true`.** Rolling and jumping stay independent of mass, so mass can drive plates and blocks while handling is tuned separately. Friction still depends on the physical material.
