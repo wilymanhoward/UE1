@@ -45,6 +45,15 @@ void ACrackedWall::Break(const FVector& ImpactVelocity)
 	Mesh->SetVisibility(false);
 	Mesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
+	for (AActor* Rubble : RubbleActors)
+	{
+		if (Rubble)
+		{
+			Rubble->SetActorHiddenInGame(true);
+			Rubble->SetActorEnableCollision(false);
+		}
+	}
+
 	if (DebrisMesh)
 	{
 		const FVector ImpactDirection = ImpactVelocity.GetSafeNormal();

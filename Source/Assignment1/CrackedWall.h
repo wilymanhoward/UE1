@@ -39,6 +39,10 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cracked Wall")
 	TObjectPtr<UStaticMesh> DebrisMesh;
 
+	/** Scenery that makes up the blockage, such as a rock pile. It disappears along with the wall's own mesh. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cracked Wall")
+	TArray<TObjectPtr<AActor>> RubbleActors;
+
 	/** Plays when the wall breaks. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cracked Wall")
 	TObjectPtr<USoundBase> BreakSound;

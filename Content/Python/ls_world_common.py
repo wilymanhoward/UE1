@@ -12,6 +12,8 @@ import random
 
 import unreal
 
+import ls_generate_player_meshes
+
 TAG = "LS_Generated"
 GREYBOX_TAG = "LS_Greybox"
 MAP_FOLDER = "/Game/LastSeed/Maps"
@@ -161,6 +163,39 @@ class Terrain:
         return asset_path
 
 
+def import_generated_mesh(name, mesh, solid=False, nanite=True):
+    """Imports a mesh built in Python, unless its file hasn't changed. A solid mesh uses its exact triangles as collision."""
+    os.makedirs(SOURCE_FOLDER, exist_ok=True)
+    path = os.path.join(SOURCE_FOLDER, name + ".obj")
+    new_path = path + ".new"
+    ls_generate_player_meshes.write_obj(new_path, mesh)
+    asset_path = "{}/{}".format(MESH_FOLDER, name)
+    unchanged = os.path.exists(path) and asset_library.does_asset_exist(asset_path) and open(path, "rb").read() == open(new_path, "rb").read()
+    os.replace(new_path, path)
+    if not unchanged:
+        task = unreal.AssetImportTask()
+        task.filename = os.path.normpath(path)
+        task.destination_path = MESH_FOLDER
+        task.destination_name = name
+        task.automated = True
+        task.replace_existing = True
+        task.save = True
+        unreal.AssetToolsHelpers.get_asset_tools().import_asset_tasks([task])
+        if not asset_library.does_asset_exist(asset_path):
+            raise RuntimeError("Last Seed world: mesh {} did not import".format(name))
+        loaded = unreal.load_asset(asset_path)
+        subsystem = unreal.get_editor_subsystem(unreal.StaticMeshEditorSubsystem)
+        settings = loaded.get_editor_property("nanite_settings")
+        settings.set_editor_property("enabled", nanite and not solid)
+        subsystem.set_nanite_settings(loaded, settings, True)
+        if solid:
+            subsystem.remove_collisions(loaded)
+            body = loaded.get_editor_property("body_setup")
+            body.set_editor_property("collision_trace_flag", unreal.CollisionTraceFlag.CTF_USE_COMPLEX_AS_SIMPLE)
+        asset_library.save_loaded_asset(loaded, False)
+    return asset_path
+
+
 def spread_coordinates(lowest, highest, fine_from, fine_to, fine_step, growth=1.18, sharp=()):
     """Evenly spaced near the route, growing further apart toward the horizon, plus exact values at each sharp edge."""
     values = set()
@@ -248,12 +283,12 @@ def jittered_grid(x0, x1, y0, y1, spacing, rng):
 # --- Boundaries ---
 
 def invisible_wall(x0, y0, x1, y1, bottom, top, folder="Boundaries"):
-    """A hidden solid box. The camera ignores it, so the view doesn't jump when the ball rolls beside one."""
+    """A hidden solid box between two points. The camera ignores it, so the view doesn't jump when the ball rolls beside one."""
     thickness = 100.0
-    size_x = max(abs(x1 - x0), thickness)
-    size_y = max(abs(y1 - y0), thickness)
-    actor = spawn(unreal.StaticMeshActor, (x0 + x1) / 2.0, (y0 + y1) / 2.0, (bottom + top) / 2.0, "InvisibleWall", folder)
-    actor.set_actor_scale3d(unreal.Vector(size_x / 100.0, size_y / 100.0, (top - bottom) / 100.0))
+    length = max(math.hypot(x1 - x0, y1 - y0), thickness)
+    yaw = math.degrees(math.atan2(y1 - y0, x1 - x0))
+    actor = spawn(unreal.StaticMeshActor, (x0 + x1) / 2.0, (y0 + y1) / 2.0, (bottom + top) / 2.0, "InvisibleWall", folder, yaw)
+    actor.set_actor_scale3d(unreal.Vector(length / 100.0, thickness / 100.0, (top - bottom) / 100.0))
     component = actor.static_mesh_component
     component.set_static_mesh(unreal.load_asset("/Engine/BasicShapes/Cube"))
     component.set_collision_profile_name("BlockAll")
@@ -262,8 +297,8 @@ def invisible_wall(x0, y0, x1, y1, bottom, top, folder="Boundaries"):
     return actor
 
 
-def kill_volume(x, y, z, half_x, half_y, half_z=200.0):
-    actor = spawn(unreal.load_class(None, "/Script/Assignment1.KillVolume"), x, y, z, "KillVolume", "Boundaries")
+def kill_volume(x, y, z, half_x, half_y, half_z=200.0, yaw=0.0):
+    actor = spawn(unreal.load_class(None, "/Script/Assignment1.KillVolume"), x, y, z, "KillVolume", "Boundaries", yaw)
     # ALSVolumeBase's box is 200 half-size in every direction, so volumes are resized by scaling.
     actor.set_actor_scale3d(unreal.Vector(half_x / 200.0, half_y / 200.0, half_z / 200.0))
     return actor
@@ -359,7 +394,8 @@ def preview_camera(name, location, look_at):
 def take_preview_screenshots(cameras, width=1920, height=1080):
     """Moves the level viewport to each camera in turn and takes a shot. A shot takes several frames, so an editor tick drives it."""
     queue = list(cameras)
-    state = {"wait": 0, "pending": None}
+    # The first shot waits longest, as new shaders and meshes are still settling after the build.
+    state = {"wait": 300, "pending": None}
     folder = os.path.join(unreal.Paths.project_saved_dir(), "Screenshots", "LS_Previews").replace("\\", "/")
     os.makedirs(folder, exist_ok=True)
     editor = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)

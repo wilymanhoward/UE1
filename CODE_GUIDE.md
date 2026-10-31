@@ -81,7 +81,7 @@ On first touch it sets the ball's checkpoint, locks in the current restoration, 
 `ALSVolumeBase` creates the invisible overlap box. `AKillVolume` calls `Die`. `ATutorialTrigger` shows its message once.
 
 ### `ACrackedWall`: breakable wall
-`OnBallHit` checks for Stone, then for a slam or an impact speed of at least `BreakSpeed`. `Break` hides the mesh, removes its collision, and spawns physics debris with a set lifespan. It is the first user of the `ImpactVelocity` value that `ASeedBall` saves before each impact.
+`OnBallHit` checks for Stone, then for a slam or an impact speed of at least `BreakSpeed`. `Break` hides the mesh and any `RubbleActors`, removes their collision, and spawns physics debris with a set lifespan. It is the first user of the `ImpactVelocity` value that `ASeedBall` saves before each impact.
 
 ### `APressurePlate`: weight sensor
 `GetMassOnPlate` adds up the mass of every simulating body in the trigger. `Tick` compares it with `RequiredMassKg` and broadcasts `OnPlatePressed` or `OnPlateReleased` when the answer changes. `OnBallOverlap` shows the "Too light!" prompt. **Pattern:** observer.
@@ -163,7 +163,7 @@ A standalone script using only the standard library. It builds each model from m
 An editor script that imports the OBJ files, builds the materials node by node, creates the physical materials and fills in `BP_SeedBall`'s form data. Rerunning it rebuilds each asset in place. The materials need no textures, because the UVs carry masks: on the Stone, U says how much of a crack a point is, and the material turns that into glowing gold.
 
 ### `Content/Python/build_world_level1.py` and `ls_world_common.py`: the forest
-The level script decides what goes where, and `ls_world_common.py` knows how to place it, so Level 2 can share it. `Route` reads the floors and gaps from the greybox actors instead of repeating their numbers, so the ground always matches the collision. `Route.height` gives one height for any point, and both the terrain mesh and the trees use it, which is why trees sit on the hills. `Scatter` groups transforms by mesh into one instanced component each, with a cull distance per ring. `jittered_grid` with a fixed seed gives a forest that looks random but rebuilds identically. `ls_material_helpers.py` holds the small node-building functions the material scripts share.
+The level script decides what goes where, and `ls_world_common.py` knows how to place it, so Level 2 can share it. The tables at the top of the script hold the whole layout: `BENDS`, `INSERTS`, `HILLS` and the rest. `ls_curved_route.py` turns a greybox position into (s, d), the distance along the winding road and the distance to its right. Because distance along the road never changes, a jump measures the same after bending. `road_height` and `terrain_height` give one height for any point, and the road mesh, terrain and trees all use them, which is why everything sits on the hills. `shaped_land` averages the hillsides over the nearby road, as using only the nearest point would make a cliff wherever a different stretch of road becomes nearest. `check_layout` stops the build if a table edit makes a slope too steep, puts a bend on a puzzle, or runs the road into itself. Each greybox actor keeps its original place in an `LS_Origin` tag, so a rerun bends from the straight line again. `ls_generate_world_meshes.py` builds what the Fab packs lack: the giant tree, music note, gate ring and floating island. `Scatter` groups transforms by mesh into one instanced component each, with a cull distance per ring. `jittered_grid` with a fixed seed gives a forest that looks random but rebuilds identically. `ls_material_helpers.py` holds the small node-building functions the material scripts share.
 
 ### Dev cheats
 `bEnableDevCheats` on `ALSPlayerController` adds F1, F2 and F3 to the mapping context. F3 collects real notes through `OnBallOverlap`, so the count and stars stay correct.
@@ -244,6 +244,9 @@ Each rubric area, with what to show and where it is.
 32. **Why the cubes are hidden and not deleted.** A flat cube is perfect collision for a rolling ball, and a Fab mesh's rough collision would make it bounce. Hidden components still collide, so art and physics can each be what they are best at.
 33. **Why instancing matters.** The forest has about 5,700 objects. One instanced component draws all copies of a mesh together, and its cull distance drops distant ones, which keeps a laptop GPU near 60 fps.
 34. **Why the invisible walls ignore the camera channel.** The spring arm pulls in when it hits something on that channel, so a wall that blocked it would make the view jump whenever the ball rolled beside an edge.
+35. **Why the road is one mesh instead of rotated cubes.** Rotated cubes would leave a small step at every joint on a curve. A strip following the curve has none, and it uses its exact triangles as collision.
+36. **Why blocks have their own physical material.** Stone's grip is so strong that pushing a block also presses it into the ground, which jammed it. `PM_Block`'s lower friction lets Stone push it while Seed still can't.
+37. **Why the world starts at saturation 0.** `RestorationDriver` starts Level 1 fully black and white, so `WitheredSaturation` must be 0. A higher value keeps too much of the sunset's colour and the effect stops reading. Things with stencil 1 keep their colour, which now includes the start of the road, as in the concept art.
 
 ## Suggested explanation order
 1. `SeedFormTypes.h`: what a form is.
