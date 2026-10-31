@@ -152,6 +152,9 @@ Looping sounds use a `UAudioComponent`, so an attenuation can be assigned: `Roll
 ### `Content/Python/build_greybox.py`: the level builder
 An editor script, so it isn't part of the game. Helpers such as `floor`, `ramp` and `note` keep each zone function readable, and the spacing comes from the ball's real speed and jump height. Every actor gets a tag, so a rerun replaces only its own work. `dress_mesh` reads a mesh's bounds to scale it to a target height and rest it on the ground.
 
+### `Content/Python/ls_asset_inventory.py`: what the Fab packs contain
+An editor script that writes every mesh, material, Niagara system and cloud asset to a CSV, with its size and a category guessed from its name. The world scripts choose assets from this list, which is why they can scale scenery correctly. It only reads.
+
 ### Dev cheats
 `bEnableDevCheats` on `ALSPlayerController` adds F1, F2 and F3 to the mapping context. F3 collects real notes through `OnBallOverlap`, so the count and stars stay correct.
 

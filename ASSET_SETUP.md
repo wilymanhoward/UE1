@@ -398,6 +398,16 @@ In `BP_LSPlayerController`, tick **Dev > Enable Dev Cheats** to use these. Untic
 | F2 | Teleports to the nearest shrine not yet reached |
 | F3 | Collects 5 Life Notes |
 
+## World build
+
+### Stage 1: asset inventory
+`Content/Python/ls_asset_inventory.py` lists the Fab packs in `Saved/LS_AssetInventory.csv`. It only reads, and you only need to rerun it after adding a pack.
+
+1. In Unreal, choose **Tools > Execute Python Script**.
+2. Pick `Content/Python/ls_asset_inventory.py` and click **Open**.
+3. Wait for `Last Seed inventory: ... assets written` in **Output Log**. Open **Window > Output Log** if you can't see it.
+4. Open `Saved/LS_AssetInventory.csv` in the project folder with Excel.
+
 ## Input
 No input assets are required. All input is built in `ALSPlayerController`.
 
