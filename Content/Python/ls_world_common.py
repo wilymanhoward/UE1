@@ -327,6 +327,31 @@ def point_light(x, y, z, colour, brightness, radius, folder="Guide Lights"):
     return actor
 
 
+def zone_grade(x, y, z, half_x, half_y, half_z, yaw, exposure, tint, label):
+    """A box that changes the picture only while the camera is inside it, fading at its edges. It adds to the level's main grade."""
+    systems = unreal.get_engine_subsystem(unreal.SubobjectDataSubsystem)
+    actor = spawn(unreal.Actor, x, y, z, label, "Zone Grades", yaw)
+    root = systems.k2_gather_subobject_data_for_instance(actor)[0]
+    box_handle, _ = systems.add_new_subobject(unreal.AddNewSubobjectParams(parent_handle=root, new_class=unreal.BoxComponent, blueprint_context=None))
+    systems.add_new_subobject(unreal.AddNewSubobjectParams(parent_handle=box_handle, new_class=unreal.PostProcessComponent, blueprint_context=None))
+    box = actor.get_component_by_class(unreal.BoxComponent)
+    box.set_box_extent(unreal.Vector(half_x, half_y, half_z), False)
+    # The grade measures the camera against the box's collision shape, so it needs one, but this one never reports overlaps.
+    box.set_collision_profile_name("OverlapAll")
+    box.set_editor_property("generate_overlap_events", False)
+    grade = actor.get_component_by_class(unreal.PostProcessComponent)
+    grade.set_editor_property("unbound", False)
+    grade.set_editor_property("blend_radius", 500.0)
+    grade.set_editor_property("priority", 1.0)
+    settings = grade.get_editor_property("settings")
+    settings.set_editor_property("override_auto_exposure_bias", True)
+    settings.set_editor_property("auto_exposure_bias", exposure)
+    settings.set_editor_property("override_scene_color_tint", True)
+    settings.set_editor_property("scene_color_tint", tint)
+    grade.set_editor_property("settings", settings)
+    return actor
+
+
 def find_actor(cls):
     for actor in actor_subsystem.get_all_level_actors():
         if isinstance(actor, cls):

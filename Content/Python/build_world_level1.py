@@ -30,7 +30,7 @@ from ls_generate_player_meshes import Mesh
 from ls_material_helpers import blend, colour, combine, finish, fresh_material, mask, node, number, output, texture, world_uv
 from ls_world_common import (Scatter, Terrain, base_height_offset, clear_generated, greybox_actors, hide_component, import_generated_mesh,
                              invisible_wall, jittered_grid, kill_volume, lerp, mesh_actor, niagara, open_world_map, point_light,
-                             preview_camera, report, set_up_sky, smooth_noise, smoothstep, spawn, spread_coordinates, take_preview_screenshots)
+                             preview_camera, report, set_up_sky, smooth_noise, smoothstep, spawn, spread_coordinates, take_preview_screenshots, zone_grade)
 
 SOURCE_MAP = "/Game/L_Level1"
 WORLD_MAP = "L_Level1_World"
@@ -55,7 +55,7 @@ HILLS = [(0, 0), (300, 0), (1700, 130), (3200, 0), (4100, 0), (4800, -70), (5500
 # How much the land rises on the left and falls on the right, as (s, height). Negative rises on the right instead.
 SIDE_TILT = [(0, 750), (6000, 750), (8000, 200), (12200, 300), (13000, 0), (23000, 0), (24800, 300), (33800, -300), (41700, 200)]
 # How much the land rises on both sides, which makes a canyon.
-CANYON = [(0, 0), (12200, 0), (13200, 1100), (22500, 1100), (23500, 0), (41700, 0)]
+CANYON = [(0, 0), (12200, 0), (13200, 1800), (22500, 1800), (23500, 0), (41700, 0)]
 
 # The greybox's floor as (x0, x1, z0, z1), which gives the height the road starts from.
 GREYBOX_FLOOR = [(0, 6500, 0, 0), (6500, 8000, 0, 300), (8000, 26100, 300, 300), (26100, 28100, 300, 800), (28100, 30200, 800, 800), (30200, 32200, 300, 300)]
@@ -75,6 +75,15 @@ ISLAND_RADIUS = 350.0
 POCKETS = [(5200.0, 500.0, 2700.0, True), (13400.0, 500.0, 2700.0, True), (37000.0, 500.0, 2500.0, False)]
 
 ZONES = [("1_1", 0.0, 12200.0), ("1_2", 12200.0, 23200.0), ("1_3", 23200.0, ROAD_LENGTH)]
+# Zone 1-2. The cave's mouth is just before the wall that breaks, and it opens out before the first plate.
+CAVE = (14440.0, 15320.0)
+CAVE_WALL_S = 14500.0
+# A pool to the right of the road, below a rocky edge. Scenery only, as the walls stop the ball.
+POOL = (15400.0, 19000.0)
+POOL_BED = 180.0
+POOL_WATER = 260.0
+# Patch 1 is 200 cm clear of patch 2 at a walking line, so these give Stone room to cross the lane between them.
+THORN_SHIFT = 250.0
 HEART_TREE = (3000.0, -2700.0)  # (s, d). Where it stands in view from the start, with its roots clear of the road.
 # The hop up to the ledge moved back from the first island jump. Coming off it at full speed carries a ball about 330 cm.
 LEDGE_SHIFT = -300.0
@@ -157,6 +166,11 @@ def marsh_amount(s):
     return smoothstep(MARSH[0] - 300.0, MARSH[0] + 100.0, s) * (1.0 - smoothstep(MARSH[1] - 100.0, MARSH[1] + 300.0, s))
 
 
+def pool_amount(s, d):
+    along = smoothstep(POOL[0], POOL[0] + 400.0, s) * (1.0 - smoothstep(POOL[1] - 400.0, POOL[1], s))
+    return along * smoothstep(655.0, 820.0, d) * (1.0 - smoothstep(3000.0, 3800.0, d))
+
+
 def in_pocket(x, y, margin=0.0):
     """Pockets are straight-sided rectangles, so this measures from the ledge's own spot, not along the curved road."""
     for s0, half, far, _ in POCKETS:
@@ -207,6 +221,7 @@ def side_ground(s, d, x, y):
         height = level(near_s) - 20.0
     side = max(abs(d) - EDGE, 0.0)
     height = lerp(height, WATER_LEVEL - 70.0, marsh_amount(near_s) * (1.0 - smoothstep(200.0, 2400.0, side)))
+    height = lerp(height, POOL_BED, pool_amount(near_s, d))
     return lerp(height, CHASM, gap_amount(near_s) * (1.0 - smoothstep(150.0, 1600.0, side)))
 
 
@@ -301,10 +316,55 @@ def build_stair_mesh(s0, s1):
     return import_generated_mesh("SM_LS_Stairs_L1", built)
 
 
+def build_cave_shell():
+    """A rock hill with a tunnel through it, following the road. The ball rolls on the road and the rock is solid, which also keeps the camera inside."""
+    built = Mesh()
+    rows, columns = 24, 26
+    inner_half, inner_high = 800.0, 680.0
+    outer_half, outer_high = 2000.0, 1500.0
+    base = level((CAVE[0] + CAVE[1]) / 2.0)
+
+    def lumps(row, column, size):
+        return size * (math.sin(row * 1.3 + column * 0.7) * 0.5 + math.sin(row * 0.4 - column * 1.9 + 2.0) * 0.5)
+
+    for surface, half, high, sink, lump in ((0, inner_half, inner_high, 30.0, 26.0), (1, outer_half, outer_high, 120.0, 90.0)):
+        for row in range(rows + 1):
+            s = lerp(CAVE[0], CAVE[1], row / rows)
+            for column in range(columns + 1):
+                angle = math.pi * (1.0 - column / columns)
+                rough = lumps(row, column, lump) if 0 < column < columns else 0.0
+                x, y = road.point(s, math.cos(angle) * (half + rough))
+                built.add_vertex((x, y, base - sink + math.sin(angle) * (high + rough)), (0.0, 0.0))
+    width = columns + 1
+    outer = (rows + 1) * width
+    for row in range(rows):
+        for column in range(columns):
+            a = row * width + column
+            b = a + 1
+            c = a + width
+            d = c + 1
+            built.triangles += [(a, b, c), (b, d, c)]  # The tunnel's surface faces inward.
+            built.triangles += [(outer + a, outer + c, outer + b), (outer + b, outer + c, outer + d)]
+    for column in range(columns):
+        for row, facing_ahead in ((0, False), (rows, True)):
+            i = row * width + column
+            i2 = i + 1
+            o = outer + i
+            o2 = o + 1
+            if facing_ahead:
+                built.triangles += [(i, i2, o), (i2, o2, o)]
+            else:
+                built.triangles += [(i, o, i2), (i2, o, o2)]
+    built.smooth_normals()
+    return import_generated_mesh("SM_LS_CaveShell", built, solid=True)
+
+
 def import_world_meshes():
     return {"tree": import_generated_mesh("SM_LS_GnarledTree", ls_generate_world_meshes.build_gnarled_tree()),
             "note": import_generated_mesh("SM_LS_MusicNote", ls_generate_world_meshes.build_music_note(), nanite=False),
             "ring": import_generated_mesh("SM_LS_GateRing", ls_generate_world_meshes.build_gate_ring()),
+            "log": import_generated_mesh("SM_LS_Log", ls_generate_world_meshes.build_log()),
+            "root_arch": import_generated_mesh("SM_LS_RootArch", ls_generate_world_meshes.build_root_arch()),
             "island": import_generated_mesh("SM_LS_FloatingIsland", ls_generate_world_meshes.build_floating_island())}
 
 
@@ -319,7 +379,7 @@ def build_terrain_material(name, grass_tint):
     steep = mask(material, uv, False)
     grass = combine(material, unreal.MaterialExpressionMultiply, texture(material, terrain_folder + "/T_Grass_2", world_uv(material, 500.0)), colour(material, *grass_tint))
     dirt = combine(material, unreal.MaterialExpressionMultiply, texture(material, terrain_folder + "/T_Dirt", world_uv(material, 420.0)), colour(material, 1.8, 1.6, 1.35))
-    rock = texture(material, terrain_folder + "/T_rock", world_uv(material, 900.0))
+    rock = combine(material, unreal.MaterialExpressionMultiply, texture(material, terrain_folder + "/T_rock", world_uv(material, 900.0)), colour(material, 0.42, 0.4, 0.38))
     base = blend(material, blend(material, grass, dirt, path), rock, steep)
     output(material, base, unreal.MaterialProperty.MP_BASE_COLOR)
     output(material, number(material, 0.92), unreal.MaterialProperty.MP_ROUGHNESS)
@@ -365,6 +425,7 @@ def build_materials():
     material = fresh_material("M_LS_Waterfall")
     material.set_editor_property("blend_mode", unreal.BlendMode.BLEND_TRANSLUCENT)
     material.set_editor_property("shading_model", unreal.MaterialShadingModel.MSM_UNLIT)
+    material.set_editor_property("two_sided", True)
     # A stretched texture sliding downward reads as falling streaks, for less than a particle effect would cost.
     streak_uv = combine(material, unreal.MaterialExpressionMultiply, node(material, unreal.MaterialExpressionTextureCoordinate),
                         node(material, unreal.MaterialExpressionConstant2Vector, r=3.0, g=0.5))
@@ -378,13 +439,13 @@ def build_materials():
     material = fresh_material("M_LS_CrackedRock")
     # Glowing cracks like the Stone Shell's own, which hints that Stone is what breaks this wall.
     position = node(material, unreal.MaterialExpressionWorldPosition)
-    cracks = node(material, unreal.MaterialExpressionNoise, noise_function=unreal.NoiseFunction.NOISEFUNCTION_VORONOI_ALU, scale=0.012, levels=1, output_min=0.0, output_max=1.0, turbulence=False)
+    cracks = node(material, unreal.MaterialExpressionNoise, noise_function=unreal.NoiseFunction.NOISEFUNCTION_VORONOI_ALU, scale=0.02, levels=1, output_min=0.0, output_max=1.0, turbulence=False)
     ls_material_helpers.library.connect_material_expressions(position, "", cracks, "Position")
-    shaped = combine(material, unreal.MaterialExpressionMultiply, combine(material, unreal.MaterialExpressionSubtract, cracks, number(material, 0.7)), number(material, 14.0))
+    shaped = combine(material, unreal.MaterialExpressionMultiply, combine(material, unreal.MaterialExpressionSubtract, cracks, number(material, 0.72)), number(material, 14.0))
     limit = node(material, unreal.MaterialExpressionSaturate)
     ls_material_helpers.library.connect_material_expressions(shaped, "", limit, "")
-    output(material, combine(material, unreal.MaterialExpressionMultiply, texture(material, terrain_folder + "/T_rock", world_uv(material, 400.0)), colour(material, 0.6, 0.55, 0.5)), unreal.MaterialProperty.MP_BASE_COLOR)
-    output(material, combine(material, unreal.MaterialExpressionMultiply, limit, colour(material, 9.0, 4.5, 1.0)), unreal.MaterialProperty.MP_EMISSIVE_COLOR)
+    output(material, combine(material, unreal.MaterialExpressionMultiply, texture(material, terrain_folder + "/T_rock", world_uv(material, 160.0)), colour(material, 0.2, 0.18, 0.16)), unreal.MaterialProperty.MP_BASE_COLOR)
+    output(material, combine(material, unreal.MaterialExpressionMultiply, limit, colour(material, 4.0, 1.8, 0.35)), unreal.MaterialProperty.MP_EMISSIVE_COLOR)
     materials["cracked"] = finish(material)
 
     def glow(name, r, g, b, strength):
@@ -396,7 +457,38 @@ def build_materials():
 
     # Strong emissive values burn out to white, so these stay low to keep their colour.
     materials["guide"] = glow("M_LS_GuideGlow", 1.0, 0.42, 0.06, 0.9)
-    materials["plate"] = glow("M_LS_Plate", 0.8, 0.5, 0.15, 1.5)
+    materials["teal"] = glow("M_LS_GuideTeal", 0.1, 0.9, 0.8, 1.6)
+
+    material = fresh_material("M_LS_Plate")
+    # Gold rings around the plate's centre, cut from the distance to the middle of its top face.
+    uv = node(material, unreal.MaterialExpressionTextureCoordinate)
+    offset = combine(material, unreal.MaterialExpressionSubtract, uv, node(material, unreal.MaterialExpressionConstant2Vector, r=0.5, g=0.5))
+    radius = node(material, unreal.MaterialExpressionLength)
+    ls_material_helpers.library.connect_material_expressions(offset, "", radius, "")
+    wave = node(material, unreal.MaterialExpressionSine, period=0.22)
+    ls_material_helpers.library.connect_material_expressions(radius, "", wave, "")
+    rings = node(material, unreal.MaterialExpressionSaturate)
+    ls_material_helpers.library.connect_material_expressions(combine(material, unreal.MaterialExpressionMultiply, combine(material, unreal.MaterialExpressionSubtract, wave, number(material, 0.55)), number(material, 6.0)), "", rings, "")
+    output(material, combine(material, unreal.MaterialExpressionMultiply, texture(material, terrain_folder + "/T_rock", world_uv(material, 200.0)), colour(material, 0.5, 0.48, 0.44)), unreal.MaterialProperty.MP_BASE_COLOR)
+    output(material, combine(material, unreal.MaterialExpressionMultiply, rings, colour(material, 3.0, 1.7, 0.4)), unreal.MaterialProperty.MP_EMISSIVE_COLOR)
+    materials["plate"] = finish(material)
+
+    material = fresh_material("M_LS_Planks")
+    # Boards from the cube's own UVs, so the texture rises with the door. Dark gaps come from where each board starts and ends.
+    boards = combine(material, unreal.MaterialExpressionMultiply, node(material, unreal.MaterialExpressionTextureCoordinate),
+                     node(material, unreal.MaterialExpressionConstant2Vector, r=10.0, g=1.0))
+    fraction = node(material, unreal.MaterialExpressionFrac)
+    ls_material_helpers.library.connect_material_expressions(boards, "", fraction, "")
+    across = mask(material, fraction, True)
+    left_gap = node(material, unreal.MaterialExpressionSaturate)
+    ls_material_helpers.library.connect_material_expressions(combine(material, unreal.MaterialExpressionMultiply, combine(material, unreal.MaterialExpressionSubtract, across, number(material, 0.05)), number(material, 25.0)), "", left_gap, "")
+    right_gap = node(material, unreal.MaterialExpressionSaturate)
+    ls_material_helpers.library.connect_material_expressions(combine(material, unreal.MaterialExpressionMultiply, combine(material, unreal.MaterialExpressionSubtract, number(material, 0.95), across), number(material, 25.0)), "", right_gap, "")
+    wood = texture(material, "/Game/StyleHex_Studio/Free_Packs/FREE_Stylized_Forest_Sample/Textures/Trees/T_Tree_Trunk_Broadleaf_BC", boards)
+    tinted = combine(material, unreal.MaterialExpressionMultiply, wood, colour(material, 0.8, 0.6, 0.42))
+    output(material, combine(material, unreal.MaterialExpressionMultiply, tinted, combine(material, unreal.MaterialExpressionMultiply, left_gap, right_gap)), unreal.MaterialProperty.MP_BASE_COLOR)
+    output(material, number(material, 0.85), unreal.MaterialProperty.MP_ROUGHNESS)
+    materials["planks"] = finish(material)
     materials["pad"] = glow("M_LS_LilyPad", 0.16, 0.34, 0.1, 0.05)
     materials["thorn"] = glow("M_LS_Thorn", 0.5, 0.03, 0.05, 0.6)
     materials["blob"] = glow("M_LS_Blob", 0.02, 0.01, 0.03, 0.0)
@@ -454,6 +546,8 @@ def bend_greybox():
             half_thick = scale_z * 50.0
             z = (MARSH_BED + WATER_LEVEL) / 2.0 + half_thick - half_thick / math.cos(math.radians(pitch)) - hills(s)
             actor.set_actor_scale3d(unreal.Vector(length / 100.0, LANE * 2.0 / 100.0, scale_z))
+        elif abs(x - 16800.0) < 1.0:
+            s = to_road(x) + THORN_SHIFT
         elif label == "Ledge" or (actor.get_class().get_name() == "BP_LifeNote_C" and abs(x - 5900.0) < 1.0):
             s = to_road(x) + LEDGE_SHIFT
         else:
@@ -485,11 +579,12 @@ def clone(source, label, s, d, z, folder="Added Challenges", yaw=0.0):
 
 def block_physical_material():
     """Stone Shell's grip is so strong that pushing a block also presses it into the ground, which jams it. This lets it slide.
-    Friction 0.25 is low enough for Stone's push and too much for Seed's, whose grip is about 13700 against about 15000 needed."""
+    Stone's spin can only drive about 16000 of push, and 0.12 needs about 7500, which leaves enough to get a block moving at a fair pace.
+    Seed can push it too, which is fine, as only Stone or a block is heavy enough to hold a plate down."""
     path = "/Game/LastSeed/Physics/PM_Block"
     physical = unreal.load_asset(path) if unreal.EditorAssetLibrary.does_asset_exist(path) else unreal.AssetToolsHelpers.get_asset_tools().create_asset(
         "PM_Block", "/Game/LastSeed/Physics", unreal.PhysicalMaterial, unreal.PhysicalMaterialFactoryNew())
-    physical.set_editor_property("friction", 0.25)
+    physical.set_editor_property("friction", 0.12)
     physical.set_editor_property("override_friction_combine_mode", True)
     physical.set_editor_property("friction_combine_mode", unreal.FrictionCombineMode.MIN)
     unreal.EditorAssetLibrary.save_loaded_asset(physical, False)
@@ -509,16 +604,21 @@ def add_challenges():
     z = hills(17000.0) + 300.0
     plate_b = clone(plate_a, "PressurePlate", 18000.0, 0.0, z - 10.0)
     plate_b.get_component_by_class(unreal.StaticMeshComponent).set_material(0, plate_a.get_component_by_class(unreal.StaticMeshComponent).get_material(0))
-    block_b = clone(block_a, "PushableBlock", 16800.0, 0.0, z + 60.0)
+    block_b = clone(block_a, "PushableBlock", 17050.0, 0.0, z + 60.0)
     block_b.set_editor_property("mass_kg", 52.0)
     slippery = block_physical_material()
     for block in (block_a, block_b):
-        block.get_component_by_class(unreal.StaticMeshComponent).set_phys_material_override(slippery)
+        component = block.get_component_by_class(unreal.StaticMeshComponent)
+        component.set_phys_material_override(slippery)
+        # A block that could turn would wedge itself across a chute.
+        body = component.get_editor_property("body_instance")
+        body.set_editor_property("lock_z_rotation", True)
+        component.set_editor_property("body_instance", body)
     actors_of("Gate")[0].set_editor_property("required_plates", [plate_a, plate_b])
 
     # 1-2: a third thorn patch, which makes the clear lane wind once more.
     thorns = actors_of("HazardVolume")[0]
-    third = clone(thorns, "Thorns", 22000.0, -200.0, hills(22000.0) + 350.0)
+    third = clone(thorns, "Thorns", 22400.0, -200.0, hills(22400.0) + 350.0)
     third.set_actor_scale3d(thorns.get_actor_scale3d())
 
     # 1-3: three more lily pads and a third blob.
@@ -588,11 +688,17 @@ def dress_actor(actor, materials, thorns, rng):
         elif label in ("SecretLedge", "Ramp"):
             actor.static_mesh_component.set_material(0, materials["rock"])
     elif class_name == "CrackedWall":
-        actor.get_component_by_class(unreal.StaticMeshComponent).set_material(0, materials["cracked"])
-    elif class_name in ("Gate", "PushableBlock"):
-        actor.get_component_by_class(unreal.StaticMeshComponent).set_material(0, materials["rock"])
+        # Still the wall that breaks, but hidden. The rock pile in front of it is what the player sees. See build_cave.
+        hide_component(actor.get_component_by_class(unreal.StaticMeshComponent))
+    elif class_name == "Gate":
+        actor.get_component_by_class(unreal.StaticMeshComponent).set_material(0, materials["planks"])
+    elif class_name == "PushableBlock":
+        actor.get_component_by_class(unreal.StaticMeshComponent).set_material(0, materials["planks"])
     elif class_name == "PressurePlate":
-        actor.get_component_by_class(unreal.StaticMeshComponent).set_material(0, materials["plate"])
+        component = actor.get_component_by_class(unreal.StaticMeshComponent)
+        component.set_material(0, materials["plate"])
+        # Flush with the road it would flicker, as both surfaces fight to be drawn. This small lip is too low for a ball to notice.
+        component.set_relative_location(unreal.Vector(0.0, 0.0, 3.0), False, False)
     elif class_name == "SinkingPad":
         # A cylinder has simple collision like the cube's, and its round shape reads as a lily pad.
         component = actor.get_component_by_class(unreal.StaticMeshComponent)
@@ -691,6 +797,8 @@ def usable(x, y, distance_range, margin=120.0):
     if gap_amount(near_s) > 0.0 and abs(d) < 1500.0:
         return False
     if marsh_amount(near_s) > 0.0 and terrain_height(x, y) < WATER_LEVEL + 5.0:
+        return False
+    if pool_amount(near_s, d) > 0.3:
         return False
     tree_x, tree_y = road.point(*HEART_TREE)
     return math.hypot(x - tree_x, y - tree_y) > 1300.0
@@ -803,9 +911,8 @@ def awakening_grove_landmarks(materials):
         fall.static_mesh_component.set_cast_shadow(False)
 
     # The great fallen trunk across the view to the right of the road.
-    x, y = road.point(2300.0, 1050.0)
-    trunk = mesh("SM_Pine_Tree_03_dead_cut")
-    mesh_actor(trunk, x, y, terrain_height(x, y) + 140.0, folder, (2.4, 2.4, 2.4), road.yaw(2300.0) + 8.0, label="FallenTrunk", pitch=-86.0)
+    x, y = road.point(1900.0, 1000.0)
+    mesh_actor(WORLD_MESHES["log"], x, y, terrain_height(x, y) + 90.0, folder, (2.2, 2.4, 2.4), road.yaw(1900.0) + 6.0, materials["bark"], "FallenTrunk", pitch=2.0)
 
     # Large mossy boulders close by, on the high side.
     for s, d, scale in ((700.0, -1250.0, 0.65), (2100.0, -1300.0, 0.8), (3100.0, -1150.0, 0.5), (4700.0, -1350.0, 0.7)):
@@ -835,6 +942,132 @@ def awakening_grove_landmarks(materials):
     point_light(x, y, ground + 1000.0, unreal.LinearColor(0.2, 1.0, 0.9, 1.0), 120.0, 1800.0, folder)
 
 
+def build_cave(materials):
+    """The tunnel, then the rock pile blocking its mouth. The pile's glowing cracks hint that Stone is what breaks it."""
+    folder = "Zone 1-2"
+    rng = random.Random(SEED + 6)
+    mesh_actor(build_cave_shell(), 0.0, 0.0, 0.0, folder, material=materials["moss"], label="CaveShell").static_mesh_component.set_collision_profile_name("BlockAll")
+
+    # Cliffs around the mouth hide where the hill meets the land.
+    for d, up, scale, yaw in ((-1650.0, -60.0, 1.5, 200.0), (1650.0, -60.0, 1.5, 20.0), (-900.0, 900.0, 1.2, 80.0), (900.0, 950.0, 1.1, 300.0)):
+        path = mesh("SM_RockPack_Cliff_07_B")
+        x, y = road.point(CAVE[0] - 60.0, d)
+        mesh_actor(path, x, y, level(CAVE[0]) + up - base_height_offset(unreal.load_asset(path), scale), folder, (scale, scale, scale), yaw, label="CaveCliff")
+
+    # Rough rocks around the arch, which hide the shell's flat front. Together they read as a cave mouth.
+    cliff = mesh("SM_RockPack_Cliff_07_D")
+    bounds = unreal.load_asset(cliff).get_bounds()
+    for step in range(11):
+        angle = math.pi * step / 10.0
+        scale = rng.uniform(0.55, 0.8)
+        x, y = road.point(CAVE[0] - 40.0, math.cos(angle) * 1120.0)
+        z = level(CAVE[0]) + math.sin(angle) * 960.0 - bounds.origin.z * scale
+        mesh_actor(cliff, x, y, z, folder, (scale, scale, scale), rng.uniform(0, 360), label="CaveMouthRock")
+
+    # Rows of boulders that fill the arch, largest at the bottom. Nothing here is solid: the hidden wall behind them stops the ball.
+    rubble = []
+    ground = level(CAVE_WALL_S)
+    names = ["SM_R_Rock_01", "SM_R_Rock_02", "SM_R_Rock_03", "SM_S_Rock_01"]
+    # Pack rocks are 3 to 6 m tall, so these are small scales. Two layers leave no gaps to see through.
+    rows = ((0.0, 700.0, 9, 0.6), (140.0, 660.0, 8, 0.55), (270.0, 560.0, 7, 0.5), (400.0, 400.0, 5, 0.45), (510.0, 220.0, 3, 0.4))
+    for layer, up, half_width, count, scale in [(layer, *row) for layer in (0, 1) for row in rows]:
+        for index in range(count):
+            d = -half_width + 2.0 * half_width * index / (count - 1) + rng.uniform(-30.0, 30.0)
+            s = CAVE_WALL_S + 60.0 + layer * 130.0 + rng.uniform(-20.0, 30.0)
+            path = mesh(rng.choice(names))
+            x, y = road.point(s, d)
+            size = scale * rng.uniform(0.85, 1.1)
+            rubble.append(mesh_actor(path, x, y, ground + up - 40.0 - base_height_offset(unreal.load_asset(path), size), folder, (size, size, size), rng.uniform(0, 360), materials["cracked"], "RockPile"))
+    wall = actors_of("CrackedWall")[0]
+    wall.set_editor_property("rubble_actors", rubble)
+    # Boulders fly out, not cubes. This mesh has simple collision, which a physics body needs.
+    wall.set_editor_property("debris_mesh", unreal.load_asset(mesh("SM_RockPack_Rock_04")))
+    wall.set_editor_property("debris_scale", 1.1)
+    wall.set_editor_property("debris_count", 16)
+
+    x, y = road.point(CAVE_WALL_S - 300.0)
+    point_light(x, y, ground + 350.0, unreal.LinearColor(1.0, 0.55, 0.2, 1.0), 12.0, 1000.0, folder)
+    for s in (14800.0, 15150.0):
+        x, y = road.point(s)
+        point_light(x, y, ground + 420.0, unreal.LinearColor(0.15, 0.95, 0.85, 1.0), 12.0, 1000.0, folder)
+
+
+def rootwood_hollow(materials):
+    """Zone 1-2, built to match its concept picture: a dark hollow of roots, with a still pool to one side and teal light along the road."""
+    folder = "Zone 1-2"
+    rng = random.Random(SEED + 7)
+    build_cave(materials)
+
+    # Great roots arching over the road. They have no collision and clear the highest jump, so they are only scenery.
+    arches = [(13200.0, -12.0, 1.0)]
+    s = 15450.0
+    while s < 23000.0:
+        arches.append((s, rng.uniform(-16.0, 16.0), rng.uniform(0.95, 1.15)))
+        s += rng.uniform(520.0, 780.0)
+    for s, turn, scale in arches:
+        x, y = road.point(s)
+        mesh_actor(WORLD_MESHES["root_arch"], x, y, level(s) - 10.0, folder, (scale, scale, scale), road.yaw(s) + turn, materials["bark"], "RootArch")
+
+    # Giant dead trees looming behind the walls.
+    for s, d, scale, yaw in ((17500.0, -3000.0, 0.8, 120.0), (21000.0, 3100.0, 0.75, 250.0), (13600.0, -2700.0, 0.65, 10.0)):
+        rest_on_ground(WORLD_MESHES["tree"], s, d, 30.0, folder, scale, yaw, materials["bark"], "HollowTree")
+
+    # Rocks along the pool's edge, as in picture 2.
+    rim = Scatter("Pool_Rim", 9000, 12000, material=materials["moss"])
+    for x, y, s in along_road(POOL[0], POOL[1], 720.0, 900.0, 170.0, rng):
+        rim.add(mesh(rng.choice(["SM_S_Rock_02", "SM_R_Rock_01", "SM_R_Rock_03"])), x, y, POOL_BED + 240.0, rng.uniform(0.16, 0.3), rng, tilt=8.0)
+    rim.build()
+
+    # The still pool, and waterfalls feeding it from the far bank.
+    s = (POOL[0] + POOL[1]) / 2.0
+    x, y = road.point(s, 2100.0)
+    water = unreal.load_asset("/Game/Stylized_PBR_Nature/Terrain/M_Water_Basic")
+    mesh_actor("/Engine/BasicShapes/Plane", x, y, POOL_WATER, folder, ((POOL[1] - POOL[0] + 400.0) / 100.0, 36.0, 1.0), road.yaw(s), water, "Pool")
+    for s, d, high in ((16300.0, 3000.0, 900.0), (17900.0, 3050.0, 1100.0)):
+        rest_on_ground(mesh("SM_RockPack_Cliff_07_B"), s, d + 350.0, 100.0, folder, 1.4, road.yaw(s), label="PoolCliff")
+        x, y = road.point(s, d)
+        fall = mesh_actor("/Engine/BasicShapes/Plane", x, y, POOL_WATER + high / 2.0, folder, (high / 100.0, 2.6, 1.0), road.yaw(s), materials["waterfall"], "Waterfall", pitch=90.0)
+        fall.static_mesh_component.set_cast_shadow(False)
+
+    # Picture 2's tilted log on a stump. It does nothing, as the game has no seesaw.
+    rest_on_ground(mesh("SM_R_Rock_03"), 17100.0, 1700.0, 60.0, folder, 0.7, 40.0, materials["moss"], "LogRest")
+    x, y = road.point(17100.0, 1700.0)
+    mesh_actor(WORLD_MESHES["log"], x - 380.0, y + 150.0, POOL_WATER + 60.0, folder, (1.2, 1.2, 1.2), road.yaw(17100.0) + 30.0, materials["bark"], "TiltedLog", pitch=12.0)
+
+    # Log chutes guide each block onto its plate and stop it just past. A block pushed against a wall could never be pulled back, which would
+    # leave the gate shut for good. A chute is just wider than the ball, so the ball can't slip past the block, and its mouth flares to guide the ball in.
+    def chute_log(s0, d0, s1, d1):
+        x0, y0 = road.point(s0, d0)
+        x1, y1 = road.point(s1, d1)
+        top = level(s0)
+        invisible_wall(x0, y0, x1, y1, top - 50.0, top + 120.0, folder)
+        length = math.hypot(x1 - x0, y1 - y0)
+        mesh_actor(WORLD_MESHES["log"], x0, y0, top + 28.0, folder, (length / 800.0, 0.75, 0.75), math.degrees(math.atan2(y1 - y0, x1 - x0)), materials["bark"], "ChuteLog")
+
+    plate_s = to_road(13300.0)
+    for side in (-1.0, 1.0):
+        chute_log(plate_s + side * 150.0, 430.0, plate_s + side * 150.0, -430.0)
+        chute_log(plate_s + side * 340.0, 610.0, plate_s + side * 150.0, 430.0)
+        chute_log(16930.0, side * 150.0, 18130.0, side * 150.0)
+        chute_log(16720.0, side * 340.0, 16930.0, side * 150.0)
+    chute_log(plate_s - 150.0, -430.0, plate_s + 150.0, -430.0)
+    chute_log(18130.0, -150.0, 18130.0, 150.0)
+
+    # A frame of logs around the plank gate.
+    s = to_road(14800.0)
+    for side in (-1, 1):
+        x, y = road.point(s, side * 730.0)
+        mesh_actor(WORLD_MESHES["log"], x, y, level(s) - 40.0, folder, (1.5, 1.5, 1.2), rng.uniform(0, 360), materials["bark"], "GatePost", pitch=90.0)
+    x, y = road.point(s, -900.0)
+    mesh_actor(WORLD_MESHES["log"], x, y, level(s) + 660.0, folder, (2.3, 1.4, 1.4), road.yaw(s) + 90.0, materials["bark"], "GateLintel")
+
+    # Dark inside, with a slight teal cast. Three boxes, because a box can't bend with the road.
+    for s0, s1 in ((14300.0, 19700.0), (19500.0, 21000.0), (20800.0, 23200.0)):
+        middle = (s0 + s1) / 2.0
+        x, y = road.point(middle)
+        zone_grade(x, y, level(middle) + 800.0, (s1 - s0) / 2.0 + 200.0, 2000.0, 2000.0, road.yaw(middle), -1.5, unreal.LinearColor(0.72, 0.9, 0.92, 1.0), "HollowGrade")
+
+
 def rock_set_pieces():
     """Cliffs where the player should feel enclosed, and at each edge the eye is drawn to."""
     folder = "Set Pieces"
@@ -850,14 +1083,12 @@ def rock_set_pieces():
     s = 13000.0
     while s < 22800.0:
         for side in (-1, 1):
-            rock(rng.choice(["SM_RockPack_Cliff_07_B", "SM_RockPack_Cliff_07_D", "SM_S_Rock_10", "SM_S_Rock_04"]),
-                 s + rng.uniform(-150, 150), side * rng.uniform(1100, 1500), -40.0, rng.uniform(1.0, 1.7), rng.uniform(0, 360))
+            in_cave = CAVE[0] - 300.0 < s < CAVE[1] + 200.0
+            over_pool = side > 0 and POOL[0] - 200.0 < s < POOL[1] + 200.0
+            if not in_cave and not over_pool:
+                rock(rng.choice(["SM_RockPack_Cliff_07_B", "SM_RockPack_Cliff_07_D", "SM_S_Rock_10", "SM_S_Rock_04"]),
+                     s + rng.uniform(-150, 150), side * rng.uniform(1350, 1800), -40.0, rng.uniform(0.8, 1.3), rng.uniform(0, 360))
         s += 850.0
-
-    # Fallen trunks high across the road. They have no collision, so they can't block a jump.
-    for s, z_extra, turn in ((13500.0, 700.0, -8.0), (20500.0, 800.0, 7.0), (22400.0, 680.0, -15.0)):
-        x, y = road.point(s, -900.0)
-        mesh_actor(mesh("SM_Pine_Tree_03_dead_cut"), x, y, level(s) + z_extra, folder, (2.2, 2.2, 2.2), road.yaw(s) + 90.0 + turn, pitch=-88.0)
 
     # Rock under each lip of a gap, so the chasm has a real edge and not a sheer cut in the ground.
     for gap0, gap1 in GAPS:
@@ -882,7 +1113,7 @@ def rock_set_pieces():
             while d < LANE:
                 rock(rng.choice(["SM_R_Rock_01", "SM_R_Rock_02", "SM_S_Rock_01"]), front - rng.uniform(5, 30), d, -30.0, rng.uniform(0.18, 0.3), rng.uniform(0, 360))
                 d += 170.0
-        if name in ("CrackedWall", "Gate"):
+        if name == "Gate":
             s = to_road(origin_of(actor)[0])
             for side in (-1, 1):
                 rock("SM_RockPack_Cliff_07_B", s, side * 1050.0, -60.0, 1.25, side * 60.0)
@@ -947,15 +1178,18 @@ def build_guides(materials):
     """Warm lights lead the eye along the road. Their stencil keeps them coloured while the world around is grey."""
     rng = random.Random(SEED + 3)
     glow = Scatter("Guide_Mushrooms", 9000, 12000, shadows=False, material=materials["guide"], stencil=True)
+    teal = Scatter("Guide_TealMushrooms", 9000, 12000, shadows=False, material=materials["teal"], stencil=True)
     mushroom = mesh("SM_Caesars_Mushroom_01")
     s = 200.0
     while s < ROAD_LENGTH:
         if has_road(s):
             for side in (-1, 1):
                 x, y = road.point(s + rng.uniform(-60, 60), side * (LANE - rng.uniform(10, 40)))
-                glow.add(mushroom, x, y, level(s), rng.uniform(1.0, 1.5), rng, sink=2.0)
+                in_hollow = ZONES[1][1] <= s < ZONES[1][2]
+                (teal if in_hollow else glow).add(mushroom, x, y, level(s), rng.uniform(1.3, 2.2) if in_hollow else rng.uniform(1.0, 1.5), rng, sink=2.0)
         s += 260.0
     glow.build()
+    teal.build()
 
     # Stones scattered on the dirt, as the road would look bare without them. They have no collision, so the ball rolls over them.
     pebbles = Scatter("Road_Pebbles", 4000, 5500, shadows=False)
@@ -995,6 +1229,12 @@ def build_preview_cameras():
                camera("Preview_1_1_C", 5900.0, -6000.0, 3500.0, 7500.0, 0.0, 0.0),
                camera("Preview_1_1_D", 6440.0, 0.0, 200.0, 8490.0, 0.0, 60.0),   # The island jumps.
                camera("Preview_1_1_E", 10000.0, 0.0, 200.0, 12120.0, 0.0, 500.0),   # Up the stairs to the gate.
+               camera("Preview_1_1_F", 2800.0, -1200.0, 300.0, 4000.0, -3400.0, 500.0),   # Waterfalls.
+               camera("Preview_1_2_D", 13500.0, 0.0, 240.0, 14500.0, 0.0, 300.0),   # The blocked cave.
+               camera("Preview_1_2_E", 14720.0, -150.0, 170.0, 15300.0, 80.0, 180.0),   # Inside the tunnel.
+               camera("Preview_1_2_F", 15250.0, 300.0, 330.0, 15720.0, -100.0, 0.0),   # The first plate.
+               camera("Preview_1_2_H", 16800.0, -300.0, 230.0, 17900.0, 1900.0, -100.0),   # Plate and pool, like picture 2.
+               camera("Preview_1_2_G", 18300.0, 300.0, 210.0, 19200.0, 0.0, 250.0),   # The plank gate.
                camera("Preview_Route", 20000.0, -18000.0, 22000.0, 20000.0, 0.0, 0.0)]
     for name, s0, s1 in ZONES[1:]:
         middle = (s0 + s1) / 2.0
@@ -1053,6 +1293,7 @@ def main():
     scatter_rings(materials)
     living_start()
     awakening_grove_landmarks(materials)
+    rootwood_hollow(materials)
     rock_set_pieces()
     build_water()
     build_boundaries()

@@ -104,6 +104,40 @@ def build_gnarled_tree():
     return mesh
 
 
+def build_log():
+    """A bare log 800 cm long and 45 cm in radius, along X from the origin. The Fab trunks all keep their branches."""
+    mesh = Mesh()
+    path = [(800.0 * i / 8, 8.0 * math.sin(i * 1.1), 8.0 * math.sin(i * 0.7)) for i in range(9)]
+    add_tube(mesh, path, [45.0 + 4.0 * math.sin(i * 1.7) for i in range(9)], 12)
+    mesh.smooth_normals()
+    return mesh
+
+
+def build_root_arch():
+    """Three roots twisted together, arching 900 cm high across a 2500 cm span along Y. The ends sink below ground at Z = 0."""
+    rng = random.Random(23)
+    mesh = Mesh()
+    for strand in range(3):
+        angle = 2.0 * math.pi * strand / 3.0
+        path = []
+        radii = []
+        for row in range(25):
+            t = row / 24.0
+            twist = angle + t * 9.0
+            wobble = 28.0 + 20.0 * math.sin(t * 7.0 + strand)
+            y = -1250.0 + 2500.0 * t
+            z = 960.0 * math.sin(math.pi * t) - 60.0
+            path.append((math.cos(twist) * wobble, y, z + math.sin(twist) * wobble))
+            radii.append(26.0 + 52.0 * abs(2.0 * t - 1.0) ** 1.6 + 6.0 * math.sin(t * 20.0 + strand))
+        add_tube(mesh, path, radii, 8)
+        # Thin side roots leave the arch low down and reach for the ground, away from the road.
+        for side in (0.08, 0.92):
+            at = int(side * 24)
+            grow_branch(mesh, rng, path[at], (rng.uniform(-0.8, 0.8), -1.0 if side < 0.5 else 1.0, -0.6), 500.0, radii[at] * 0.5, 1)
+    mesh.smooth_normals()
+    return mesh
+
+
 def build_music_note():
     """An eighth note, about 110 cm tall and centred on the pickup. The head is a flattened sphere, tilted like a printed note."""
     mesh = Mesh()
