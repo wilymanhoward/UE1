@@ -8,7 +8,7 @@ public class Assignment1 : ModuleRules
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 	
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput", "PhysicsCore", "UMG", "Niagara", "LevelSequence" });
+		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput", "PhysicsCore", "UMG", "Niagara", "LevelSequence", "MovieScene" });
 
 		PrivateDependencyModuleNames.AddRange(new string[] {  });
 
