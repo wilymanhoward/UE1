@@ -1583,6 +1583,139 @@
 ],
 "add": [
 {
+"label": "SM_RockPack_Cliff_07_D10",
+"mesh": "SM_RockPack_Cliff_07_D",
+"loc": [
+5511.8,
+834.9,
+-269.7
+],
+"rot": [
+0.0,
+0.0,
+145.0
+],
+"scale": [
+1.0,
+1.0,
+1.0
+]
+},
+{
+"label": "SM_RockPack_Cliff_07_D11",
+"mesh": "SM_RockPack_Cliff_07_D",
+"loc": [
+5371.8,
+694.9,
+-269.7
+],
+"rot": [
+0.0,
+0.0,
+145.0
+],
+"scale": [
+1.0,
+1.0,
+1.0
+]
+},
+{
+"label": "SM_RockPack_Cliff_07_D12",
+"mesh": "SM_RockPack_Cliff_07_D",
+"loc": [
+5931.8,
+1514.9,
+-269.7
+],
+"rot": [
+0.0,
+0.0,
+65.0
+],
+"scale": [
+1.0,
+1.0,
+1.0
+]
+},
+{
+"label": "SM_RockPack_Cliff_07_D13",
+"mesh": "SM_RockPack_Cliff_07_D",
+"loc": [
+5881.8,
+1314.9,
+-269.7
+],
+"rot": [
+0.0,
+0.0,
+65.0
+],
+"scale": [
+1.0,
+1.0,
+1.0
+]
+},
+{
+"label": "SM_RockPack_Cliff_07_D14",
+"mesh": "SM_RockPack_Cliff_07_D",
+"loc": [
+5751.8,
+1094.9,
+-269.7
+],
+"rot": [
+0.0,
+0.0,
+155.0
+],
+"scale": [
+1.0,
+1.0,
+1.0
+]
+},
+{
+"label": "SM_RockPack_Cliff_07_D15",
+"mesh": "SM_RockPack_Cliff_07_D",
+"loc": [
+5661.8,
+904.9,
+-269.7
+],
+"rot": [
+0.0,
+0.0,
+75.0
+],
+"scale": [
+1.0,
+1.0,
+1.0
+]
+},
+{
+"label": "SM_RockPack_Cliff_07_D16",
+"mesh": "SM_RockPack_Cliff_07_D",
+"loc": [
+5621.8,
+724.9,
+-249.7
+],
+"rot": [
+0.0,
+0.0,
+75.0
+],
+"scale": [
+1.0,
+1.0,
+1.0
+]
+},
+{
 "label": "SM_RockPack_Cliff_07_D2",
 "mesh": "SM_RockPack_Cliff_07_D",
 "loc": [
@@ -1689,6 +1822,44 @@
 0.0,
 0.0,
 65.0
+],
+"scale": [
+1.0,
+1.0,
+1.0
+]
+},
+{
+"label": "SM_RockPack_Cliff_07_D8",
+"mesh": "SM_RockPack_Cliff_07_D",
+"loc": [
+5841.8,
+1464.9,
+-269.7
+],
+"rot": [
+0.0,
+0.0,
+-155.0
+],
+"scale": [
+1.0,
+1.0,
+1.0
+]
+},
+{
+"label": "SM_RockPack_Cliff_07_D9",
+"mesh": "SM_RockPack_Cliff_07_D",
+"loc": [
+5631.8,
+1244.9,
+-269.7
+],
+"rot": [
+0.0,
+0.0,
+145.0
 ],
 "scale": [
 1.0,
