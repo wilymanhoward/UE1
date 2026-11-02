@@ -70,6 +70,7 @@ MIST_LAYERS = (20.0, 60.0, 110.0)  # Heights above the water. Stacked sheets of 
 MARSH_BED = -50.0
 ISLAND_CHAIN = (6490.0, 8890.0)
 LAVA_LEVEL = -300.0  # The surface of the lava filling the pit under the floating islands.
+LAVA_TILE = 800.0  # How many cm one repeat of the lava material's textures covers.
 CAVERN_GAP = (19700.0, 22300.0)
 GAPS = [(3500.0, 3900.0), ISLAND_CHAIN, CAVERN_GAP, (39700.0, 40700.0), (41500.0, 42700.0)]
 GLIDE_ISLAND = (40700.0, 41500.0, 500.0)  # A landing that splits the glide in two.
@@ -452,7 +453,7 @@ def build_lava():
                 if min(terrain_height(x + a, y + b) for a in (0.0, step) for b in (0.0, step)) < LAVA_LEVEL + 20.0:
                     first = len(built.points)
                     for a, b in ((0.0, 0.0), (step, 0.0), (0.0, step), (step, step)):
-                        built.add_vertex((x + a, y + b, LAVA_LEVEL), (0.0, 0.0))
+                        built.add_vertex((x + a, y + b, LAVA_LEVEL), ((x + a) / LAVA_TILE, (y + b) / LAVA_TILE))
                     built.triangles += [(first, first + 1, first + 2), (first + 1, first + 3, first + 2)]
             y += step
         x += step
@@ -730,20 +731,6 @@ def build_materials():
     output(material, colour(material, 0.3, 0.32, 0.32), unreal.MaterialProperty.MP_EMISSIVE_COLOR)
     output(material, soft, unreal.MaterialProperty.MP_OPACITY)
     materials["mist"] = finish(material)
-    material = fresh_material("M_LS_Lava")
-    material.set_editor_property("shading_model", unreal.MaterialShadingModel.MSM_UNLIT)
-    # Cells of dark crust with glowing cracks between them, from two sizes of noise drifting apart over time. Unlit, so it makes its own light and shows no highlights.
-    def drifting_cells(scale, speed_x, speed_y):
-        drift = combine(material, unreal.MaterialExpressionMultiply, node(material, unreal.MaterialExpressionTime), node(material, unreal.MaterialExpressionConstant3Vector, constant=unreal.LinearColor(speed_x, speed_y, 0.0, 1.0)))
-        cells = node(material, unreal.MaterialExpressionNoise, noise_function=unreal.NoiseFunction.NOISEFUNCTION_VORONOI_ALU, scale=scale, levels=1, output_min=0.0, output_max=1.0, turbulence=False)
-        ls_material_helpers.library.connect_material_expressions(combine(material, unreal.MaterialExpressionAdd, node(material, unreal.MaterialExpressionWorldPosition), drift), "", cells, "Position")
-        return cells
-
-    noise = combine(material, unreal.MaterialExpressionMultiply, combine(material, unreal.MaterialExpressionAdd, drifting_cells(0.004, 14.0, 8.0), drifting_cells(0.011, -18.0, 12.0)), number(material, 0.5))
-    heat = node(material, unreal.MaterialExpressionSaturate)
-    ls_material_helpers.library.connect_material_expressions(combine(material, unreal.MaterialExpressionMultiply, combine(material, unreal.MaterialExpressionSubtract, noise, number(material, 0.6)), number(material, 4.0)), "", heat, "")
-    output(material, blend(material, colour(material, 0.22, 0.018, 0.006), colour(material, 3.2, 0.75, 0.05), heat), unreal.MaterialProperty.MP_EMISSIVE_COLOR)
-    materials["lava"] = finish(material)
     materials["goal_glow"] = glow("M_LS_GoalGlow", 1.0, 0.6, 0.14, 2.6)
     materials["moss_strand"] = glow("M_LS_MossStrand", 0.1, 0.13, 0.05, 0.0)
     materials["thorn"] = glow("M_LS_Thorn", 0.5, 0.03, 0.05, 0.6)
@@ -937,13 +924,14 @@ def build_island_chain(materials):
     kill_volume(kill_x, kill_y, LAVA_LEVEL - 240.0, 1400.0, 1000.0, yaw=road.yaw(7690.0))
 
     # In colour against the grey world, so the danger reads at once.
-    lava = mesh_actor(WORLD_MESHES["lava"], 0.0, 0.0, 0.0, "Floating Islands", material=materials["lava"], label="Lava")
+    lava = mesh_actor(WORLD_MESHES["lava"], 0.0, 0.0, 0.0, "Floating Islands", material=unreal.load_asset("/Game/Lava_Material/Material/M_Lava_01"), label="Lava")
     lava.static_mesh_component.set_cast_shadow(False)
     lava.static_mesh_component.set_render_custom_depth(True)
     lava.static_mesh_component.set_custom_depth_stencil_value(ls_world_common.FULL_COLOUR_STENCIL)
     for s, d in ((6950.0, 500.0), (7700.0, -500.0), (8450.0, 500.0)):
         x, y = road.point(s, d)
-        point_light(x, y, LAVA_LEVEL + 260.0, unreal.LinearColor(1.0, 0.32, 0.06, 1.0), 140.0, 2600.0, "Floating Islands")
+        # These only light the pit walls. Their shine on the lava would show as pale patches.
+        point_light(x, y, LAVA_LEVEL + 260.0, unreal.LinearColor(1.0, 0.32, 0.06, 1.0), 140.0, 2600.0, "Floating Islands").point_light_component.set_editor_property("specular_scale", 0.0)
     for s, d in ((7200.0, 300.0), (8100.0, -300.0)):
         niagara("/Game/FreeParticle_SoftTofu/Niagara/NS_Sparkling_Noise", *road.point(s, d), LAVA_LEVEL + 120.0, "Floating Islands", 6.0)
 
