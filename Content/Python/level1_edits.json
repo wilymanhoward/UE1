@@ -724,6 +724,15 @@
 "label": "GuideLight",
 "cls": "PointLight",
 "at": [
+5283.2,
+3678.2,
+452.4
+]
+},
+{
+"label": "GuideLight",
+"cls": "PointLight",
+"at": [
 34025.4,
 12854.1,
 780.0
@@ -877,6 +886,24 @@
 "label": "LogHub",
 "cls": "StaticMeshActor",
 "at": [
+18825.5,
+2413.3,
+466.8
+]
+},
+{
+"label": "LogHub",
+"cls": "StaticMeshActor",
+"at": [
+20425.7,
+2314.1,
+466.8
+]
+},
+{
+"label": "LogHub",
+"cls": "StaticMeshActor",
+"at": [
 20293.7,
 2806.7,
 466.8
@@ -934,6 +961,51 @@
 20359.7,
 2560.4,
 336.0
+]
+},
+{
+"label": "SM_RockPack_Cliff_07_D",
+"cls": "StaticMeshActor",
+"at": [
+6191.8,
+924.9,
+-349.7
+]
+},
+{
+"label": "SM_RockPack_Cliff_07_D",
+"cls": "StaticMeshActor",
+"at": [
+6369.3,
+1305.6,
+-349.7
+]
+},
+{
+"label": "SM_RockPack_Cliff_07_D",
+"cls": "StaticMeshActor",
+"at": [
+7808.8,
+-292.5,
+-349.7
+]
+},
+{
+"label": "SM_RockPack_Cliff_07_D",
+"cls": "StaticMeshActor",
+"at": [
+7986.3,
+88.2,
+-349.7
+]
+},
+{
+"label": "SM_RockPack_Cliff_07_D",
+"cls": "StaticMeshActor",
+"at": [
+8163.8,
+468.8,
+-349.7
 ]
 },
 {
@@ -1021,6 +1093,30 @@
 15.6,
 -12.7,
 38.3
+],
+"scale": [
+1.0,
+1.0,
+1.0
+]
+},
+{
+"label": "LifeNote",
+"cls": "BP_LifeNote_C",
+"from": [
+5194.9,
+1389.8,
+230.0
+],
+"loc": [
+5194.9,
+1389.8,
+340.0
+],
+"rot": [
+0.0,
+0.0,
+-25.0
 ],
 "scale": [
 1.0,
@@ -1341,6 +1437,30 @@
 ]
 },
 {
+"label": "SM_RockPack_Cliff_07_D",
+"cls": "StaticMeshActor",
+"from": [
+6014.3,
+544.3,
+-349.7
+],
+"loc": [
+4921.8,
+924.9,
+-89.7
+],
+"rot": [
+0.0,
+0.0,
+65.0
+],
+"scale": [
+1.0,
+1.0,
+1.0
+]
+},
+{
 "label": "SM_S_Rock_10",
 "cls": "StaticMeshActor",
 "from": [
@@ -1462,6 +1582,120 @@
 }
 ],
 "add": [
+{
+"label": "SM_RockPack_Cliff_07_D2",
+"mesh": "SM_RockPack_Cliff_07_D",
+"loc": [
+5051.8,
+1214.9,
+-109.7
+],
+"rot": [
+0.0,
+0.0,
+65.0
+],
+"scale": [
+1.0,
+1.0,
+1.0
+]
+},
+{
+"label": "SM_RockPack_Cliff_07_D3",
+"mesh": "SM_RockPack_Cliff_07_D",
+"loc": [
+5221.8,
+1364.9,
+-109.7
+],
+"rot": [
+0.0,
+0.0,
+-65.0
+],
+"scale": [
+1.0,
+1.0,
+1.0
+]
+},
+{
+"label": "SM_RockPack_Cliff_07_D4",
+"mesh": "SM_RockPack_Cliff_07_D",
+"loc": [
+5331.8,
+1604.9,
+-99.7
+],
+"rot": [
+0.0,
+0.0,
+-105.0
+],
+"scale": [
+1.0,
+1.0,
+1.0
+]
+},
+{
+"label": "SM_RockPack_Cliff_07_D5",
+"mesh": "SM_RockPack_Cliff_07_D",
+"loc": [
+5401.8,
+1774.9,
+-99.7
+],
+"rot": [
+0.0,
+0.0,
+-155.0
+],
+"scale": [
+1.0,
+1.0,
+1.0
+]
+},
+{
+"label": "SM_RockPack_Cliff_07_D6",
+"mesh": "SM_RockPack_Cliff_07_D",
+"loc": [
+5281.8,
+1454.9,
+-109.7
+],
+"rot": [
+0.0,
+0.0,
+-65.0
+],
+"scale": [
+1.0,
+1.0,
+1.0
+]
+},
+{
+"label": "SM_RockPack_Cliff_07_D7",
+"mesh": "SM_RockPack_Cliff_07_D",
+"loc": [
+5061.8,
+934.9,
+-89.7
+],
+"rot": [
+0.0,
+0.0,
+65.0
+],
+"scale": [
+1.0,
+1.0,
+1.0
+]
+},
 {
 "label": "SM_RockPack_RockGroups_01_A",
 "mesh": "SM_RockPack_RockGroups_01_A",

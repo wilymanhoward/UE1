@@ -197,6 +197,46 @@ def build_blob():
     return mesh
 
 
+def build_shrine():
+    """A stone plinth with three curved ribs holding a glowing orb, about 250 cm tall. It is open, so it never hides the road behind it.
+    U tells the material which part is which: 0 stone, 0.5 carved ring, 1 orb."""
+    mesh = Mesh()
+
+    def stone_part(part, make):
+        first = len(mesh.points)
+        make()
+        mesh.uvs[first:] = [(part, 0.0)] * (len(mesh.points) - first)
+
+    def centre_tube(heights, radii):
+        add_tube(mesh, [(0.0, 0.0, z) for z in heights], radii, 24)
+
+    # The plinth's steps, narrowing upward and closed on top.
+    stone_part(0.0, lambda: centre_tube([0.0, 18.0, 19.0, 36.0, 37.0, 38.0], [105.0, 105.0, 82.0, 82.0, 40.0, 0.5]))
+    ring = [(math.cos(2.0 * math.pi * i / 32.0) * 93.0, math.sin(2.0 * math.pi * i / 32.0) * 93.0, 19.0) for i in range(33)]
+    stone_part(0.5, lambda: add_tube(mesh, ring, [4.5] * 33, 6))
+    for rib in range(3):
+        angle = 2.0 * math.pi * rib / 3.0
+        path = []
+        for row in range(13):
+            t = row / 12.0
+            distance = 68.0 + 30.0 * math.sin(math.pi * t) - 60.0 * t * t
+            path.append((math.cos(angle) * distance, math.sin(angle) * distance, 30.0 + 210.0 * t))
+        stone_part(0.0, lambda: add_tube(mesh, path, [15.0 - 9.0 * row / 12.0 for row in range(13)], 8))
+
+    points, triangles = icosphere(3)
+
+    def ball(height, size, part):
+        first = len(mesh.points)
+        for p in points:
+            mesh.add_vertex((p[0] * size, p[1] * size, height + p[2] * size), (part, 0.0))
+        mesh.triangles += [(a + first, b + first, c + first) for a, b, c in triangles]
+
+    ball(140.0, 34.0, 1.0)
+    ball(245.0, 14.0, 0.0)
+    mesh.smooth_normals()
+    return mesh
+
+
 def build_log():
     """A bare log 800 cm long and 45 cm in radius, along X from the origin. The Fab trunks all keep their branches."""
     mesh = Mesh()
@@ -367,7 +407,7 @@ if __name__ == "__main__":
     for name, built, centre in (("tree", build_gnarled_tree(), None), ("note", build_music_note(), None),
                                 ("ring", build_gate_ring(), None), ("island", build_floating_island(), (0.0, 0.0, -50.0)),
                                 ("moss", build_tree_moss(), None), ("roots", build_root_clump(), None), ("bramble", build_bramble(), None),
-                                ("blob", build_blob(), None)):
+                                ("blob", build_blob(), None), ("shrine", build_shrine(), None)):
         print(name, len(built.points), "points", len(built.triangles), "triangles", "outward" if centre is None or faces_outward(built, centre) else "REVERSED")
         for normal in built.normals:
             assert normal is not None

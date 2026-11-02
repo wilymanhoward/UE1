@@ -521,6 +521,7 @@ def import_world_meshes():
             "roots": import_generated_mesh("SM_LS_RootClump", ls_generate_world_meshes.build_root_clump()),
             "bramble": import_generated_mesh("SM_LS_Bramble", ls_generate_world_meshes.build_bramble()),
             "blob": import_generated_mesh("SM_LS_Blob", ls_generate_world_meshes.build_blob(), nanite=False),
+            "shrine": import_generated_mesh("SM_LS_Shrine", ls_generate_world_meshes.build_shrine(), nanite=False),
             "water": build_swamp_water(),
             "mist": build_swamp_mist()}
 
@@ -710,7 +711,18 @@ def build_materials():
     materials["thorn"] = glow("M_LS_Thorn", 0.5, 0.03, 0.05, 0.6)
     materials["note"] = glow("M_LS_Note", 1.0, 0.62, 0.1, 2.0)
     materials["petal"] = glow("M_LS_Petal", 1.0, 0.25, 0.4, 1.3)
-    materials["shrine"] = glow("M_LS_Shrine", 0.3, 0.75, 1.0, 1.2)
+    material = fresh_material("M_LS_Shrine")
+    # Like the blob, the mesh's U says which part this is. See ls_generate_world_meshes.build_shrine.
+    part = mask(material, node(material, unreal.MaterialExpressionTextureCoordinate), True)
+    orb = node(material, unreal.MaterialExpressionSaturate)
+    ls_material_helpers.library.connect_material_expressions(combine(material, unreal.MaterialExpressionMultiply, combine(material, unreal.MaterialExpressionSubtract, part, number(material, 0.75)), number(material, 10.0)), "", orb, "")
+    carved = node(material, unreal.MaterialExpressionSaturate)
+    ls_material_helpers.library.connect_material_expressions(combine(material, unreal.MaterialExpressionMultiply, combine(material, unreal.MaterialExpressionSubtract, part, number(material, 0.25)), number(material, 10.0)), "", carved, "")
+    stone = combine(material, unreal.MaterialExpressionMultiply, texture(material, terrain_folder + "/T_rock", world_uv(material, 120.0)), colour(material, 0.5, 0.48, 0.42))
+    output(material, stone, unreal.MaterialProperty.MP_BASE_COLOR)
+    output(material, combine(material, unreal.MaterialExpressionMultiply, carved, colour(material, 0.2, 1.1, 1.0)), unreal.MaterialProperty.MP_EMISSIVE_COLOR)
+    output(material, number(material, 0.85), unreal.MaterialProperty.MP_ROUGHNESS)
+    materials["shrine"] = finish(material)
     materials["gate_glow"] = glow("M_LS_GateGlow", 0.15, 0.95, 0.85, 6.0)
     return materials
 
@@ -962,7 +974,7 @@ def dress_actor(actor, materials, thorns, rng):
         fit_mesh(component, mesh("SM_Poppy_02"), 170.0, -40.0)
     elif class_name == "BP_CheckpointShrine_C":
         component = keep_coloured(actor, None)
-        fit_mesh(component, mesh("SM_Menhir_Rock_02"), 280.0, -50.0)
+        fit_mesh(component, WORLD_MESHES["shrine"], 255.0, -50.0)
         component.set_material(0, materials["shrine"])
     elif class_name == "BP_FormFlower_Stone_C":
         component = keep_coloured(actor, None)
@@ -1808,6 +1820,16 @@ def apply_hand_edits():
     unreal.log("Last Seed world: hand edits applied: {} removed, {} changed ({} not found), {} added".format(len(edits["remove"]), len(edits["change"]), missing, len(edits["add"])))
 
 
+def solid_cliffs():
+    """Every Cliff_07 is a real obstacle, whoever placed it. The Fab mesh already has simple collision shapes, and the Fab folder itself isn't changed."""
+    count = 0
+    for actor in unreal.get_editor_subsystem(unreal.EditorActorSubsystem).get_all_level_actors():
+        if isinstance(actor, unreal.StaticMeshActor) and actor.static_mesh_component.static_mesh and actor.static_mesh_component.static_mesh.get_name().startswith("SM_RockPack_Cliff_07"):
+            actor.static_mesh_component.set_collision_profile_name("BlockAll")
+            count += 1
+    unreal.log("Last Seed world: {} cliffs made solid".format(count))
+
+
 def main():
     global WORLD_MESHES
     check_layout()
@@ -1852,6 +1874,7 @@ def main():
 
     cameras = build_preview_cameras()
     apply_hand_edits()
+    solid_cliffs()
     report(world_path)
     take_preview_screenshots(cameras)
 
