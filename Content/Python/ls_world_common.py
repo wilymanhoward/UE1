@@ -229,6 +229,9 @@ def smooth_noise(x, y, seed=0.0):
 class Scatter:
     """Collects transforms per mesh, then creates one instanced component for each mesh in a ring."""
 
+    # Spots this returns true for are left empty. It runs after the random numbers are drawn, so everything else keeps its place.
+    excluded = None
+
     def __init__(self, folder, cull_start, cull_end, shadows=True, material=None, stencil=False):
         self.folder = folder
         self.cull_start = cull_start
@@ -246,6 +249,8 @@ class Scatter:
                 raise RuntimeError("Last Seed world: missing mesh " + mesh_path)
         z = ground - base_height_offset(self.meshes[mesh_path], scale) - sink
         rotation = unreal.Rotator(rng.uniform(-tilt, tilt), rng.uniform(-tilt, tilt), rng.uniform(0, 360))
+        if self.excluded and self.excluded(x, y):
+            return
         transform = unreal.Transform(location=unreal.Vector(x, y, z), rotation=rotation, scale=unreal.Vector(scale, scale, scale))
         self.transforms.setdefault(mesh_path, []).append(transform)
 

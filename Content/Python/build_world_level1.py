@@ -71,6 +71,8 @@ MARSH_BED = -50.0
 ISLAND_CHAIN = (6490.0, 8890.0)
 LAVA_LEVEL = -300.0  # The surface of the lava filling the pit under the floating islands.
 LAVA_TILE = 800.0  # How many cm one repeat of the lava material's textures covers.
+RIVER_BED = -650.0  # The bottom of the lava river's channel.
+RIVER_LENGTH = 7600.0  # How far the river runs from the road on each side, before it narrows to nothing.
 CAVERN_GAP = (19700.0, 22300.0)
 GAPS = [(3500.0, 3900.0), ISLAND_CHAIN, CAVERN_GAP, (39700.0, 40700.0), (41500.0, 42700.0)]
 GLIDE_ISLAND = (40700.0, 41500.0, 500.0)  # A landing that splits the glide in two.
@@ -195,6 +197,35 @@ def road_box(s0, s1, margin):
     return (min(p[0] for p in points) - margin, max(p[0] for p in points) + margin, min(p[1] for p in points) - margin, max(p[1] for p in points) + margin)
 
 
+def river_shape(across):
+    """The lava river at a distance across the road: (its middle along the road, its half width). It runs straight only where it passes under the road."""
+    side = abs(across)
+    bend = smoothstep(1100.0, 3000.0, side)
+    middle = bend * (650.0 * math.sin(across / 1500.0 + 0.6) + 250.0 * math.sin(across / 620.0))
+    # As wide as the gap at the road, so it meets both lips, then narrower and uneven further out.
+    width = lerp(1200.0, 620.0 + 130.0 * math.sin(across / 900.0 + 1.0) + 60.0 * math.sin(across / 210.0), smoothstep(1100.0, 3200.0, side))
+    return middle, width * (1.0 - smoothstep(RIVER_LENGTH - 1400.0, RIVER_LENGTH, side))
+
+
+def river_amount(x, y):
+    """1 in the channel, falling to 0 over the bank. The road is straight here, so this measures along and across it from the middle of the island gap."""
+    middle_s = (ISLAND_CHAIN[0] + ISLAND_CHAIN[1]) / 2.0
+    px, py = road.point(middle_s)
+    heading = road.heading(middle_s)
+    along = (x - px) * math.cos(heading) + (y - py) * math.sin(heading)
+    across = -(x - px) * math.sin(heading) + (y - py) * math.cos(heading)
+    if abs(across) >= RIVER_LENGTH:
+        return 0.0
+    middle, width = river_shape(across)
+    if width < 5.0:
+        return 0.0
+    return 1.0 - smoothstep(width - 500.0, width, abs(along - middle))
+
+
+def in_river(x, y):
+    return river_amount(x, y) > 0.0
+
+
 def in_cavern(s, d, margin=1.05):
     return ((s - CAVERN[0]) / CAVERN[1]) ** 2 + (d / CAVERN[2]) ** 2 < margin * margin
 
@@ -255,7 +286,10 @@ def side_ground(s, d, x, y):
     height = lerp(height, WATER_LEVEL - 70.0, swamp_amount(near_s) * (1.0 - smoothstep(SWAMP_WIDTH - 2500.0, SWAMP_WIDTH, side)))
     if in_cavern(s, d):
         return CAVERN_FLOOR
-    return lerp(height, CHASM, gap_amount(near_s) * (1.0 - smoothstep(150.0, 1600.0, side)))
+    # The island gap is the lava river instead of a straight cut.
+    if not ISLAND_CHAIN[0] < near_s < ISLAND_CHAIN[1]:
+        height = lerp(height, CHASM, gap_amount(near_s) * (1.0 - smoothstep(150.0, 1600.0, side)))
+    return lerp(height, RIVER_BED, river_amount(x, y))
 
 
 def road_height(s, d, x, y):
@@ -440,23 +474,34 @@ def build_cavern_dome():
 
 
 def build_lava():
-    """Fills the island pit up to LAVA_LEVEL. Like the swamp's water, it keeps only the squares where the ground is low enough, so its shore follows the terrain."""
+    """A strip following the river, a little wider than its channel. The banks hide its edges, so the shore is wherever the ground meets LAVA_LEVEL."""
     built = Mesh()
-    step = 100.0
-    x0, x1, y0, y1 = road_box(ISLAND_CHAIN[0] - 400.0, ISLAND_CHAIN[1] + 400.0, 2800.0)
-    x = x0
-    while x < x1:
-        y = y0
-        while y < y1:
-            s, d = road.project(x + step / 2.0, y + step / 2.0)
-            if ISLAND_CHAIN[0] - 300.0 < s < ISLAND_CHAIN[1] + 300.0 and abs(d) < 2700.0:
-                if min(terrain_height(x + a, y + b) for a in (0.0, step) for b in (0.0, step)) < LAVA_LEVEL + 20.0:
-                    first = len(built.points)
-                    for a, b in ((0.0, 0.0), (step, 0.0), (0.0, step), (step, step)):
-                        built.add_vertex((x + a, y + b, LAVA_LEVEL), ((x + a) / LAVA_TILE, (y + b) / LAVA_TILE))
-                    built.triangles += [(first, first + 1, first + 2), (first + 1, first + 3, first + 2)]
-            y += step
-        x += step
+    middle_s = (ISLAND_CHAIN[0] + ISLAND_CHAIN[1]) / 2.0
+    px, py = road.point(middle_s)
+    heading = road.heading(middle_s)
+    columns = 8
+    across = -RIVER_LENGTH
+    rows = 0
+    while across <= RIVER_LENGTH:
+        middle, width = river_shape(across)
+        for column in range(columns + 1):
+            along = middle + (width + 150.0) * (column / columns * 2.0 - 1.0)
+            x = px + along * math.cos(heading) - across * math.sin(heading)
+            y = py + along * math.sin(heading) + across * math.cos(heading)
+            built.add_vertex((x, y, LAVA_LEVEL), (x / LAVA_TILE, y / LAVA_TILE))
+        rows += 1
+        across += 100.0
+    for row in range(rows - 1):
+        for column in range(columns):
+            a = row * (columns + 1) + column
+            b = a + 1
+            c = a + columns + 1
+            d = c + 1
+            for triangle in ((a, b, c), (b, d, c)):
+                p0, p1, p2 = (built.points[i] for i in triangle)
+                # Each triangle faces up, whichever way the river's heading makes the rows run.
+                up = (p1[0] - p0[0]) * (p2[1] - p0[1]) - (p1[1] - p0[1]) * (p2[0] - p0[0])
+                built.triangles.append(triangle if up > 0.0 else (triangle[0], triangle[2], triangle[1]))
     built.smooth_normals()
     return import_generated_mesh("SM_LS_Lava", built, nanite=False)
 
@@ -928,7 +973,7 @@ def build_island_chain(materials):
     lava.static_mesh_component.set_cast_shadow(False)
     lava.static_mesh_component.set_render_custom_depth(True)
     lava.static_mesh_component.set_custom_depth_stencil_value(ls_world_common.FULL_COLOUR_STENCIL)
-    for s, d in ((6950.0, 500.0), (7700.0, -500.0), (8450.0, 500.0)):
+    for s, d in ((6950.0, 500.0), (7700.0, -500.0), (8450.0, 500.0), *[(7690.0 + river_shape(far)[0], far) for far in (-5400.0, -3300.0, 3300.0, 5400.0)]):
         x, y = road.point(s, d)
         # These only light the pit walls. Their shine on the lava would show as pale patches.
         point_light(x, y, LAVA_LEVEL + 260.0, unreal.LinearColor(1.0, 0.32, 0.06, 1.0), 140.0, 2600.0, "Floating Islands").point_light_component.set_editor_property("specular_scale", 0.0)
@@ -1108,6 +1153,7 @@ def along_road(s0, s1, d0, d1, spacing, rng):
 
 def scatter_rings(materials):
     rng = random.Random(SEED)
+    Scatter.excluded = staticmethod(in_river)
 
     # Boundary ring: rocks, logs and shrubs right beside the road, with a tight line of dead trees behind them.
     rocks = Scatter("Ring1_MossRocks", 9000, 12000, material=materials["moss"])
@@ -1779,6 +1825,7 @@ def build_preview_cameras():
                camera("Preview_1_1_E", 10000.0, 0.0, 200.0, 12120.0, 0.0, 500.0),   # Up the stairs to the gate.
                camera("Preview_1_1_G", 6300.0, 0.0, 420.0, 7500.0, 0.0, -300.0),   # The lava pit, from the road.
                camera("Preview_1_1_H", 7700.0, 2600.0, 1500.0, 7700.0, 0.0, -300.0),   # The lava pit, from above.
+               camera("Preview_1_1_I", 5800.0, -5000.0, 4200.0, 7900.0, 0.0, -300.0),   # The whole lava river.
                camera("Preview_1_1_F", 2800.0, -1200.0, 300.0, 4000.0, -3400.0, 500.0),   # Waterfalls.
                camera("Preview_1_2_D", 13500.0, 0.0, 240.0, 14500.0, 0.0, 300.0),   # The blocked cave.
                camera("Preview_1_2_E", 14900.0, -150.0, 170.0, 16000.0, 80.0, 180.0),   # Inside the tunnel.
@@ -1805,6 +1852,10 @@ def build_preview_cameras():
 
 def check_layout():
     """Stops the build if an edit to the tables above broke a rule the level depends on."""
+    for s in range(0, int(ROAD_LENGTH), 100):
+        if not ISLAND_CHAIN[0] <= s <= ISLAND_CHAIN[1]:
+            for d in (-ROAD_SIDE, 0.0, ROAD_SIDE):
+                assert not in_river(*road.point(s, d)), "the lava river runs into the road at s = {}".format(s)
     assert abs(to_road(32200.0) - ROAD_LENGTH) < 1.0, "the inserts and ROAD_LENGTH disagree"
     for x in (0.0, 5000.0, 12100.0, 14800.0, 22600.0, 31700.0):
         assert abs(greybox_x(to_road(x)) - x) < 1.0, x
