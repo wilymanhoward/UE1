@@ -201,7 +201,8 @@ def river_shape(across):
     """The lava river at a distance across the road: (its middle along the road, its half width). It runs straight only where it passes under the road."""
     side = abs(across)
     bend = smoothstep(1100.0, 3000.0, side)
-    middle = bend * (650.0 * math.sin(across / 1500.0 + 0.6) + 250.0 * math.sin(across / 620.0))
+    # On the left it swings ahead, to stay clear of the giant's waterfalls.
+    middle = bend * (650.0 * math.sin(across / 1500.0 + 0.6) + 250.0 * math.sin(across / 620.0) + (900.0 if across < 0.0 else 0.0))
     # As wide as the gap at the road, so it meets both lips, then narrower and uneven further out.
     width = lerp(1200.0, 620.0 + 130.0 * math.sin(across / 900.0 + 1.0) + 60.0 * math.sin(across / 210.0), smoothstep(1100.0, 3200.0, side))
     return middle, width * (1.0 - smoothstep(RIVER_LENGTH - 1400.0, RIVER_LENGTH, side))
