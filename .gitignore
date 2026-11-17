@@ -44,3 +44,7 @@ Build/*/**
 !Build/*/PakBlacklist*.txt
 !Build/**/*.ico
 *_BuiltData.uasset
+
+# Local tooling and the separate nested checkout
+.codex/
+UE1/
