@@ -26,6 +26,7 @@ protected:
 	virtual void NativeOnInitialized() override;
 	virtual void NativeConstruct() override;
 	virtual void NativeDestruct() override;
+	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 
 	/** Holds the buttons and sliders. Hidden while the controls list is open. */
 	UPROPERTY(meta = (BindWidget))

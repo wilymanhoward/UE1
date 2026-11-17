@@ -4,6 +4,7 @@
 
 #include "Components/Button.h"
 #include "Components/Slider.h"
+#include "Components/TextBlock.h"
 #include "LSControlsWidget.h"
 #include "LSGameInstance.h"
 #include "LSPlayerController.h"
@@ -42,6 +43,18 @@ void ULSPauseMenuWidget::NativeDestruct()
 	}
 
 	Super::NativeDestruct();
+}
+
+void ULSPauseMenuWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
+{
+	Super::NativeTick(MyGeometry, InDeltaTime);
+	for (UButton* Button : {ResumeButton.Get(), RestartButton.Get(), ControlsButton.Get(), MainMenuButton.Get()})
+	{
+		const bool bSelected = Button->IsHovered() || Button->HasKeyboardFocus() || Button->HasUserFocus(GetOwningPlayer());
+		if (UTextBlock* Label = Cast<UTextBlock>(Button->GetContent()))
+			Label->SetColorAndOpacity(FSlateColor(bSelected ? FLinearColor(1.f, 0.82f, 0.36f) : FLinearColor(0.92f, 0.91f, 0.84f)));
+		Button->SetBackgroundColor(FLinearColor(1.f, 1.f, 1.f, bSelected ? 1.f : 0.f));
+	}
 }
 
 ALSPlayerController* ULSPauseMenuWidget::GetLSPlayerController() const

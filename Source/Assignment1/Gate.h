@@ -1,9 +1,9 @@
 // Last Seed - a door opened by pressure plates.
 //
-// Purpose: opens smoothly while ALL of its plates are pressed and closes again if any is released, which
-// is what makes the two-plate puzzle work.
-// Design pattern: observer. The gate subscribes to its plates' events and never polls them.
-// Connections: list the plates in RequiredPlates on the placed gate. Listens to APressurePlate.
+// Purpose: opens smoothly while ALL of its plates are pressed and levers are on, and closes again if any is
+// released, which is what makes the two-plate puzzle work.
+// Design pattern: observer. The gate subscribes to its plates' and levers' events and never polls them.
+// Connections: list them in RequiredPlates and RequiredLevers on the placed gate. Listens to APressurePlate and ALever.
 
 #pragma once
 
@@ -11,6 +11,7 @@
 #include "GameFramework/Actor.h"
 #include "Gate.generated.h"
 
+class ALever;
 class APressurePlate;
 class UCurveFloat;
 class UStaticMeshComponent;
@@ -42,6 +43,10 @@ protected:
 	/** All of these must be pressed to open the gate. Set this on the placed gate. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Gate")
 	TArray<TObjectPtr<APressurePlate>> RequiredPlates;
+
+	/** All of these must be on, as well as every plate. A gate may use plates, levers or both. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Gate")
+	TArray<TObjectPtr<ALever>> RequiredLevers;
 
 	/** Optional motion: time in seconds to door position, 0 closed to 1 open. Empty uses a smooth default. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Gate")

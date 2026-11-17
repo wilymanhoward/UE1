@@ -3,14 +3,17 @@
 #include "RestorationDriver.h"
 
 #include "Components/ExponentialHeightFogComponent.h"
+#include "Components/VolumetricCloudComponent.h"
 #include "Engine/ExponentialHeightFog.h"
 #include "Engine/PostProcessVolume.h"
 #include "Engine/World.h"
+#include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMaterialLibrary.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Materials/MaterialInterface.h"
 #include "Materials/MaterialParameterCollection.h"
 #include "RestorationSubsystem.h"
+#include "TimerManager.h"
 
 namespace
 {
@@ -19,6 +22,8 @@ namespace
 	const FName LastNoteLocationParameter(TEXT("LastNoteLocation"));
 	const FName LocalBloomRadiusParameter(TEXT("LocalBloomRadius"));
 	const FName SaturationParameter(TEXT("Saturation"));
+	const FName CloudAlbedoParameter(TEXT("Cloud_AlbedoColor"));
+	const FName CloudCoverageParameter(TEXT("Cloud_GlobalCoverage"));
 }
 
 ARestorationDriver::ARestorationDriver()
@@ -53,8 +58,21 @@ void ARestorationDriver::BeginPlay()
 		}
 	}
 
+	if (WeatherClouds)
+	{
+		UVolumetricCloudComponent* Cloud = WeatherClouds->FindComponentByClass<UVolumetricCloudComponent>();
+		if (Cloud && Cloud->GetMaterial())
+		{
+			CloudInstance = UMaterialInstanceDynamic::Create(Cloud->GetMaterial(), this);
+			ClearCloudAlbedo = CloudInstance->K2_GetVectorParameterValue(CloudAlbedoParameter);
+			ClearCloudCoverage = CloudInstance->K2_GetScalarParameterValue(CloudCoverageParameter);
+			Cloud->SetMaterial(CloudInstance);
+		}
+	}
+
 	// Without this, the level would show its normal colours for a moment before turning grey.
 	ApplyVisuals();
+	UpdateWeather(0.f);
 }
 
 void ARestorationDriver::HandleNoteCollected(FVector Location)
@@ -79,6 +97,46 @@ void ARestorationDriver::Tick(float DeltaSeconds)
 	CurrentBloomRadius = FMath::FInterpTo(CurrentBloomRadius, TargetRadius, DeltaSeconds, NoteBloomSpeed);
 
 	ApplyVisuals();
+	UpdateWeather(DeltaSeconds);
+}
+
+void ARestorationDriver::UpdateWeather(float DeltaSeconds)
+{
+	if (!CloudInstance && !DistantThunder)
+	{
+		return;
+	}
+
+	const float Storm = 1.f - FMath::SmoothStep(0.f, 0.75f, DisplayedRestoration);
+	LightningGlowTime = FMath::Max(0.f, LightningGlowTime - DeltaSeconds);
+	if (Storm > 0.1f)
+	{
+		TimeToLightning -= DeltaSeconds;
+		if (TimeToLightning <= 0.f)
+		{
+			TimeToLightning = FMath::FRandRange(25.f, 42.f);
+			LightningGlowTime = 0.65f;
+			if (DistantThunder)
+			{
+				GetWorldTimerManager().SetTimer(ThunderTimer, this, &ARestorationDriver::PlayDistantThunder, 0.55f);
+			}
+		}
+	}
+
+	if (CloudInstance)
+	{
+		const FLinearColor Overcast(0.20f, 0.23f, 0.27f, ClearCloudAlbedo.A);
+		const float Glow = FMath::Square(LightningGlowTime / 0.65f) * Storm;
+		const FLinearColor Albedo = FMath::Lerp(ClearCloudAlbedo, Overcast, Storm);
+		CloudInstance->SetVectorParameterValue(CloudAlbedoParameter, FMath::Lerp(Albedo, ClearCloudAlbedo, Glow * 0.8f));
+		CloudInstance->SetScalarParameterValue(CloudCoverageParameter, ClearCloudCoverage + 0.24f * Storm);
+	}
+}
+
+void ARestorationDriver::PlayDistantThunder()
+{
+	const float Storm = 1.f - FMath::SmoothStep(0.f, 0.75f, DisplayedRestoration);
+	UGameplayStatics::PlaySound2D(this, DistantThunder, 0.64f * Storm, 1.f, 0.f, nullptr, this, false);
 }
 
 void ARestorationDriver::ApplyVisuals()

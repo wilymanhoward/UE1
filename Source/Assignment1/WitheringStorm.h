@@ -1,4 +1,4 @@
-// Last Seed - the rising storm that chases the player up Storm Ascent.
+// Last Seed - the storm that chases the player: rising up Storm Ascent, or along a trail (ChasePoints).
 //
 // Purpose: once triggered, a huge kill box rises at a set speed. Each collected note pushes it back down.
 // Touching it kills the ball. After a respawn it returns to a position saved at the last checkpoint. As it
@@ -75,6 +75,12 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tuning", meta = (ClampMin = "0.1"))
 	float ShakeInterval = 1.f;
 
+	/** Optional. World points along a trail, in order. With two or more, the storm chases along them instead of
+	 *  rising: it faces down the path, its front (the box's +X face) moves at Rise Speed, notes push it back along
+	 *  the path, and Max Rise Distance limits how far it goes. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Storm")
+	TArray<FVector> ChasePoints;
+
 private:
 	UFUNCTION()
 	void HandleNoteCollected(FVector Location);
@@ -87,6 +93,16 @@ private:
 
 	void SetStormZ(float NewZ);
 	void UpdateCloseEffects(float DeltaSeconds);
+
+	// The chase along ChasePoints. Progress is the distance along the path of the storm's middle.
+	bool FollowsPath() const { return ChasePoints.Num() >= 2; }
+	void SetProgress(float NewProgress);
+	float PathDistanceOf(const FVector& Location) const;
+	float GetPathLength() const;
+	float Progress = 0.f;
+	float SavedProgress = 0.f;
+	/** Along a path: whether the ball has reached a checkpoint since the chase began. */
+	bool bCheckpointInChase = false;
 
 	/** The ball being chased. Set when the storm starts. */
 	UPROPERTY(Transient)

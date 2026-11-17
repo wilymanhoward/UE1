@@ -20,4 +20,7 @@ public:
 
 protected:
 	virtual void OnCollected(ASeedBall* Ball) override;
+
+	/** Each note collected chimes one step higher up a pentatonic scale, so collecting them plays a tune. */
+	virtual float GetCollectPitch() const override;
 };

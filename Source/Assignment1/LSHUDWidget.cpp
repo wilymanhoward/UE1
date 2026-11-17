@@ -40,6 +40,8 @@ void ULSHUDWidget::NativeConstruct()
 	HandleRestorationChanged(Restoration->GetRestoration());
 	ShowForm(ESeedForm::Seed);
 	PromptText->SetRenderOpacity(0.f);
+	if (PromptPanel) PromptPanel->SetRenderOpacity(0.f);
+	if (NoticePanel) NoticePanel->SetRenderOpacity(0.f);
 }
 
 void ULSHUDWidget::SetBall(ASeedBall* Ball)
@@ -62,15 +64,28 @@ void ULSHUDWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 	{
 		PromptTimeRemaining -= InDeltaTime;
 		// Above the fade time this clamps to 1, so the text stays solid until only the fade time is left.
-		PromptText->SetRenderOpacity(FMath::Clamp(PromptTimeRemaining / PromptFadeTime, 0.f, 1.f));
+		(PromptPanel ? PromptPanel.Get() : PromptText.Get())->SetRenderOpacity(FMath::Clamp(PromptTimeRemaining / PromptFadeTime, 0.f, 1.f));
+	}
+	if (NoticeTimeRemaining > 0.f && NoticePanel)
+	{
+		NoticeTimeRemaining -= InDeltaTime;
+		NoticePanel->SetRenderOpacity(FMath::Clamp(NoticeTimeRemaining / PromptFadeTime, 0.f, 1.f));
 	}
 }
 
 void ULSHUDWidget::ShowPrompt(const FText& Message, float Duration)
 {
+	ShowHint(NSLOCTEXT("LastSeed", "Hint", "FOREST GUIDE"), FText::GetEmpty(), Message, Duration);
+}
+
+void ULSHUDWidget::ShowHint(const FText& Title, const FText& Keys, const FText& Message, float Duration)
+{
+	if (PromptTitleText) PromptTitleText->SetText(Title);
+	if (PromptKeyText) PromptKeyText->SetText(Keys);
 	PromptText->SetText(Message);
-	PromptTimeRemaining = Duration + PromptFadeTime;
+	PromptTimeRemaining = Duration > 0.f ? Duration + PromptFadeTime : -1.f;
 	PromptText->SetRenderOpacity(1.f);
+	if (PromptPanel) PromptPanel->SetRenderOpacity(1.f);
 }
 
 void ULSHUDWidget::HandleFormChanged(ESeedForm OldForm, ESeedForm NewForm)
@@ -91,6 +106,12 @@ void ULSHUDWidget::ShowForm(ESeedForm Form)
 void ULSHUDWidget::HandleNoteCollected(FVector Location)
 {
 	RefreshNotes();
+	if (NoticePanel && NoticeText)
+	{
+		NoticeText->SetText(NSLOCTEXT("LastSeed", "NoteObtained", "+1 LIFE NOTE   /   The forest stirs"));
+		NoticeTimeRemaining = 4.f;
+		NoticePanel->SetRenderOpacity(1.f);
+	}
 }
 
 void ULSHUDWidget::RefreshNotes()

@@ -4,6 +4,7 @@
 
 #include "Components/Button.h"
 #include "Components/TextBlock.h"
+#include "LSGameInstance.h"
 
 void ULSControlsWidget::NativeOnInitialized()
 {
@@ -11,19 +12,21 @@ void ULSControlsWidget::NativeOnInitialized()
 
 	BackButton->OnClicked.AddDynamic(this, &ULSControlsWidget::HandleBack);
 
-	// Set here and not in the layout, so this stays next to the code that defines the keys.
-	ControlsText->SetText(NSLOCTEXT("LastSeed", "ControlsList",
-		"Move: WASD / Left stick\n"
-		"Look: Mouse / Right stick\n"
-		"Jump, hold to glide as Dandelion: Space / A\n"
-		"Slam as Stone Shell: Left Ctrl or Left Mouse / B\n"
-		"Seed, Stone Shell, Dandelion: 1, 2, 3 / D-pad\n"
-		"Cycle form: Q, E / LB, RB\n"
-		"Pause: Esc / Start"));
 }
 
 void ULSControlsWidget::Open()
 {
+	FString Controls = TEXT("W A S D / LEFT STICK     Roll\n\nMOUSE / RIGHT STICK     Look around\n\nSPACE / A     Jump\n\nESC / START     Pause");
+	if (const ULSGameInstance* GI = GetGameInstance<ULSGameInstance>())
+	{
+		if (GI->IsFormUnlocked(ESeedForm::Stone))
+			Controls += TEXT("\n\n2 / D-PAD LEFT     Stone Shell\nLEFT CTRL / LEFT MOUSE / B     Slam");
+		if (GI->IsFormUnlocked(ESeedForm::Dandelion))
+			Controls += TEXT("\n\n3 / D-PAD RIGHT     Dandelion\nHOLD SPACE / A     Glide");
+		if (GI->IsFormUnlocked(ESeedForm::Stone) || GI->IsFormUnlocked(ESeedForm::Dandelion))
+			Controls += TEXT("\n\n1 / D-PAD UP     Seed\nQ E / LB RB     Cycle unlocked forms");
+	}
+	ControlsText->SetText(FText::FromString(Controls));
 	SetVisibility(ESlateVisibility::Visible);
 	BackButton->SetFocus();
 }

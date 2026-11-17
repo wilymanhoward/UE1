@@ -7,6 +7,7 @@
 #include "Curves/CurveFloat.h"
 #include "Engine/CollisionProfile.h"
 #include "LSDefaultMeshes.h"
+#include "Lever.h"
 #include "PressurePlate.h"
 
 AGate::AGate()
@@ -42,6 +43,14 @@ void AGate::BeginPlay()
 			Plate->OnPlateReleased.AddDynamic(this, &AGate::RefreshGate);
 		}
 	}
+	for (ALever* Lever : RequiredLevers)
+	{
+		if (Lever)
+		{
+			Lever->OnLeverOn.AddDynamic(this, &AGate::RefreshGate);
+			Lever->OnLeverOff.AddDynamic(this, &AGate::RefreshGate);
+		}
+	}
 }
 
 UCurveFloat* AGate::CreateDefaultCurve()
@@ -57,10 +66,17 @@ UCurveFloat* AGate::CreateDefaultCurve()
 
 void AGate::RefreshGate()
 {
-	bool bAllPressed = !RequiredPlates.IsEmpty();
+	bool bAllPressed = !RequiredPlates.IsEmpty() || !RequiredLevers.IsEmpty();
 	for (const APressurePlate* Plate : RequiredPlates)
 	{
 		if (Plate && !Plate->IsPressed())
+		{
+			bAllPressed = false;
+		}
+	}
+	for (const ALever* Lever : RequiredLevers)
+	{
+		if (Lever && !Lever->IsOn())
 		{
 			bAllPressed = false;
 		}

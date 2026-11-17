@@ -7,8 +7,8 @@
 # Every model is centred on the ball's centre, with a radius of about 50 cm, to match the 50 cm physics sphere.
 # Coordinates here are Unreal's: X forward, Y right, Z up, in cm. write_obj converts them to OBJ's axes.
 #
-# The materials use no textures. The UVs carry masks that the material graphs read:
-#   Seed shell:  U = ridge amount
+# Most materials read masks from their UVs:
+#   Seed shell: cylindrical unwrap for the painted shell textures
 #   Stone shell: U = crack amount, V = how light this rock plate is
 #   Dandelion:   U = 0 on a stalk and 1 on a tuft hair, V = distance along the stalk or hair
 
@@ -17,6 +17,16 @@ import os
 import random
 
 BALL_RADIUS = 50.0
+SEED_LEAN = math.radians(23.0)
+SEED_DEPTH = 1.04
+SEED_LENGTH = 97.0
+SEED_PROFILE = (
+    (0.00, 0.0, 0.0), (0.035, -12.0, 7.0), (0.09, -21.5, 15.0),
+    (0.17, -31.0, 23.5), (0.27, -38.0, 30.0), (0.37, -39.0, 34.0),
+    (0.46, -37.5, 34.3), (0.55, -32.5, 31.5), (0.65, -22.0, 22.0),
+    (0.75, -12.0, 10.0), (0.86, -5.0, 2.9), (0.94, -1.7, 1.1),
+    (1.00, 0.0, 0.0),
+)
 OUTPUT_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "LastSeed", "SourceMeshes")
 
 
@@ -124,16 +134,61 @@ def perpendicular_axes(direction):
 
 # --- The models ---
 
+def seed_panels(u, height):
+    """The two curved panel borders on each side, shared by the sculpt and the texture bake."""
+    bend = 0.26 * math.sin(math.pi * height) + 0.16 * height
+    phase = (2.0 * u + bend + 0.08) % 1.0
+    inner = abs(phase - 0.28)
+    outer = abs(phase - 0.70)
+    return phase, inner, outer
+
+
+def seed_section(height, left, right):
+    return ((right - left) * 0.5, (left + right) * 0.5 + 5.0 * height ** 5,
+            SEED_LENGTH * (height - 0.5))
+
+
 def build_seed_shell():
-    """A smooth ball with shallow ridges running pole to pole, like a sunflower seed."""
+    """Cross-sections traced along the cutscene seed's diagonal axis, with added depth for rolling."""
     mesh = Mesh()
-    points, mesh.triangles = icosphere(5)
-    for p in points:
-        longitude = math.atan2(p[1], p[0])
-        # Ridges fade out at the poles, where they would all pinch together.
-        ridge = (0.5 + 0.5 * math.cos(longitude * 14.0)) ** 3 * smoothstep(0.0, 0.5, 1.0 - abs(p[2]))
-        mesh.add_vertex(scale(p, BALL_RADIUS - 1.6 * (1.0 - ridge)), (ridge, 0.0))
+    sides, rows = 96, 108
+    sin_lean, cos_lean = math.sin(SEED_LEAN), math.cos(SEED_LEAN)
+    section = 0
+    for row in range(rows + 1):
+        height = (1.0 - math.cos(math.pi * row / rows)) * 0.5
+        while section + 2 < len(SEED_PROFILE) and height > SEED_PROFILE[section + 1][0]:
+            section += 1
+        before, after = SEED_PROFILE[section:section + 2]
+        progress = (height - before[0]) / (after[0] - before[0])
+        left = before[1] + progress * (after[1] - before[1])
+        right = before[2] + progress * (after[2] - before[2])
+        radius, center, z = seed_section(height, left, right)
+        for side in range(sides + 1):
+            u = side / sides
+            angle = u * math.tau
+            _, inner, outer = seed_panels(u, height)
+            groove = (1.0 - smoothstep(0.006, 0.029, inner)) + 0.60 * (1.0 - smoothstep(0.006, 0.024, outer))
+            shell = radius - min(radius * 0.1, 0.87 * groove)
+            x = math.cos(angle) * shell * SEED_DEPTH
+            y = math.sin(angle) * shell + center
+            point = (x, y * cos_lean + z * sin_lean, z * cos_lean - y * sin_lean)
+            mesh.add_vertex(point, (u, 1.0 - height))
+            if side == sides or row == rows:
+                continue
+            a = row * (sides + 1) + side
+            b, c = a + 1, a + sides + 1
+            if row > 0:
+                mesh.triangles.append((a, b, c))
+            if row < rows - 1:
+                mesh.triangles.append((b, c + 1, c))
     mesh.smooth_normals()
+    for row in range(rows + 1):
+        first, last = row * (sides + 1), row * (sides + 1) + sides
+        if row in (0, rows):
+            normal = (0.0, sin_lean, cos_lean)
+            mesh.normals[first:last + 1] = [scale(normal, -1.0 if row == 0 else 1.0)] * (sides + 1)
+        else:
+            mesh.normals[first] = mesh.normals[last] = normalize(add(mesh.normals[first], mesh.normals[last]))
     return mesh
 
 

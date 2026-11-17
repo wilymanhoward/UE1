@@ -1,0 +1,202 @@
+{
+ "visuals": [
+  {
+   "label": "FallenLog",
+   "mesh": "/Game/LastSeed/Meshes/SM_LS_Log.SM_LS_Log",
+   "loc": [
+    -24885.352358530843,
+    12006.99055378755,
+    2556.1401632648776
+   ],
+   "rot": [
+    0.0,
+    18.279999816462418,
+    0.0
+   ],
+   "scale": [
+    1.2162466837486523,
+    1.1749054894728754,
+    1.2085255030800472
+   ],
+   "materials": [
+    "/Game/LastSeed/Materials/M_LS_Bark.M_LS_Bark"
+   ]
+  },
+  {
+   "label": "BlockRock",
+   "mesh": "/Game/Wildwood/Model/Rocks/SM_Boulder_08.SM_Boulder_08",
+   "loc": [
+    -23750.61816469969,
+    5746.3019968632625,
+    2200.3189269162203
+   ],
+   "rot": [
+    0.0,
+    -63.29455947875976,
+    0.0
+   ],
+   "scale": [
+    0.3329012688970083,
+    0.4563873123288221,
+    0.5315147691791706
+   ],
+   "materials": [
+    "/Game/Wildwood/Material/MI_Boulder_08.MI_Boulder_08"
+   ]
+  },
+  {
+   "label": "BlockRock",
+   "mesh": "/Game/Wildwood/Model/Rocks/SM_Boulder_10.SM_Boulder_10",
+   "loc": [
+    -23530.33455780609,
+    5878.029847498178,
+    2240.1435531081606
+   ],
+   "rot": [
+    0.0,
+    -65.68882751464844,
+    0.0
+   ],
+   "scale": [
+    0.23095960462383971,
+    0.2727958020277859,
+    0.3514106269531218
+   ],
+   "materials": [
+    "/Game/Wildwood/Material/MI_Boulder_10.MI_Boulder_10"
+   ]
+  },
+  {
+   "label": "BlockRock",
+   "mesh": "/Game/Wildwood/Model/Rocks/SM_Boulder_09.SM_Boulder_09",
+   "loc": [
+    -23310.60778732088,
+    6004.394033354298,
+    2207.481540837567
+   ],
+   "rot": [
+    0.0,
+    -52.509315490722656,
+    0.0
+   ],
+   "scale": [
+    0.24416184971098265,
+    0.36821188364495877,
+    0.4197742934110947
+   ],
+   "materials": [
+    "/Game/Wildwood/Material/MI_Boulder_09.MI_Boulder_09"
+   ]
+  },
+  {
+   "label": "BlockRock",
+   "mesh": "/Game/Wildwood/Model/Rocks/SM_Boulder_09.SM_Boulder_09",
+   "loc": [
+    -23213.17247469564,
+    5357.528559347589,
+    2264.3550706362203
+   ],
+   "rot": [
+    0.0,
+    -48.89763259887695,
+    0.0
+   ],
+   "scale": [
+    0.732485549132948,
+    1.1046356509348763,
+    0.6013323741428934
+   ],
+   "materials": [
+    "/Game/Wildwood/Material/MI_Boulder_09.MI_Boulder_09"
+   ]
+  },
+  {
+   "label": "BlockRock2",
+   "mesh": "/Game/Wildwood/Model/Rocks/SM_Boulder_09.SM_Boulder_09",
+   "loc": [
+    -24313.172475,
+    7407.528559,
+    2264.355071
+   ],
+   "rot": [
+    0.0,
+    -178.8976319929719,
+    0.0
+   ],
+   "scale": [
+    0.732486,
+    1.104636,
+    0.601332
+   ],
+   "materials": [
+    "/Game/Wildwood/Material/MI_Boulder_09.MI_Boulder_09"
+   ]
+  },
+  {
+   "label": "FallenLog2",
+   "mesh": "/Game/LastSeed/Meshes/SM_LS_Log.SM_LS_Log",
+   "loc": [
+    -24885.352359,
+    12006.990554,
+    2646.140163
+   ],
+   "rot": [
+    -9.995448079279305,
+    -1.7465173060150507,
+    0.3032339959431853
+   ],
+   "scale": [
+    1.216247,
+    1.174905,
+    1.208526
+   ],
+   "materials": [
+    "/Game/LastSeed/Materials/M_LS_Bark.M_LS_Bark"
+   ]
+  },
+  {
+   "label": "BlockRock3",
+   "mesh": "/Game/Wildwood/Model/Rocks/SM_Boulder_10.SM_Boulder_10",
+   "loc": [
+    -22551.644338179354,
+    4149.8766293696135,
+    2329.8627225759137
+   ],
+   "rot": [
+    0.0,
+    -65.68882799999999,
+    0.0
+   ],
+   "scale": [
+    0.23096,
+    0.272796,
+    0.351411
+   ],
+   "materials": [
+    "/Game/Wildwood/Material/MI_Boulder_10.MI_Boulder_10"
+   ]
+  },
+  {
+   "label": "BlockRock4",
+   "mesh": "/Game/Wildwood/Model/Rocks/SM_Boulder_09.SM_Boulder_09",
+   "loc": [
+    -22133.172475,
+    3877.5285590000003,
+    2364.355071
+   ],
+   "rot": [
+    0.0,
+    11.102366535217993,
+    0.0
+   ],
+   "scale": [
+    0.732486,
+    1.104636,
+    0.601332
+   ],
+   "materials": [
+    "/Game/Wildwood/Material/MI_Boulder_09.MI_Boulder_09"
+   ]
+  }
+ ]
+}

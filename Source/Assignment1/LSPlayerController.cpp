@@ -239,6 +239,11 @@ ASeedBall* ALSPlayerController::GetBall() const
 
 void ALSPlayerController::HandleMove(const FInputActionValue& Value)
 {
+	if (OpeningTutorialStep == 1 && !Value.Get<FVector2D>().IsNearlyZero())
+	{
+		TutorialInputTime += GetWorld()->GetDeltaSeconds();
+		if (TutorialInputTime >= 0.7f) AdvanceOpeningTutorial();
+	}
 	if (ASeedBall* Ball = GetBall())
 	{
 		Ball->SetMoveInput(Value.Get<FVector2D>());
@@ -248,6 +253,11 @@ void ALSPlayerController::HandleMove(const FInputActionValue& Value)
 void ALSPlayerController::HandleLook(const FInputActionValue& Value)
 {
 	const FVector2D Look = Value.Get<FVector2D>() * LookSensitivity;
+	if (OpeningTutorialStep == 2 && !Look.IsNearlyZero())
+	{
+		TutorialInputTime += GetWorld()->GetDeltaSeconds();
+		if (TutorialInputTime >= 0.35f) AdvanceOpeningTutorial();
+	}
 	AddYawInput(Look.X);
 	// The project uses legacy input scales, where pitch is multiplied by -2.5.
 	// Negating here makes pushing up look up. If legacy scales are ever disabled, remove this minus.
@@ -256,6 +266,7 @@ void ALSPlayerController::HandleLook(const FInputActionValue& Value)
 
 void ALSPlayerController::HandleJumpPressed()
 {
+	if (OpeningTutorialStep == 3) AdvanceOpeningTutorial();
 	if (ASeedBall* Ball = GetBall())
 	{
 		Ball->JumpPressed();
@@ -440,21 +451,7 @@ void ALSPlayerController::SetGameplayInputEnabled(bool bEnabled)
 
 void ALSPlayerController::PlayStory(ULevelSequence* Sequence, const TArray<FText>& Cards, TFunction<void()> OnFinished)
 {
-	// A new story replaces one still playing, such as the ball reaching the goal during a cutscene.
-	if (bStoryPlaying)
-	{
-		FinishStory();
-	}
-
-	AfterStory = MoveTemp(OnFinished);
-	bStoryPlaying = true;
-	SetGameplayInputEnabled(false);
-	SetHUDVisible(false);
-	if (ALSGameMode* GameMode = GetLSGameMode())
-	{
-		// A cutscene can't play while paused, so the timer is stopped separately.
-		GameMode->SetTimerRunning(false);
-	}
+	BeginStory(MoveTemp(OnFinished));
 
 	if (Sequence)
 	{
@@ -481,10 +478,82 @@ void ALSPlayerController::PlayStory(ULevelSequence* Sequence, const TArray<FText
 	FinishStory();
 }
 
+void ALSPlayerController::BeginStory(TFunction<void()> OnFinished)
+{
+	// A new story replaces one still playing, such as the ball reaching the goal during a cutscene.
+	if (bStoryPlaying)
+	{
+		FinishStory();
+	}
+
+	AfterStory = MoveTemp(OnFinished);
+	bStoryPlaying = true;
+	SetGameplayInputEnabled(false);
+	SetHUDVisible(false);
+	if (ALSGameMode* GameMode = GetLSGameMode())
+	{
+		// A cutscene can't play while paused, so the timer is stopped separately.
+		GameMode->SetTimerRunning(false);
+	}
+}
+
+void ALSPlayerController::PlayIntro(const TArray<FLSIntroShot>& Shots, USoundBase* Music, USoundBase* VoiceOver)
+{
+	BeginStory(nullptr);
+	bOpeningIntro = true;
+	ULSIntroWidget* Intro = CreateWidget<ULSIntroWidget>(this, ULSIntroWidget::StaticClass());
+	Intro->SetIntro(Shots, Music, VoiceOver);
+	// It ends the same way the story cards do: close it, then hand back control.
+	Intro->OnFinished.AddDynamic(this, &ALSPlayerController::HandleStoryCardsFinished);
+	OpenMenu(Intro);
+}
+
 void ALSPlayerController::HandleStoryCardsFinished()
 {
+	const bool bStartTutorial = bOpeningIntro;
+	bOpeningIntro = false;
 	CloseMenu();
 	FinishStory();
+	if (bStartTutorial) AdvanceOpeningTutorial();
+}
+
+void ALSPlayerController::AdvanceOpeningTutorial()
+{
+	++OpeningTutorialStep;
+	TutorialInputTime = 0.f;
+	if (!HUD) { OpeningTutorialStep = 0; return; }
+	switch (OpeningTutorialStep)
+	{
+	case 1:
+		HUD->ShowHint(FText::FromString(TEXT("FIRST STEPS   /   1 OF 3")), FText::FromString(TEXT("W A S D  /  LEFT STICK")),
+			NSLOCTEXT("LastSeed", "LearnRoll", "Roll along the forest path."), 0.f);
+		break;
+	case 2:
+		HUD->ShowHint(FText::FromString(TEXT("LOOK AROUND   /   2 OF 3")), FText::FromString(TEXT("MOUSE  /  RIGHT STICK")),
+			NSLOCTEXT("LastSeed", "LearnLook", "Move the camera to explore your surroundings."), 0.f);
+		break;
+	case 3:
+		HUD->ShowHint(FText::FromString(TEXT("A LITTLE LEAP   /   3 OF 3")), FText::FromString(TEXT("SPACE  /  A")),
+			NSLOCTEXT("LastSeed", "LearnJump", "Jump to clear roots and small obstacles."), 0.f);
+		break;
+	default:
+		OpeningTutorialStep = 0;
+		HUD->ShowHint(NSLOCTEXT("LastSeed", "BeginJourney", "YOUR JOURNEY BEGINS"), FText::FromString(TEXT("ESC  /  START   ·   PAUSE")),
+			NSLOCTEXT("LastSeed", "SeekNotes", "Follow the path. Collect Life Notes to bring the forest back to life."), 7.f);
+		break;
+	}
+}
+
+void ALSPlayerController::ShowFormUnlock(ESeedForm Form, const FText& Message, float Duration)
+{
+	OpeningTutorialStep = 0;
+	if (HUD)
+	{
+		const bool bStone = Form == ESeedForm::Stone;
+		HUD->ShowHint(FText::FromString(bStone ? TEXT("NEW FORM   /   STONE SHELL") : TEXT("NEW FORM   /   DANDELION")),
+			FText::FromString(bStone ? TEXT("2 / D-PAD LEFT    ·    Q E / LB RB TO CYCLE") : TEXT("3 / D-PAD RIGHT    ·    Q E / LB RB TO CYCLE")),
+			Message, FMath::Max(Duration, 12.f));
+	}
 }
 
 void ALSPlayerController::HandleSequenceFinished()
@@ -572,6 +641,7 @@ void ALSPlayerController::ApplyVolumeSettings()
 
 void ALSPlayerController::ShowPrompt(const FText& Message, float Duration)
 {
+	if (OpeningTutorialStep != 0) return;
 	if (HUD)
 	{
 		HUD->ShowPrompt(Message, Duration);

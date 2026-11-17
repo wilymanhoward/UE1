@@ -11,6 +11,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
+#include "LSIntroWidget.h"
 #include "LSLevelTypes.h"
 #include "SeedFormTypes.h"
 #include "LSPlayerController.generated.h"
@@ -26,6 +27,7 @@ class ULSMainMenuWidget;
 class ULSPauseMenuWidget;
 class ULSResultsWidget;
 class ULSStoryCardWidget;
+class USoundBase;
 class USoundClass;
 class USoundMix;
 class UUserWidget;
@@ -43,11 +45,17 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "UI")
 	void ShowPrompt(const FText& Message, float Duration);
 
+	UFUNCTION(BlueprintCallable, Category = "UI")
+	void ShowFormUnlock(ESeedForm Form, const FText& Message, float Duration);
+
 	/**
 	 * Plays Sequence if it is set, or otherwise shows Cards, with gameplay input off. OnFinished runs afterward,
 	 * and runs straight away if there is nothing to play.
 	 */
 	void PlayStory(ULevelSequence* Sequence, const TArray<FText>& Cards, TFunction<void()> OnFinished = nullptr);
+
+	/** Plays the painted opening cutscene (ULSIntroWidget) with gameplay input off. Shots must not be empty. */
+	void PlayIntro(const TArray<FLSIntroShot>& Shots, USoundBase* Music, USoundBase* VoiceOver);
 
 	/** Opens the results screen. */
 	void ShowResults(const FLSLevelResult& Result);
@@ -157,7 +165,10 @@ private:
 	void OpenMenu(UUserWidget* Menu);
 	void SetGameplayInputEnabled(bool bEnabled);
 	void SetHUDVisible(bool bVisible);
+	/** Turns gameplay input, the HUD and the timer off for a story, replacing any story still playing. */
+	void BeginStory(TFunction<void()> OnFinished);
 	void FinishStory();
+	void AdvanceOpeningTutorial();
 	ALSGameMode* GetLSGameMode() const;
 
 	UFUNCTION()
@@ -197,6 +208,9 @@ private:
 
 	TFunction<void()> AfterStory;
 	bool bStoryPlaying = false;
+	bool bOpeningIntro = false;
+	int32 OpeningTutorialStep = 0;
+	float TutorialInputTime = 0.f;
 
 	// UPROPERTY keeps these runtime-created objects alive: otherwise garbage collection would delete them.
 	/** Maps every key to its action. Created in code. */

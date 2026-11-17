@@ -31,7 +31,6 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Pressure Plate")
 	bool IsPressed() const { return bPressed; }
-
 	/** Fires when the mass on the plate reaches the threshold. */
 	UPROPERTY(BlueprintAssignable, Category = "Pressure Plate")
 	FOnPlateChanged OnPlatePressed;

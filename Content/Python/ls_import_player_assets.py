@@ -6,11 +6,13 @@
 # Requires: Python Editor Script Plugin. Run with Tools > Execute Python Script.
 
 import importlib
+import math
 import os
 
 import unreal
 
 import ls_generate_player_meshes
+import ls_generate_seed_textures
 from ls_material_helpers import MATERIAL_FOLDER, blend, colour, combine, finish, fresh_material, library, mask, node, number
 
 ROOT = "/Game/LastSeed"
@@ -61,39 +63,92 @@ def check_mesh_placement(meshes):
     sprout = meshes["SM_LS_SeedSprout"].get_bounds()
     lowest = sprout.origin.z - sprout.box_extent.z
     shell = meshes["SM_LS_SeedShell"].get_bounds()
-    if lowest < 40.0 or abs(shell.box_extent.z - 50.0) > 2.0:
+    if lowest < 40.0 or abs(shell.box_extent.z - 43.65) > 1.0:
         raise RuntimeError("Last Seed player assets: meshes imported at the wrong scale or axis (sprout bottom {:.1f}, shell half height {:.1f})".format(
             lowest, shell.box_extent.z))
 
 
 # --- The materials ---
 
+def import_seed_textures():
+    ls_generate_seed_textures.bake()
+    tasks = []
+    for suffix in ("Color", "Normal"):
+        name = "T_LS_SeedShell_" + suffix
+        task = unreal.AssetImportTask()
+        task.set_editor_properties({
+            "filename": str(ls_generate_seed_textures.SOURCE / (name + ".png")),
+            "destination_path": ROOT + "/Textures/Seed", "destination_name": name,
+            "automated": True, "replace_existing": True, "save": False,
+        })
+        tasks.append(task)
+    assets.import_asset_tasks(tasks)
+
+    albedo, normal = (task.get_objects()[0] for task in tasks)
+    albedo.set_editor_properties({"srgb": True, "compression_no_alpha": False})
+    normal.set_editor_properties({"srgb": False, "compression_settings": unreal.TextureCompressionSettings.TC_NORMALMAP})
+    for texture in (albedo, normal):
+        if not unreal.EditorAssetLibrary.save_loaded_asset(texture, False):
+            raise RuntimeError("Could not save " + texture.get_path_name())
+    return albedo, normal
+
+
+def seat_seed_on_collider(material):
+    """Compensate for the seed's narrower profile as its spherical collider rolls."""
+    local_up = node(material, unreal.MaterialExpressionTransform,
+                    transform_source_type=unreal.MaterialVectorCoordTransformSource.TRANSFORMSOURCE_WORLD,
+                    transform_type=unreal.MaterialVectorCoordTransform.TRANSFORM_LOCAL)
+    library.connect_material_expressions(colour(material, 0.0, 0.0, 1.0), "", local_up, "")
+    lean = ls_generate_player_meshes.SEED_LEAN
+    sin_lean, cos_lean = math.sin(lean), math.cos(lean)
+    sections = [ls_generate_player_meshes.seed_section(*section) for section in ls_generate_player_meshes.SEED_PROFILE]
+    profile = ", ".join(f"float3({radius:.5f}, {center:.5f}, {height:.5f})" for radius, center, height in sections)
+    offset = node(material, unreal.MaterialExpressionCustom, description="Seed contact with rolling sphere",
+                  output_type=unreal.CustomMaterialOutputType.CMOT_FLOAT3,
+                  code=f"""
+float3 up = normalize(LocalUp);
+float side = dot(up, float3(0.0, {cos_lean:.8f}, {-sin_lean:.8f}));
+float axis = dot(up, float3(0.0, {sin_lean:.8f}, {cos_lean:.8f}));
+float width = length(float2(up.x * {ls_generate_player_meshes.SEED_DEPTH:.5f}, side));
+const float3 sections[{len(sections)}] = {{ {profile} }};
+float bottom = 0.0;
+[unroll]
+for (int i = 0; i < {len(sections)}; ++i)
+{{
+    float3 ring = sections[i];
+    bottom = min(bottom, ring.y * side + ring.z * axis - ring.x * width);
+}}
+float scale = length(TransformLocalVectorToWorld(Parameters, float3(1.0, 0.0, 0.0)));
+return float3(0.0, 0.0, -max(0.0, {ls_generate_player_meshes.BALL_RADIUS - 0.8:.2f} + bottom) * scale);
+""")
+    up_input = unreal.CustomInput()
+    up_input.set_editor_property("input_name", "LocalUp")
+    offset.set_editor_property("inputs", [up_input])
+    assert library.connect_material_expressions(local_up, "", offset, "LocalUp")
+    assert library.connect_material_property(offset, "", unreal.MaterialProperty.MP_WORLD_POSITION_OFFSET)
+
+
 def build_seed_material():
-    """Warm gold with a soft glow, plus a brighter rim at the edge of the ball."""
+    """Matte seed coat with a tangent-space normal map for the seams and grain."""
+    albedo, normal = import_seed_textures()
     material = fresh_material("M_LS_Seed")
-    ridge = mask(material, node(material, unreal.MaterialExpressionTextureCoordinate), True)
-    base = blend(material, colour(material, 0.62, 0.32, 0.06), colour(material, 1.0, 0.68, 0.22), ridge)
-    library.connect_material_property(base, "", unreal.MaterialProperty.MP_BASE_COLOR)
-    library.connect_material_property(number(material, 0.22), "", unreal.MaterialProperty.MP_ROUGHNESS)
-
-    body_glow = combine(material, unreal.MaterialExpressionMultiply, base, number(material, 0.15))
-    fresnel = node(material, unreal.MaterialExpressionFresnel, exponent=3.0)
-    rim = combine(material, unreal.MaterialExpressionMultiply, fresnel, colour(material, 1.5, 0.8, 0.2))
-    emissive = combine(material, unreal.MaterialExpressionAdd, body_glow, rim)
-    library.connect_material_property(emissive, "", unreal.MaterialProperty.MP_EMISSIVE_COLOR)
+    paint = node(material, unreal.MaterialExpressionTextureSample, texture=albedo,
+                 sampler_type=unreal.MaterialSamplerType.SAMPLERTYPE_COLOR)
+    detail = node(material, unreal.MaterialExpressionTextureSample, texture=normal,
+                  sampler_type=unreal.MaterialSamplerType.SAMPLERTYPE_NORMAL)
+    assert library.connect_material_property(paint, "RGB", unreal.MaterialProperty.MP_BASE_COLOR)
+    assert library.connect_material_property(paint, "A", unreal.MaterialProperty.MP_ROUGHNESS)
+    assert library.connect_material_property(detail, "RGB", unreal.MaterialProperty.MP_NORMAL)
+    assert library.connect_material_property(number(material, 0.28), "", unreal.MaterialProperty.MP_SPECULAR)
+    seat_seed_on_collider(material)
     return finish(material)
 
 
-def build_sprout_material():
-    material = fresh_material("M_LS_Sprout")
-    material.set_editor_property("two_sided", True)
-    along = mask(material, node(material, unreal.MaterialExpressionTextureCoordinate), False)
-    base = blend(material, colour(material, 0.28, 0.5, 0.08), colour(material, 0.55, 0.85, 0.2), along)
-    library.connect_material_property(base, "", unreal.MaterialProperty.MP_BASE_COLOR)
-    library.connect_material_property(number(material, 0.55), "", unreal.MaterialProperty.MP_ROUGHNESS)
-    glow = combine(material, unreal.MaterialExpressionMultiply, base, number(material, 0.4))
-    library.connect_material_property(glow, "", unreal.MaterialProperty.MP_EMISSIVE_COLOR)
-    return finish(material)
+def seed_appearance(mesh, material):
+    return {
+        "mesh": mesh, "material": material, "upright_mesh": None, "upright_material": None,
+        "glow_effect": None, "glow_color": unreal.LinearColor(1.0, 0.72, 0.3, 1.0), "glow_brightness": 0.0,
+    }
 
 
 def build_stone_material():
@@ -216,7 +271,6 @@ def main():
     check_mesh_placement(meshes)
 
     seed_material = build_seed_material()
-    sprout_material = build_sprout_material()
     stone_material = build_stone_material()
     dandelion_material = build_dandelion_material()
     core_material = build_core_material()
@@ -227,12 +281,8 @@ def main():
         unreal.log_warning("Last Seed player assets: {} not found, so the forms have no particles".format(GLOW_EFFECT))
 
     assign_to_ball({
-        unreal.SeedForm.SEED: {
-            "mesh": meshes["SM_LS_SeedShell"], "material": seed_material,
-            "upright_mesh": meshes["SM_LS_SeedSprout"], "upright_material": sprout_material,
-            "glow_effect": glow, "glow_color": unreal.LinearColor(1.0, 0.72, 0.3, 1.0), "glow_brightness": 40.0,
-            "physical_material": build_physical_material("PM_Seed", 0.7, 0.1),
-        },
+        unreal.SeedForm.SEED: dict(seed_appearance(meshes["SM_LS_SeedShell"], seed_material),
+                                  physical_material=build_physical_material("PM_Seed", 0.7, 0.1)),
         unreal.SeedForm.STONE: {
             "mesh": meshes["SM_LS_StoneShell"], "material": stone_material,
             "upright_mesh": None, "upright_material": None,
@@ -248,8 +298,9 @@ def main():
     })
 
     unreal.log("Last Seed player assets: imported {} meshes to {}".format(len(meshes), MESH_FOLDER))
-    unreal.log("Last Seed player assets: built 6 materials in {} and 3 physical materials in {}".format(MATERIAL_FOLDER, PHYSICS_FOLDER))
+    unreal.log("Last Seed player assets: built 5 materials in {} and 3 physical materials in {}".format(MATERIAL_FOLDER, PHYSICS_FOLDER))
     unreal.log("Last Seed player assets: assigned everything to {}. Press Play to see it.".format(BALL_BLUEPRINT))
 
 
-main()
+if __name__ == "__main__":
+    main()

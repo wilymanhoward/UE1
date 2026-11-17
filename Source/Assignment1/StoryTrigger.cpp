@@ -41,6 +41,13 @@ void AStoryTrigger::Play()
 
 	if (ALSPlayerController* PlayerController = Cast<ALSPlayerController>(GetWorld()->GetFirstPlayerController()))
 	{
-		PlayerController->PlayStory(Sequence, Cards);
+		if (!IntroShots.IsEmpty())
+		{
+			PlayerController->PlayIntro(IntroShots, IntroMusic, IntroVoiceOver);
+		}
+		else
+		{
+			PlayerController->PlayStory(Sequence, Cards);
+		}
 	}
 }

@@ -16,10 +16,12 @@
 
 class AExponentialHeightFog;
 class APostProcessVolume;
+class AVolumetricCloud;
 class UMaterialInstanceDynamic;
 class UMaterialInterface;
 class UMaterialParameterCollection;
 class URestorationSubsystem;
+class USoundBase;
 
 UCLASS()
 class ASSIGNMENT1_API ARestorationDriver : public AActor
@@ -94,11 +96,20 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tuning", meta = (ClampMin = "0"))
 	float RestoredFogDensity = 0.01f;
 
+	/** Optional cloud layer using the EngineSky cloud material's albedo and coverage parameters. */
+	UPROPERTY(EditAnywhere, Category = "Weather")
+	TObjectPtr<AVolumetricCloud> WeatherClouds;
+
+	UPROPERTY(EditAnywhere, Category = "Weather")
+	TObjectPtr<USoundBase> DistantThunder;
+
 private:
 	UFUNCTION()
 	void HandleNoteCollected(FVector Location);
 
 	void ApplyVisuals();
+	void UpdateWeather(float DeltaSeconds);
+	void PlayDistantThunder();
 
 	/** The world's restoration rules. Read each frame. */
 	UPROPERTY(Transient)
@@ -107,6 +118,15 @@ private:
 	/** This level's copy of WitherPostMaterial, updated as the world recovers. Empty if the asset is missing. */
 	UPROPERTY(Transient)
 	TObjectPtr<UMaterialInstanceDynamic> WitherPostInstance;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UMaterialInstanceDynamic> CloudInstance;
+
+	FLinearColor ClearCloudAlbedo = FLinearColor::White;
+	float ClearCloudCoverage = 0.f;
+	float TimeToLightning = 4.5f;
+	float LightningGlowTime = 0.f;
+	FTimerHandle ThunderTimer;
 
 	// What is on screen now. It chases the real value, which jumps with each note.
 	float DisplayedRestoration = 0.f;

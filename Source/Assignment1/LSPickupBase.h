@@ -33,6 +33,9 @@ protected:
 	/** The payload of the pickup. Children implement this. */
 	virtual void OnCollected(ASeedBall* Ball) {}
 
+	/** Pitch of the collect sound, 1 for its own pitch. Runs after OnCollected, so a child can follow a running count. */
+	virtual float GetCollectPitch() const { return 1.f; }
+
 	/** Overlap area that detects the ball. Change its radius to make the pickup easier or harder to touch. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	TObjectPtr<USphereComponent> Trigger;

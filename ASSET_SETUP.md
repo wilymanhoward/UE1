@@ -439,6 +439,20 @@ To jump to a preview, find `Preview_1_1_A` and the others under **World > Previe
 
 To tune the withered look, select `RestorationDriver` in the Outliner. Changes to generated actors or the sky are replaced on the next rerun, so make those in the script. Changes to anything outside the `World` folder stay, apart from the materials and meshes the script assigns.
 
+### Stage 4: Level 1 in the Wildwood forest
+`Content/LastSeed/Maps/L_Level1_Wildwood` is the new Level 1, and the project now opens it by default. `L_Level1_World` stays as it was.
+
+1. To change the route or a set piece, edit the tables at the top of `Content/Python/ls_wildwood_plan.py`, then run `python ls_wildwood_plan.py` from `Content/Python`. Check `Saved/LS/preview.png` and `Saved/LS/profile.png`.
+2. Open `L_Level1_Wildwood`, then run each stage in `build_level1_wildwood.STAGES` in order from the Python console: `import build_level1_wildwood as b; b.run("foliage")`, then `"clear"`, `"trail"`, `"scenery"`, `"gameplay"`, `"hand"`, `"world"`, `"leaves"` and `"save"`. `"hand"` puts back the rocks and logs recorded in `Content/Python/ls_hand_placed.json`.
+   - Before any full rebuild, run `b.run("protect")` in the open level, so rocks and logs you moved or added by hand are recorded. A rebuild starts from a fresh map and would otherwise lose them.
+   - To add only the planner's extra obstacles (`trail01_extras`) to the open level, run `b.run("extras")`. It leaves everything else alone and refuses to run twice.
+   - To add only the fun extras (bouncy mushrooms, the Withering's chase, the music and the note chime) to the open level, run `b.run("fun")`. It also raises the two notes above mushrooms, leaves everything else alone and refuses to run twice. Before the first run, run `python ls_generate_music.py` and `python ls_generate_mushroom.py` from `Content/Python`; the stage imports what they write.
+   - The opening cutscene imports eight 1920×1080 PNGs from `Content/LastSeed/SourceIntro/Anime/`, selected by `ls_intro_shots.py`. To change one, replace its file and run `b.run("intro")`, then `b.run("save")`. Shot timings, camera moves and captions are in `ls_intro_shots.py`. If the timing changes, retime `Content/LastSeed/SourceSounds/MUS_LS_Intro_Recordings.wav` before reapplying the intro. See `AUDIO_CREDITS.md` for the audio sources. To rebuild the intro motion materials after editing the HLSL or motion layers, run `import ls_intro_motion; ls_intro_motion.build()` in the Unreal Python console, then reapply and save the intro.
+   - To add only the ghost of the player's best run (`AGhostRacer`), run `b.run("ghost")`, then `b.run("save")`. A full rebuild places it in the `world` stage. Saved ghosts live in `Saved/SaveGames/Ghost_<level>.sav`; delete that file to clear one.
+3. `foliage` and `scenery` work on the demo map's own foliage and rocks, so start from a fresh copy of `Wildwood/Map/Wildwood` when rebuilding everything.
+
+The leaf change edits the Wildwood pack's `MM_Tree_LeavesWind_Snow_01`, so the pack's own demo maps also show bare trees in the editor.
+
 ### EngineWire (optional AI editor control)
 `Plugins/EngineWire` is a third-party plugin (0.6.0, MIT) that lets an AI assistant control the open editor. It loads in the editor only and is not part of the packaged game or this git repo. The project opens normally without it. To remove it, close the editor and delete that folder. The status bar shows `MCP :3000 (0)` while it is running.
 
@@ -456,3 +470,11 @@ No input assets are required. All input is built in `ALSPlayerController`.
 | Pause | Esc | Start / Options |
 
 In Play In Editor, Esc stops the session instead of pausing. To test pausing, use a gamepad or run with **Play > Standalone Game**.
+
+### Stage 5: the screens
+The main menu, pause menu, controls, HUD, story cards and results screen are built. `Content/LastSeed/Maps/L_MainMenu` is the game's start map (the editor still opens Level 1).
+
+1. To change an icon, edit `Content/Python/ls_generate_ui.py`, run `python ls_generate_ui.py` from `Content/Python`, then in the editor run `import build_ui; build_ui.run("textures")`.
+2. `build_ui.run("menu_level")` remakes the menu level and its game mode, and `build_ui.run("wire")` points the player controller, the HUD and the main menu at their screens, icons and levels.
+3. The layouts themselves are the `WBP_` Widget Blueprints in `/Game/UI`. Edit them in the Widget Designer, keeping every widget name the C++ class binds to.
+

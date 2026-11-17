@@ -21,6 +21,8 @@ void UAdaptiveMusicComponent::BeginPlay()
 		UAudioComponent* Audio = UGameplayStatics::CreateSound2D(this, Stem, 1.f, 1.f, 0.f, nullptr, false, false);
 		if (Audio)
 		{
+			// CreateSound2D defaults to UI audio, which would keep the forest stems playing under the intro.
+			Audio->bIsUISound = false;
 			// A duration of 0 starts it at this volume straight away. The fade volume is multiplied by the component's
 			// volume multiplier, so the multiplier stays at 1 and all later changes go through the fade.
 			Audio->FadeIn(0.f, WaitingVolume);

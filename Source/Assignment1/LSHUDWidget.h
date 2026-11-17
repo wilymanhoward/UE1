@@ -29,6 +29,7 @@ public:
 
 	/** Shows Message for Duration seconds, then fades it out. */
 	void ShowPrompt(const FText& Message, float Duration);
+	void ShowHint(const FText& Title, const FText& Keys, const FText& Message, float Duration);
 
 protected:
 	virtual void NativeConstruct() override;
@@ -62,6 +63,17 @@ protected:
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UTextBlock> PromptText;
 
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UWidget> PromptPanel;
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UTextBlock> PromptTitleText;
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UTextBlock> PromptKeyText;
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UWidget> NoticePanel;
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UTextBlock> NoticeText;
+
 	/** The icon for each form. A form with no entry keeps the current icon. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "HUD")
 	TMap<ESeedForm, TObjectPtr<UTexture2D>> FormIcons;
@@ -84,4 +96,5 @@ private:
 	void RefreshNotes();
 
 	float PromptTimeRemaining = 0.f;
+	float NoticeTimeRemaining = 0.f;
 };

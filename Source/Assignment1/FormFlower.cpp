@@ -16,6 +16,6 @@ void AFormFlower::OnCollected(ASeedBall* Ball)
 
 	if (ALSPlayerController* PlayerController = Ball->GetController<ALSPlayerController>())
 	{
-		PlayerController->ShowPrompt(PromptMessage, PromptDuration);
+		PlayerController->ShowFormUnlock(FormToUnlock, PromptMessage, PromptDuration);
 	}
 }

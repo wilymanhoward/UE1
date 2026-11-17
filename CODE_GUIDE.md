@@ -63,12 +63,15 @@ Each is a C++ base class with `meta = (BindWidget)` properties, and the layout l
 - `ULSStoryCardWidget`: one card at a time, then `OnFinished`.
 - `ULSControlsWidget`: one controls list, placed inside both menus.
 
+### `ULSIntroWidget`: the painted opening cutscene
+Plays a list of `FLSIntroShot`s: each a full-screen picture (fitted by a `UScaleBox`, so it fills any screen shape without stretching) that slowly zooms and pans, fading in over the one before, sometimes from a white flash, with an optional caption. `NativeTick` works out the current shot from the elapsed time. The music is a UI sound, so it plays while the game is paused behind the cutscene, and the last second fades the widget out to show the level. It builds its widgets in code in `NativeOnInitialized`, so it has no Widget Blueprint. `AStoryTrigger` plays it when `IntroShots` is set, through `ALSPlayerController::PlayIntro`, which shares `BeginStory` with the story cards and ends the same way. The shots (timings, camera moves, captions) are in `Content/Python/ls_intro_shots.py`, and the recorded soundtrack is `MUS_LS_Intro_Recordings.wav`. See `AUDIO_CREDITS.md` for sources. **Pattern:** observer (`OnFinished`).
+
 ### `ILSInteractable`: the interaction contract
 `OnBallOverlap(Ball)` and `OnBallHit(Ball, ImpactVelocity)`, both defaulting to no action. `ASeedBall::HandleBeginOverlap` and `HandleHit` cast whatever they touched to this interface and call it. **Pattern:** interface / polymorphism. The ball never casts to a pickup or a volume, so new world objects don't change the ball.
 
 ### `ALSPickupBase`, `ALifeNote`, `AGoldenPetal`, `AFormFlower`: pickups
 `ALSPickupBase` handles bob and spin, the collect-once guard, effects and `Destroy`. Children implement only `OnCollected`:
-- `ALifeNote`: reports to `URestorationSubsystem`.
+- `ALifeNote`: reports to `URestorationSubsystem`. It overrides `GetCollectPitch`, so each note chimes one step higher on a major scale than the one before.
 - `AGoldenPetal`: adds to the count in `ALSGameMode`.
 - `AFormFlower`: unlocks a form, saves, and shows a prompt.
 
@@ -88,6 +91,9 @@ Each tick it adds up mass times distance from the pivot for every simulating bod
 
 ### `APressurePlate`: weight sensor
 `GetMassOnPlate` adds up the mass of every simulating body in the trigger. `Tick` compares it with `RequiredMassKg` and broadcasts `OnPlatePressed` or `OnPlateReleased` when the answer changes. `OnBallOverlap` shows the "Too light!" prompt. **Pattern:** observer.
+
+### `ALever`: a floor lever held by a pushed block
+A standalone actor (no pressure plate). `GetMassAgainst` adds up the mass of every simulating body in `PushZone`, just in front of the plinth's front end, skipping pawns, so the player's ball never counts and only something pushed there (the block) holds it. `Tick` broadcasts `OnLeverOn` or `OnLeverOff` when that crosses `RequiredMassKg`, and swings `ArmPivot` (with the `Rod` and `Grip` on it) between `OffPitch` and `OnPitch`. `AGate` takes levers in `RequiredLevers`, alongside its plates. Its meshes and painted wood, iron and leather textures come from `Content/Python/ls_generate_lever.py`; `build_level1_wildwood.lever_assets` imports them and builds the materials. **Pattern:** observer.
 
 ### `AGate`: door with a timeline
 `BeginPlay` builds the timeline from `OpenCurve`, or from `CreateDefaultCurve` when none is assigned, and subscribes to every plate. `RefreshGate` plays forward only if all plates are pressed, and otherwise reverses. **Pattern:** observer.
@@ -128,7 +134,7 @@ Each frame it adds drag against the velocity, plus upward buoyancy that grows wi
 `Tick` moves `DisplayedRestoration` smoothly toward the real value. `ApplyVisuals` writes it to the material parameter collection, the post-process volume and the fog. `HandleNoteCollected` sets `LastNoteLocation` and restarts the local bloom radius. If `M_LS_WitherPost` exists, `BeginPlay` adds it to the volume and saturation goes through that material, which leaves the player in full colour. If not, the volume's own saturation is used. **Pattern:** observer.
 
 ### `ARestorableActor`: plants that grow back
-Hidden at the start. It starts growing when restoration reaches its threshold or a note is collected nearby. `Tick` scales it with a bounce curve, and only runs while growing. **Pattern:** observer.
+Hidden at the start. It starts growing when restoration reaches its threshold or a note is collected nearby. `Tick` scales it with a bounce curve, and only runs while growing. An optional `WitheredMesh` (a dead trunk, say) stands in its place until then and shrinks away as it grows, which is how Level 1's dead trees come back to life. Trees also wait a random `MaxStartDelay` (so a stand rises in a wave), sway by `ShakeDegrees` while growing, fading as they settle, and play `GrowSound` when they start (spaced at least 0.35 s apart across all trees, so many at once don't turn into noise). The sound uses recorded leaves and a robin call credited in `AUDIO_CREDITS.md`. **Pattern:** observer.
 
 ### `AWitherBlob`: the enemy
 | Function | What it does |
@@ -142,8 +148,18 @@ Hidden at the start. It starts growing when restoration reaches its threshold or
 ### `AWitheringStorm` and `AStormTrigger`: the chase
 `AStormTrigger` calls `StartRising`, which subscribes to the ball's events. `Tick` raises the box, updates the rumble and camera shake, and kills a ball inside. `HandleNoteCollected` pushes it down, `HandleCheckpointSet` saves a safe height, and `HandleBallRespawned` restores it. **Pattern:** observer.
 
+When `ChasePoints` is set, the storm chases along that path instead of rising: `Progress` is how far along it the storm is, and `SetProgress` places and turns it there. It stays hidden until the trigger fires. Notes push it back along the path. A ball that dies before reaching a checkpoint in the chase respawns behind the trigger, so the chase is called off and starts again when the ball passes the trigger. In Level 1 it chases the ball from just after the blob arena to the Heart Tree.
+
+### `ABounceMushroom`: a giant mushroom that bounces the ball
+`OnBallHit` launches a ball that lands on the cap (more than `BounceAboveHeight` above the base) upward at `LaunchSpeed` through `ASeedBall::Knockback`, keeping most of its sideways speed, and plays `BounceSound` at a slightly random pitch. `Tick` squashes the cap and lets it spring back for 0.8 s. Its meshes and textures come from `Content/Python/ls_generate_mushroom.py`. In Level 1, two notes float above mushrooms where only a bounce reaches them. **Pattern:** interface (`ILSInteractable`).
+
+### `AGhostRacer` and `ULSGhostSave`: race your best run
+`Tick` records the ball's position each time `ALSGameMode`'s level clock passes another `SampleInterval`, so the ghost and the player share a clock that stops during story cards. When `OnLevelCompleted` fires and the time beats the saved one (or there is none), the run is written to its own save slot, `Ghost_<level>`. On the next attempt `Tick` replays it, blending between the two points around the current level time, and hides the ghost at its finishing time. The ghost is a sphere the size of the ball, with `M_LS_Ghost` (an unlit, dithered, masked glow, so it stays in colour while the forest is grey). **Pattern:** observer, with `ULSGhostSave` as a memento.
+
 ### `UAdaptiveMusicComponent` and `AMusicManager`: music that grows back
 `AMusicManager` is a placeable actor that stays loaded and holds the component. `BeginPlay` starts every stem together at near-zero volume and fades in stem 0. `HandleMilestoneReached` fades in the next stem at each restoration milestone. `PlayFinale` fades out the stems and fades in the finale when the level completes. **Pattern:** observer.
+
+The five stems and the finale are made by `Content/Python/ls_generate_music.py`: 45.7 s loops at 84 BPM in D major (pads, then drums, bass, flute melody, and strings with birdsong), so every layer lines up. It also makes the bounce, note chime and storm rumble sounds.
 
 ### Sound effects
 Looping sounds use a `UAudioComponent`, so an attenuation can be assigned: `RollAudio` on the ball, `WindAudio` on wind volumes, and `RumbleAudio` on the storm. One-shot sounds call `UGameplayStatics::PlaySoundAtLocation`, which does nothing when the sound is empty, so every sound is optional. The roll sound lives in `FSeedFormData`, so each form sounds different with no form check in the code.
@@ -168,6 +184,12 @@ An editor script that imports the OBJ files, builds the materials node by node, 
 ### `Content/Python/build_world_level1.py` and `ls_world_common.py`: the forest
 The level script decides what goes where, and `ls_world_common.py` knows how to place it, so Level 2 can share it. The tables at the top of the script hold the whole layout: `BENDS`, `INSERTS`, `HILLS` and the rest. `ls_curved_route.py` turns a greybox position into (s, d), the distance along the winding road and the distance to its right. Because distance along the road never changes, a jump measures the same after bending. `road_height` and `terrain_height` give one height for any point, and the road mesh, terrain and trees all use them, which is why everything sits on the hills. `shaped_land` averages the hillsides over the nearby road, as using only the nearest point would make a cliff wherever a different stretch of road becomes nearest. `check_layout` stops the build if a table edit makes a slope too steep, puts a bend on a puzzle, or runs the road into itself. Each greybox actor keeps its original place in an `LS_Origin` tag, so a rerun bends from the straight line again. `ls_generate_world_meshes.py` builds what the Fab packs lack: the giant tree, music note, gate ring and floating island. `Scatter` groups transforms by mesh into one instanced component each, with a cull distance per ring. `jittered_grid` with a fixed seed gives a forest that looks random but rebuilds identically. `ls_material_helpers.py` holds the small node-building functions the material scripts share.
 
+### `Content/Python/ls_wildwood_plan.py` and `build_level1_wildwood.py`: Level 1 in the Wildwood forest
+`L_Level1_Wildwood` is a copy of the Wildwood pack's demo map. The plan script runs outside Unreal (it needs numpy) and works out a 900 m trail through the pack's own landscape: a smooth curve through the control points in `ROUTE`, picked to keep to the gentler slopes. The trail is a dirt ribbon that hugs the ground, never more than `FILL_CAP` (2 m) above it, with level stretches only where `FLATS` needs them. It is a mesh laid on the landscape, never cut into it, because this engine version's landscape import scrambles the Wildwood landscape. All parkour is props: rock stacks, logs, a moving rock and crumbling rocks over the three water crossings in `CROSSINGS`, a rock tower to glide from, and rock stairs (`find_climbs`, `rock_stairs`) wherever the ground climbs more steeply than 15 degrees. The build script's `fit_rock` keeps each rock close to its own proportions, since a stretched boulder reads as a spike. Every parkour rock and log collides as its own mesh (`collide`): the boulders as their exact triangles, the logs and stacked rocks as a hull wrapped round the mesh, so the ball meets the shape the player sees. `trail01_extras` adds easy rock and log hops along trail piece 01, marked `extra` so the `extras` stage can add them to a level that is already open without touching anything else. Rocks and logs placed by hand in the editor are kept in `ls_hand_placed.json` (the `protect` stage records them and turns on collision for copies made in the editor, which come with it off; the `hand` stage puts them back after a full rebuild). Run `protect` after editing them by hand, and don't rebuild the level without running it first. The plan also places every pickup, puzzle and hidden wall, and picks the trees near the trail that become regrowing trees. The build script applies the plan in the editor, one stage per call. The far forest has no actors to swap: its leaf material multiplies the leaves' opacity by `Restoration` from `MPC_Restoration` against each tree's random value, so a little more of the forest leafs out with every note. `fun_extras` in the plan adds the bouncy mushrooms, the two raised notes, and the Withering's chase, marked `extra: "fun"`. The `fun` stage adds them to the open level, together with the music and the note chime.
+
+### `Content/Python/ls_generate_ui.py` and `build_ui.py`: the screens
+Every screen's logic is in C++ (`ULSMainMenuWidget`, `ULSPauseMenuWidget`, `ULSControlsWidget`, `ULSHUDWidget`, `ULSStoryCardWidget`, `ULSResultsWidget`). Its layout is a Widget Blueprint of the same name in `/Game/UI` (`WBP_MainMenu` and so on) whose widget names match the C++ `BindWidget` properties. They share one look: dark moss panels with a thin gold edge, cream text, gold for the main button of each screen. `ls_generate_ui.py` paints the icons (notes, petals, timer, stars, the three forms) and the leaf divider, and `build_ui.py` imports them, makes `L_MainMenu` (an empty level run by `BP_LSGameMode_Menu`, which shows the main menu and spawns no ball) and points the player controller at every screen. The packaged game starts on `L_MainMenu`.
+
 ### Dev cheats
 `bEnableDevCheats` on `ALSPlayerController` adds F1, F2 and F3 to the mapping context. F3 collects real notes through `OnBallOverlap`, so the count and stars stay correct.
 
@@ -189,7 +211,10 @@ Each rubric area, with what to show and where it is.
 |---|---|
 | Stars and their conditions | `ALSGameMode::BuildResult`, then the results screen |
 | Hidden Golden Petals | `AGoldenPetal`, and a petal found in play |
-| The storm chase | `AWitheringStorm::Tick` and `HandleNoteCollected` |
+| The storm chase | `AWitheringStorm::Tick` and `HandleNoteCollected`, then the race to the Heart Tree |
+| Bouncy mushrooms and raised notes | `ABounceMushroom::OnBallHit`, then bouncing up to a note |
+| Notes that play a rising tune | `ALifeNote::GetCollectPitch` |
+| Racing your own ghost | `AGhostRacer::Tick` and `HandleLevelCompleted`, then a second run with the ghost beside you |
 
 ### Clarity
 | Show | Where |

@@ -46,7 +46,7 @@ void ALSPickupBase::OnBallOverlap(ASeedBall* Ball)
 
 	// Both functions safely do nothing when no asset is assigned.
 	UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, CollectEffect, GetActorLocation());
-	UGameplayStatics::PlaySoundAtLocation(this, CollectSound, GetActorLocation());
+	UGameplayStatics::PlaySoundAtLocation(this, CollectSound, GetActorLocation(), 1.f, GetCollectPitch());
 
 	Destroy();
 }

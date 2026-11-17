@@ -43,6 +43,12 @@ void AWitheringStorm::BeginPlay()
 
 	StartZ = GetActorLocation().Z;
 	SavedZ = StartZ;
+	if (FollowsPath())
+	{
+		SetProgress(0.f);
+		// Out of sight until the chase starts, so the player never walks past a storm that is waiting for them.
+		SetActorHiddenInGame(true);
+	}
 
 	GetWorld()->GetSubsystem<URestorationSubsystem>()->OnNoteCollected.AddDynamic(this, &AWitheringStorm::HandleNoteCollected);
 
@@ -66,6 +72,7 @@ void AWitheringStorm::StartRising(ASeedBall* Ball)
 
 	RumbleAudio->SetVolumeMultiplier(0.f);
 	RumbleAudio->Play();
+	SetActorHiddenInGame(false);
 }
 
 void AWitheringStorm::StopRising()
@@ -90,7 +97,14 @@ void AWitheringStorm::Tick(float DeltaSeconds)
 		return;
 	}
 
-	SetStormZ(GetActorLocation().Z + RiseSpeed * DeltaSeconds);
+	if (FollowsPath())
+	{
+		SetProgress(Progress + RiseSpeed * DeltaSeconds);
+	}
+	else
+	{
+		SetStormZ(GetActorLocation().Z + RiseSpeed * DeltaSeconds);
+	}
 	UpdateCloseEffects(DeltaSeconds);
 
 	// Checked every frame because the storm moves into the ball, and the ball may be standing still.
@@ -102,8 +116,10 @@ void AWitheringStorm::Tick(float DeltaSeconds)
 
 void AWitheringStorm::UpdateCloseEffects(float DeltaSeconds)
 {
-	const float StormTop = GetActorLocation().Z + Box->GetScaledBoxExtent().Z;
-	const float Gap = TargetBall->GetActorLocation().Z - StormTop;
+	// Along the path, the gap is from the storm's front to the ball. Rising, it is from the storm's top.
+	const float Gap = FollowsPath()
+		? PathDistanceOf(TargetBall->GetActorLocation()) - (Progress + Box->GetScaledBoxExtent().X)
+		: TargetBall->GetActorLocation().Z - (GetActorLocation().Z + Box->GetScaledBoxExtent().Z);
 
 	// 0 when the storm is at Close Distance or further away, and 1 when it reaches the ball.
 	const float Closeness = 1.f - FMath::Clamp(Gap / CloseDistance, 0.f, 1.f);
@@ -124,7 +140,14 @@ void AWitheringStorm::HandleNoteCollected(FVector Location)
 {
 	if (bRising)
 	{
-		SetStormZ(GetActorLocation().Z - NotePushback);
+		if (FollowsPath())
+		{
+			SetProgress(Progress - NotePushback);
+		}
+		else
+		{
+			SetStormZ(GetActorLocation().Z - NotePushback);
+		}
 	}
 }
 
@@ -133,12 +156,83 @@ void AWitheringStorm::HandleCheckpointSet(FVector Location)
 	// Save the storm's current height, or lower if that would put it too close to the new checkpoint.
 	const float HalfHeight = Box->GetScaledBoxExtent().Z;
 	SavedZ = FMath::Min(GetActorLocation().Z, Location.Z - RespawnClearance - HalfHeight);
+	SavedProgress = FMath::Min(Progress, PathDistanceOf(Location) - RespawnClearance - Box->GetScaledBoxExtent().X);
+	bCheckpointInChase = true;
 }
 
 void AWitheringStorm::HandleBallRespawned()
 {
 	if (bRising)
 	{
-		SetStormZ(SavedZ);
+		if (FollowsPath() && !bCheckpointInChase)
+		{
+			// The ball is back behind the trigger: call the chase off, so it starts over when the ball passes it again.
+			StopRising();
+			TargetBall->OnCheckpointSet.RemoveDynamic(this, &AWitheringStorm::HandleCheckpointSet);
+			TargetBall->OnRespawned.RemoveDynamic(this, &AWitheringStorm::HandleBallRespawned);
+			TargetBall = nullptr;
+			SetProgress(0.f);
+			SetActorHiddenInGame(true);
+		}
+		else if (FollowsPath())
+		{
+			SetProgress(SavedProgress);
+		}
+		else
+		{
+			SetStormZ(SavedZ);
+		}
 	}
+}
+
+float AWitheringStorm::GetPathLength() const
+{
+	float Length = 0.f;
+	for (int32 Index = 1; Index < ChasePoints.Num(); ++Index)
+	{
+		Length += FVector::Dist(ChasePoints[Index - 1], ChasePoints[Index]);
+	}
+	return Length;
+}
+
+void AWitheringStorm::SetProgress(float NewProgress)
+{
+	Progress = FMath::Clamp(NewProgress, 0.f, FMath::Min(GetPathLength(), MaxRiseDistance));
+	// Walk the path to the segment holding Progress, then sit there, facing along it.
+	float Remaining = Progress;
+	for (int32 Index = 1; Index < ChasePoints.Num(); ++Index)
+	{
+		const FVector Segment = ChasePoints[Index] - ChasePoints[Index - 1];
+		const float Length = Segment.Size();
+		if (Remaining <= Length || Index == ChasePoints.Num() - 1)
+		{
+			const float Alpha = Length > 0.f ? FMath::Clamp(Remaining / Length, 0.f, 1.f) : 0.f;
+			SetActorLocationAndRotation(ChasePoints[Index - 1] + Segment * Alpha, FRotator(0.f, Segment.Rotation().Yaw, 0.f));
+			return;
+		}
+		Remaining -= Length;
+	}
+}
+
+float AWitheringStorm::PathDistanceOf(const FVector& Location) const
+{
+	// The distance along the path of the point on it nearest to Location, judged on the ground plane.
+	float Best = TNumericLimits<float>::Max();
+	float BestDistance = 0.f;
+	float Walked = 0.f;
+	for (int32 Index = 1; Index < ChasePoints.Num(); ++Index)
+	{
+		const FVector2D A(ChasePoints[Index - 1]), B(ChasePoints[Index]), P(Location);
+		const FVector2D Segment = B - A;
+		const float Length = Segment.Size();
+		const float Along = Length > 0.f ? FMath::Clamp(FVector2D::DotProduct(P - A, Segment) / Length, 0.f, Length) : 0.f;
+		const float Away = FVector2D::DistSquared(P, A + Segment.GetSafeNormal() * Along);
+		if (Away < Best)
+		{
+			Best = Away;
+			BestDistance = Walked + Along;
+		}
+		Walked += Length;
+	}
+	return BestDistance;
 }
