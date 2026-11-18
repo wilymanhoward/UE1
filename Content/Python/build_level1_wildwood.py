@@ -1197,7 +1197,7 @@ def clear():
     return removed
 
 
-STAGES = ["foliage", "clear", "trail", "scenery", "gameplay", "hand", "world", "leaves", "save"]
+STAGES = ["foliage", "clear", "trail", "scenery", "gameplay", "hand", "start_approach", "world", "leaves", "save"]
 
 
 def run(stage):
@@ -1227,6 +1227,11 @@ def run(stage):
         import ls_apply_collapsing_crossing
         importlib.reload(ls_apply_collapsing_crossing)
         result = ls_apply_collapsing_crossing.build()
+    elif stage == "start_approach":
+        import ls_extend_start
+        importlib.reload(ls_extend_start)
+        assert unreal.get_editor_subsystem(unreal.LevelEditorSubsystem).save_current_level()
+        result = ls_extend_start.build()
     elif stage == "intro":
         result = intro()
     elif stage == "world":
