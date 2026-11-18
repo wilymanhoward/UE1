@@ -36,6 +36,10 @@ AWitheringStorm::AWitheringStorm()
 	RumbleAudio = CreateDefaultSubobject<UAudioComponent>(TEXT("RumbleAudio"));
 	RumbleAudio->SetupAttachment(Box);
 	RumbleAudio->SetAutoActivate(false);
+	AttackAudio = CreateDefaultSubobject<UAudioComponent>(TEXT("AttackAudio"));
+	AttackAudio->SetupAttachment(Box);
+	AttackAudio->SetAutoActivate(false);
+	AttackAudio->bAllowSpatialization = false;
 }
 
 void AWitheringStorm::BeginPlay()
@@ -61,7 +65,7 @@ void AWitheringStorm::BeginPlay()
 
 void AWitheringStorm::StartRising(ASeedBall* Ball)
 {
-	if (TargetBall)
+	if (!IsValid(Ball) || TargetBall)
 	{
 		return;
 	}
@@ -74,13 +78,17 @@ void AWitheringStorm::StartRising(ASeedBall* Ball)
 
 	RumbleAudio->SetVolumeMultiplier(0.f);
 	RumbleAudio->Play();
-	SetActorHiddenInGame(false);
+	bWaveActive = false;
+	SetActorHiddenInGame(bShockwaveAttacks);
 }
 
 void AWitheringStorm::StopRising()
 {
 	bRising = false;
 	RumbleAudio->Stop();
+	AttackAudio->Stop();
+	bWaveActive = false;
+	if (bShockwaveAttacks) SetActorHiddenInGame(true);
 }
 
 void AWitheringStorm::SetStormZ(float NewZ)
@@ -96,6 +104,11 @@ void AWitheringStorm::Tick(float DeltaSeconds)
 
 	if (!bRising)
 	{
+		return;
+	}
+	if (bShockwaveAttacks)
+	{
+		TickShockwave(DeltaSeconds);
 		return;
 	}
 	DelayRemaining = FMath::Max(0.f, DelayRemaining - DeltaSeconds);
@@ -126,6 +139,50 @@ void AWitheringStorm::Tick(float DeltaSeconds)
 	}
 }
 
+void AWitheringStorm::TickShockwave(float DeltaSeconds)
+{
+	if (!FollowsPath() || !IsValid(TargetBall) || TargetBall->IsDead()) return;
+	DelayRemaining -= DeltaSeconds;
+	if (!bWaveActive && DelayRemaining <= 0.f)
+	{
+		// Exclude the previous tier so successive attacks always change height.
+		HeightTier = HeightTier < 0 ? FMath::RandRange(0, 2) : (HeightTier + FMath::RandRange(1, 2)) % 3;
+		WaveHeight = 25.f + HeightTier * 25.f;
+		SetProgress(0.f);
+		DelayRemaining = FMath::FRandRange(2.6f, 3.8f);
+		bWaveActive = true;
+		SetActorHiddenInGame(false);
+		AttackAudio->Play();
+	}
+	if (!bWaveActive) return;
+
+	const FVector Previous = GetActorLocation();
+	SetProgress(Progress + RiseSpeed * DeltaSeconds);
+	const FVector Travel = GetActorLocation() - Previous;
+	const FTransform Pose(GetActorRotation(), (Previous + GetActorLocation()) * .5f);
+	FVector Extent = Box->GetScaledBoxExtent();
+	// Sweep the thin wave through this frame's travel so a fast attack cannot tunnel past the seed.
+	Extent.X += Travel.Size() * .5f;
+	Extent.Z += FMath::Abs(Travel.Z) * .5f;
+	const FVector Local = Pose.InverseTransformPosition(TargetBall->GetActorLocation());
+	const UStaticMeshComponent* Body = TargetBall->FindComponentByClass<UStaticMeshComponent>();
+	const float Radius = Body ? Body->Bounds.BoxExtent.GetMin() : 50.f;
+	if (FMath::Abs(Local.X) < Extent.X + Radius && FMath::Abs(Local.Y) < Extent.Y + Radius
+		&& FMath::Abs(Local.Z) < Extent.Z + Radius) TargetBall->Die();
+	for (ARestorableActor* Tree : CurseTrees)
+	{
+		if (!IsValid(Tree) || Tree->IsCursed()) continue;
+		const FVector TreeLocal = Pose.InverseTransformPosition(Tree->GetActorLocation());
+		if (FMath::Abs(TreeLocal.X) < Extent.X + 150.f && FMath::Abs(TreeLocal.Y) < Extent.Y + 200.f
+			&& FMath::Abs(TreeLocal.Z) < Extent.Z + 400.f) Tree->SetCursed(true);
+	}
+	if (Progress >= FMath::Min(GetPathLength(), MaxRiseDistance))
+	{
+		bWaveActive = false;
+		SetActorHiddenInGame(true);
+	}
+}
+
 void AWitheringStorm::UpdateCloseEffects(float DeltaSeconds)
 {
 	// Along the path, the gap is from the storm's front to the ball. Rising, it is from the storm's top.
@@ -150,7 +207,7 @@ void AWitheringStorm::UpdateCloseEffects(float DeltaSeconds)
 
 void AWitheringStorm::HandleNoteCollected(FVector Location)
 {
-	if (bRising)
+	if (bRising && !bShockwaveAttacks)
 	{
 		if (FollowsPath())
 		{
@@ -176,7 +233,7 @@ void AWitheringStorm::HandleBallRespawned()
 {
 	for (ARestorableActor* Tree : CurseTrees)
 		if (IsValid(Tree)) Tree->SetCursed(false);
-	if (!CurseTrees.IsEmpty()) bCheckpointInChase = false;
+	if (bShockwaveAttacks || !CurseTrees.IsEmpty()) bCheckpointInChase = false;
 	if (bRising)
 	{
 		if (FollowsPath() && !bCheckpointInChase)
@@ -222,7 +279,8 @@ void AWitheringStorm::SetProgress(float NewProgress)
 		if (Remaining <= Length || Index == ChasePoints.Num() - 1)
 		{
 			const float Alpha = Length > 0.f ? FMath::Clamp(Remaining / Length, 0.f, 1.f) : 0.f;
-			SetActorLocationAndRotation(ChasePoints[Index - 1] + Segment * Alpha, FRotator(0.f, Segment.Rotation().Yaw, 0.f));
+			const FVector HeightOffset(0.f, 0.f, bShockwaveAttacks ? WaveHeight : 0.f);
+			SetActorLocationAndRotation(ChasePoints[Index - 1] + Segment * Alpha + HeightOffset, FRotator(0.f, Segment.Rotation().Yaw, 0.f));
 			return;
 		}
 		Remaining -= Length;

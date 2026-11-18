@@ -1,4 +1,4 @@
-"""The witch's green curse follows the far-bank trail after her cutscene."""
+"""Repeated, jumpable green shockwaves along the far-bank trail."""
 import math
 import unreal
 
@@ -7,13 +7,12 @@ FOLDER = '/Game/LastSeed/Materials'
 
 def material():
     path = FOLDER + '/M_LS_RiverCurse'
+    edit = unreal.MaterialEditingLibrary
     if unreal.EditorAssetLibrary.does_asset_exist(path):
         mat=unreal.load_asset(path)
-        mat.set_editor_property('allow_translucent_custom_depth_writes',True)
-        unreal.EditorAssetLibrary.save_loaded_asset(mat,False)
-        return mat
-    edit = unreal.MaterialEditingLibrary
-    mat = unreal.AssetToolsHelpers.get_asset_tools().create_asset('M_LS_RiverCurse', FOLDER, unreal.Material, unreal.MaterialFactoryNew())
+        edit.delete_all_material_expressions(mat)
+    else:
+        mat = unreal.AssetToolsHelpers.get_asset_tools().create_asset('M_LS_RiverCurse', FOLDER, unreal.Material, unreal.MaterialFactoryNew())
     mat.set_editor_properties({'blend_mode': unreal.BlendMode.BLEND_TRANSLUCENT, 'two_sided': True, 'allow_translucent_custom_depth_writes':True,
                                'shading_model': unreal.MaterialShadingModel.MSM_UNLIT})
     uv = edit.create_material_expression(mat, unreal.MaterialExpressionTextureCoordinate, -500, 0)
@@ -26,10 +25,11 @@ def material():
         pins.append(pin)
     custom.set_editor_properties({'inputs':pins,'output_type':unreal.CustomMaterialOutputType.CMOT_FLOAT4,
         'code': '''float2 p=UV;
-float n=sin(p.x*31+sin(p.y*14-Time*1.8)*2+Time)*sin(p.y*26-Time*2.3);
-float wisps=pow(saturate(.5+.5*n),1.6);
-float edge=(1-smoothstep(.28,.5,abs(p.x-.5)))*(1-smoothstep(.28,.5,abs(p.y-.5)));
-return float4(lerp(float3(.015,.18,.05),float3(.18,1.6,.65),wisps),edge*(.18+.65*wisps));'''})
+float ribbon=p.x-.5+.045*sin(p.y*35-Time*12);
+float core=exp(-pow(ribbon/.15,2));
+float haze=exp(-pow(ribbon/.35,2))*(.5+.5*sin(p.y*80-Time*17));
+float edge=1-smoothstep(.32,.5,abs(p.y-.5));
+return float4(lerp(float3(.015,.25,.04),float3(.08,.9,.2),core),edge*saturate(core*.9+haze*.25));'''})
     edit.connect_material_expressions(uv,'',custom,'UV')
     edit.connect_material_expressions(clock,'',custom,'Time')
     rgb = edit.create_material_expression(mat,unreal.MaterialExpressionComponentMask,50,0)
@@ -51,14 +51,42 @@ def configure(story):
     if storm is None: storm=builder.spawn(unreal.WitheringStorm,14000,-2200,3300,'RiverbankCurse','Flow')
     route=[unreal.Vector(14000,-2200,3300),unreal.Vector(15000,-2200,3300),
            unreal.Vector(16700,-800,3200),unreal.Vector(19000,1300,3300)]
-    storm.set_editor_properties({'chase_points':route,'rise_speed':160.0,'note_pushback':100.0,
+    # Follow the actual ground between bends so a low attack does not disappear under a slope.
+    samples=[]
+    for a,b in zip(route,route[1:]):
+        steps=math.ceil(math.hypot(b.x-a.x,b.y-a.y)/200)
+        samples.extend(a+(b-a)*(i/steps) for i in range(steps))
+    route=samples+[route[-1]]
+    world=builder.require_map()
+    ground=[]
+    for actor in actors:
+        component=actor.get_component_by_class(unreal.StaticMeshComponent)
+        if isinstance(actor,unreal.LandscapeProxy) or (component and component.static_mesh and
+                component.static_mesh.get_name().startswith('SM_LS_WildwoodTrail')): ground.append(actor)
+    ignore=[a for a in actors if a not in ground]
+    for p in route:
+        hit=unreal.SystemLibrary.line_trace_single(world,unreal.Vector(p.x,p.y,3100),unreal.Vector(p.x,p.y,1000),
+            unreal.TraceTypeQuery.TRACE_TYPE_QUERY1,False,ignore,unreal.DrawDebugTrace.NONE,True)
+        assert hit and hit.to_tuple()[0], f'No trail below {p}'
+        p.z=hit.to_tuple()[4].z
+    storm.set_editor_properties({'chase_points':route,'rise_speed':1800.0,'note_pushback':0.0,'shockwave_attacks':True,
         'start_delay':2.0,'max_rise_distance':4300.0,'close_distance':1800.0,'respawn_clearance':1400.0})
-    storm.get_editor_property('box').set_box_extent(unreal.Vector(350,1400,1500),True)
+    storm.get_editor_property('box').set_box_extent(unreal.Vector(70,1400,25),True)
+    audio_path='/Game/LastSeed/Audio/SFX_LS_WitchAttackScream'
+    if not unreal.EditorAssetLibrary.does_asset_exist(audio_path):
+        task=unreal.AssetImportTask()
+        task.filename=unreal.Paths.project_content_dir()+'LastSeed/SourceSounds/SFX_LS_WitchAttackScream.wav'
+        task.destination_path='/Game/LastSeed/Audio'
+        task.automated=True
+        task.save=True
+        unreal.AssetToolsHelpers.get_asset_tools().import_asset_tasks([task])
+        assert task.imported_object_paths
+    storm.get_editor_property('attack_audio').set_sound(unreal.load_asset(audio_path))
     mesh=storm.get_editor_property('mesh')
     mesh.set_static_mesh(unreal.load_asset('/Engine/BasicShapes/Plane'))
-    mesh.set_relative_location(unreal.Vector(350,0,0),False,False)
+    mesh.set_relative_location(unreal.Vector(0,0,0),False,False)
     mesh.set_relative_rotation(unreal.Rotator(pitch=90),False,False)
-    mesh.set_relative_scale3d(unreal.Vector(30,28,1))
+    mesh.set_relative_scale3d(unreal.Vector(1.2,28,1))
     mesh.set_material(0,material())
     mesh.set_render_custom_depth(True)
     mesh.set_custom_depth_stencil_value(1)

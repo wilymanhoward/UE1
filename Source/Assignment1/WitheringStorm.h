@@ -40,6 +40,10 @@ public:
 	TArray<TObjectPtr<ARestorableActor>> CurseTrees;
 	UPROPERTY(EditAnywhere, Category = "Storm")
 	float StartDelay = 0.f;
+	UPROPERTY(EditAnywhere, Category = "Storm")
+	bool bShockwaveAttacks = false;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	TObjectPtr<UAudioComponent> AttackAudio;
 
 protected:
 	virtual void BeginPlay() override;
@@ -118,4 +122,8 @@ private:
 	float SavedZ = 0.f;
 	float ShakeTimeRemaining = 0.f;
 	float DelayRemaining = 0.f;
+	void TickShockwave(float DeltaSeconds);
+	bool bWaveActive = false;
+	int32 HeightTier = -1;
+	float WaveHeight = 25.f;
 };

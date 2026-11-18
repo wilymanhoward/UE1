@@ -29,6 +29,7 @@ The 42-second opening mix uses excerpts of the music and field recordings below.
 ## Riverbank ambush
 
 - “Woman Screaming” by DanJFilms, [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/). Human scream recorded for a short film. The public HQ preview was trimmed, filtered, level-adjusted and given a short echo for the witch's scream. [Freesound recording](https://freesound.org/people/DanJFilms/sounds/845164/)
+  The repeated shockwave warning, `SFX_LS_WitchAttackScream.wav`, uses a separate 1.25-second excerpt of this recording, filtered, faded and peak-limited to −4 dBFS, in mono 48 kHz PCM.
 - “flowing stream” by michelcik, [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/). Stream recorded with a Zoom H4n in Slovakia. The public HQ preview was excerpted and faded for the riverbank ambience. [Freesound recording](https://freesound.org/people/michelcik/sounds/436512/)
 
 ## Narration
