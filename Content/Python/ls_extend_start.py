@@ -3,6 +3,7 @@ import math
 from pathlib import Path
 import unreal
 from ls_generate_player_meshes import Mesh, smoothstep, write_obj
+from ls_widen_opening import opening_padding
 
 NAME = 'SM_LS_WildwoodTrail_Approach'
 TAG = 'LS_StartApproach'
@@ -107,12 +108,16 @@ def build():
     approach.static_mesh_component.set_collision_profile_name('BlockAll')
     for s in range(-int(LENGTH),0,500):
         z = heights[int((s+LENGTH)/50)]
-        for d in (-390,390):
+        half_width = 390 + opening_padding(0)
+        for d in (-half_width,half_width):
             a,b = point(s,d),point(s+500,d)
             wall = ls_world_common.invisible_wall(*a,*b,z-300,z+2600,'Walls')
             wall.tags = list(wall.tags)+[TAG]
     x,y = point(-LENGTH)
     back_wall[0].set_actor_location(unreal.Vector(x,y,heights[0]+1150),False,False)
+    back_scale = back_wall[0].get_actor_scale3d()
+    back_scale.x = 2 * half_width / 100
+    back_wall[0].set_actor_scale3d(back_scale)
     x,y = point(SPAWN_DISTANCE)
     z = heights[int((SPAWN_DISTANCE+LENGTH)/50)]
     starts[0].set_actor_location(unreal.Vector(x,y,z+150),False,False)

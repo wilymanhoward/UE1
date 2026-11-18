@@ -19,6 +19,7 @@ import random
 
 import numpy as np
 from PIL import Image, ImageDraw
+from ls_widen_opening import opening_padding
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 WORK = os.path.normpath(os.path.join(HERE, "..", "..", "Saved", "LS"))
@@ -637,8 +638,8 @@ def build_walls(p, air):
         for side in (-1, 1):
             if any(side == secret_side and abs(mid - secret_s) < 260.0 for secret_s, secret_side in secrets):
                 continue
-            x0, y0 = trail.point(s, side * p.wall_half(s))
-            x1, y1 = trail.point(s1, side * p.wall_half(s1))
+            x0, y0 = trail.point(s, side * (p.wall_half(s) + opening_padding(s)))
+            x1, y1 = trail.point(s1, side * (p.wall_half(s1) + opening_padding(s1)))
             walls.append([round(v, 1) for v in (x0, y0, x1, y1, low - 300.0, high)])
         s = s1
     for secret_s, side in secrets:
