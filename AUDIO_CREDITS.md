@@ -33,4 +33,5 @@ The 42-second opening mix uses excerpts of the music and field recordings below.
 
 ## Narration
 
+- The riverbank witch dialogue uses the user-supplied ElevenLabs v4 Kristen “Cold Evil Queen Villain” take from 18 November 2026. The original MP3 is retained as `VO_LS_WitchKristen.mp3`. The recording plays at its original speed, starting 1.70 seconds into the ambush. It was filtered, level-adjusted and mixed with the river ambience and recorded scream into `SFX_LS_RiverAmbush.wav`. The scream starts at 6.95 seconds, after the dialogue. The final mix peaks at or below −3 dBFS.
 - The Heart Tree narration uses the supplied ElevenLabs v4 take with the Adam voice. The take was split into phrases and timed to the Wildwood captions. It plays on a separate track over the recorded soundtrack.

@@ -94,7 +94,7 @@ def place(x, y, z, yaw, half, target):
     assert isinstance(audio, unreal.SoundWave)
     shots = []
     for name, surge, duration, caption in [
-        ('WitchReveal', 0, 4.25, 'The Heart Tree’s last seed…\nI should have crushed you when I had the chance!'),
+        ('WitchReveal', 0, 5.45, 'The Heart Tree’s last seed…\nI’ll crush you myself.'),
         ('WitchScream', 1, 3.25, '[The witch screams]'),
     ]:
         art = shot_art(name)
