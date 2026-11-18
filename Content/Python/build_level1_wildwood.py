@@ -432,7 +432,7 @@ def stone_sound(name):
     return sound
 
 
-def add_collapsing_stone(cap, supports):
+def add_collapsing_stone(cap, supports, wood=False):
     component = cap.get_component_by_class(unreal.CollapsingStoneComponent)
     if not component:
         subsystem = unreal.get_engine_subsystem(unreal.SubobjectDataSubsystem)
@@ -445,8 +445,9 @@ def add_collapsing_stone(cap, supports):
         assert isinstance(component, unreal.CollapsingStoneComponent)
     component.set_editor_property('support_actors', sorted(supports, key=lambda a: a.get_actor_location().z))
     component.set_editor_property('collapse_delay', 1.0)
-    component.set_editor_property('shake_sound', stone_sound('SFX_LS_StoneShake'))
-    component.set_editor_property('fall_sound', stone_sound('SFX_LS_StoneFall'))
+    surface = 'Wood' if wood else 'Stone'
+    component.set_editor_property('shake_sound', stone_sound('SFX_LS_' + surface + 'Shake'))
+    component.set_editor_property('fall_sound', stone_sound('SFX_LS_' + surface + 'Fall'))
     return component
 
 
@@ -853,8 +854,9 @@ def place(entry, plates):
                         "Parkour", name + "Log" if name else "FallenLog", material("M_LS_Bark")))
     elif kind == "log_bridge":
         h = math.radians(yaw)
-        collide(fit_box("/Game/LastSeed/Meshes/SM_LS_Log", x, y, z, yaw, entry["length"], entry["width"] + 60.0, entry["width"] + 40.0,
-                        "Parkour", "BridgeLog", material("M_LS_Bark")))
+        actor = collide(fit_box("/Game/LastSeed/Meshes/SM_LS_Log", x, y, z, yaw, entry["length"], entry["width"] + 60.0, entry["width"] + 40.0,
+                               "Parkour", "BridgeLog", material("M_LS_Bark")))
+        if entry.get('collapses', False): add_collapsing_stone(actor, [], wood=True)
     elif kind == "tilting_log":
         actor = spawn(unreal.load_class(None, "/Script/Assignment1.TiltingLog"), x, y, z, "TiltingLog", "Parkour", yaw)
         half = entry["half_length"]
@@ -865,6 +867,7 @@ def place(entry, plates):
         log_mesh.set_material(0, material("M_LS_Bark"))
         log_mesh.set_relative_scale3d(unreal.Vector(half * 2.0 / 800.0, entry["half_width"] / 45.0, 1.5))
         log_mesh.set_relative_location(unreal.Vector(-half, 0.0, -68.0), False, False)
+        if entry.get('collapses', False): add_collapsing_stone(actor, [], wood=True)
         stump_top = z - 140.0
         mesh_actor("/Game/LastSeed/Meshes/SM_LS_LogPivot", x, y, stump_top, "Parkour", (1.0, 1.0, (stump_top - entry["floor"]) / 500.0),
                    yaw, material("M_LS_Bark"), "LogStump")

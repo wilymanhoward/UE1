@@ -21,6 +21,11 @@ The 42-second opening mix uses excerpts of the music and field recordings below.
 
 - “Tumbling Rocks” by Fission9, [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/). [Freesound recording](https://freesound.org/people/Fission9/sounds/488660/). The recordist describes four recordings of rocks rolling down stone stairs, captured with a Zoom H4n Pro on 12/07/2019; this is a field recording, not synthesized or AI-generated audio. The public high-quality MP3 preview was downloaded for these edits. `SFX_LS_StoneShake.wav` uses 0–0.83 seconds at 80% speed; `SFX_LS_StoneFall.wav` uses 4.12–5.40 seconds at 65% speed. Both are mono 48 kHz PCM, filtered, compressed, faded and peak-limited (−8 dBFS shaking, −5 dBFS falling). Playback adds slight pitch variation.
 
+## Wooden bridge effects
+
+- “Wooden creaks.wav” by HOGGanimation, [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/). [Original recording](https://freesound.org/people/HOGGanimation/sounds/612694/). The recordist describes stepping on a creaky floorboard, recorded with a Zoom H5 in 2021. The public HQ preview's 0.30–1.18 second excerpt was slowed to 80%, converted to mono 48 kHz PCM, filtered, faded, level-adjusted and limited to −8 dBFS for `SFX_LS_WoodShake.wav`.
+- “crate_break4” by K-Forces, [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/). [Original recording](https://freesound.org/people/K-Forces/sounds/856631/). Foley recording of breaking wooden pallets in a warehouse with a Zoom H6. The public HQ preview was slowed to 80%, converted to mono 48 kHz PCM, filtered, faded, level-adjusted and limited to −5 dBFS for `SFX_LS_WoodFall.wav`. Both wood effects use recorded physical sounds, not AI synthesis.
+
 ## Narration
 
 - The Heart Tree narration uses the supplied ElevenLabs v4 take with the Adam voice. The take was split into phrases and timed to the Wildwood captions. It plays on a separate track over the recorded soundtrack.

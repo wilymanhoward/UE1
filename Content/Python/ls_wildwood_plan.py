@@ -413,13 +413,13 @@ def crossing(p, start, end, layout, note_at=()):
             p.add("pillar", s, z=height(o), radius=radius, bottom=round(min(p.ground(x, y), WATER) - 150.0, 1), solid=radius,
                   collapses=start == 'cross1')
         elif kind == "log":
-            p.add("log_bridge", s, z=height(o), length=b - a + 160.0, width=150.0)
+            p.add("log_bridge", s, z=height(o), length=b - a + 160.0, width=150.0, collapses=start == 'cross1')
         elif kind == "tilt":
             half = (b - a) / 2.0
             rim = height(o)
             drop = half * math.sin(math.radians(LOG_TILT))
             p.add("tilting_log", s, z=rim + drop, half_length=half, half_width=200.0, max_tilt=LOG_TILT,
-                  counterweight=LOG_COUNTERWEIGHT, floor=round(min(p.ground(x, y), WATER) - 150.0, 1))
+                  counterweight=LOG_COUNTERWEIGHT, floor=round(min(p.ground(x, y), WATER) - 150.0, 1), collapses=start == 'cross1')
         elif kind == "moving":
             x1, y1 = p.trail.point(s0 + b - 150.0)
             top = height(o)
@@ -535,7 +535,7 @@ def place_pieces(trail, walk, floor, ground, high, halves, climbs):
         ("stone", 160.0, 520.0, None), ("stone", 660.0, 1020.0, None), ("stone", 1140.0, 1660.0, None),
         ("log", 1660.0, 2560.0, None), ("stone", 2560.0, 3080.0, None), ("tilt", 3080.0, length + 40.0, None)],
         note_at=[(1400.0, 80.0), (2110.0, 90.0)])
-    tut(p.s("cross1", -400.0), "Pillars collapse 1 second after landing. Jump onward as they shake! They rebuild when you respawn.")
+    tut(p.s("cross1", -400.0), "Stones and logs collapse 1 second after landing. Jump onward as they shake! They rebuild when you respawn.")
 
     # 1-2 Rootwood Heights
     p.add("flower", p.s("stone", 200.0), z=p.z(p.s("stone", 200.0)) + 80.0, form="STONE",

@@ -9,7 +9,7 @@ class UAudioComponent;
 class USoundBase;
 class UPrimitiveComponent;
 
-/** A stone pillar shakes on landing, falls after a short warning, and rebuilds on respawn. */
+/** A crossing platform shakes on landing, falls after a short warning, and rebuilds on respawn. */
 UCLASS(ClassGroup = (LastSeed), meta = (BlueprintSpawnableComponent))
 class ASSIGNMENT1_API UCollapsingStoneComponent : public UActorComponent
 {
@@ -70,7 +70,6 @@ private:
 	FTimerHandle CollapseTimer;
 	float FallElapsed = 0.f;
 	float WarningElapsed = 0.f;
-	float SurfaceTop = 0.f;
 	bool bTriggered = false;
 	bool bCollapsing = false;
 };

@@ -30,10 +30,16 @@ void UCollapsingStoneComponent::BeginPlay()
 		for (UStaticMeshComponent* Mesh : Meshes) Mesh->SetMobility(EComponentMobility::Movable);
 	}
 
-	FVector Origin, Extent;
-	GetOwner()->GetActorBounds(false, Origin, Extent);
-	SurfaceTop = Origin.Z + Extent.Z;
-	Surface = GetOwner()->FindComponentByClass<UStaticMeshComponent>();
+	TInlineComponentArray<UPrimitiveComponent*> Surfaces(GetOwner());
+	for (UPrimitiveComponent* Candidate : Surfaces)
+	{
+		if (Candidate->GetCollisionEnabled() != ECollisionEnabled::NoCollision
+			&& Candidate->GetCollisionResponseToChannel(ECC_PhysicsBody) == ECR_Block)
+		{
+			Surface = Candidate;
+			break;
+		}
+	}
 	if (Surface)
 	{
 		Surface->SetNotifyRigidBodyCollision(true);
@@ -46,9 +52,8 @@ void UCollapsingStoneComponent::HandleStep(UPrimitiveComponent* HitComponent, AA
 {
 	ASeedBall* Visitor = Cast<ASeedBall>(OtherActor);
 	if (!Visitor || Visitor->IsDead() || bTriggered || bCollapsing) return;
-	// Side impacts must not consume a pillar before the player lands on its top.
-	if (Visitor->GetActorLocation().Z < SurfaceTop || Hit.ImpactPoint.Z < SurfaceTop - 45.f
-		|| FMath::Abs(Hit.ImpactNormal.Z) < 0.5f) return;
+	// Use the contact surface, since the top of a sloping log varies along its length.
+	if (Visitor->GetActorLocation().Z < Hit.ImpactPoint.Z || FMath::Abs(Hit.ImpactNormal.Z) < 0.5f) return;
 	Ball = Visitor;
 	Ball->OnRespawned.AddUniqueDynamic(this, &UCollapsingStoneComponent::Rebuild);
 	bTriggered = true;

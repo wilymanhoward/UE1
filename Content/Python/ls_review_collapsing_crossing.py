@@ -12,10 +12,10 @@ pawn = unreal.GameplayStatics.get_player_pawn(world, 0)
 body = next(c for c in pawn.get_components_by_class(unreal.StaticMeshComponent) if c.get_name() == 'BallMesh')
 safe = pawn.get_actor_location()
 pawn.set_checkpoint(safe)
-caps = sorted([a for a in unreal.GameplayStatics.get_all_actors_of_class(world, unreal.StaticMeshActor)
+caps = sorted([a for a in unreal.GameplayStatics.get_all_actors_of_class(world, unreal.Actor)
                if a.get_component_by_class(unreal.CollapsingStoneComponent)], key=lambda a: a.get_actor_location().x)
 components = [a.get_component_by_class(unreal.CollapsingStoneComponent) for a in caps]
-assert len(caps) == 4 and all(c.collapse_delay == 1 for c in components)
+assert len(caps) == 6 and all(c.collapse_delay == 1 for c in components)
 groups = [list(c.support_actors) + [a] for a, c in zip(caps, components)]
 positions = {a: a.get_actor_location() for g in groups for a in g}
 output = Path(unreal.Paths.project_saved_dir()) / 'Screenshots/CollapsingCrossing'
@@ -28,7 +28,10 @@ def move(location):
     body.set_physics_angular_velocity_in_radians(unreal.Vector(0, 0, 0))
 
 def land(index):
-    center, extent, _ = unreal.SystemLibrary.get_component_bounds(caps[index].static_mesh_component)
+    surface = next(c for c in caps[index].get_components_by_class(unreal.PrimitiveComponent)
+                   if c.get_collision_enabled() != unreal.CollisionEnabled.NO_COLLISION
+                   and c.get_collision_response_to_channel(unreal.CollisionChannel.ECC_PHYSICS_BODY) == unreal.CollisionResponseType.ECR_BLOCK)
+    center, extent, _ = unreal.SystemLibrary.get_component_bounds(surface)
     move(unreal.Vector(center.x, center.y, center.z + extent.z + 53))
     state.update(phase='landing', start=unreal.GameplayStatics.get_time_seconds(world))
 
@@ -88,7 +91,7 @@ def review(_delta):
         elif state['phase'] == 'fall':
             if t < 1.15: return
             assert all(a.get_editor_property('hidden') and not a.get_actor_enable_collision() for a in groups[i])
-            if i < 3 and not state['reuse']:
+            if i < len(caps)-1 and not state['reuse']:
                 state['index'] += 1
                 land(i+1)
             else:
@@ -101,11 +104,12 @@ def review(_delta):
             for c in components:
                 assert not playing(c.shake_sound) and not playing(c.fall_sound)
             if not state['reuse']:
-                state.update(index=0, reuse=True)
-                land(0)
+                wood = next(i for i, c in enumerate(components) if 'Wood' in c.shake_sound.get_name())
+                state.update(index=wood, reuse=True)
+                land(wood)
             else:
-                state['index'] = 1
-                land(1)
+                state['index'] = len(caps)-1
+                land(state['index'])
                 state['phase'] = 'cancel'
         elif state['phase'] == 'cancel':
             if not component.is_shaking():
@@ -118,7 +122,7 @@ def review(_delta):
             intact()
             unreal.unregister_slate_post_tick_callback(handle)
             (output/'passed.json').write_text(json.dumps(state['samples'], indent=2))
-            print('COLLAPSING_CROSSING_PASSED: contact only, shaking, 1s collapse, both sounds, four independent pillars, death reset, repeat use and timer cancellation.')
+            print('COLLAPSING_CROSSING_PASSED: contact only, shaking, 1s collapse, both sounds, six independent platforms, death reset, repeat use and timer cancellation.')
     except Exception as error:
         body.set_enable_gravity(True)
         unreal.unregister_slate_post_tick_callback(handle)
