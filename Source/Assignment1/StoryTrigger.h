@@ -52,8 +52,16 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Story")
 	bool bPlayOnStart = false;
 
+	UPROPERTY(EditAnywhere, Category = "Story")
+	bool bWaitForLanding = false;
+
+	UPROPERTY(EditAnywhere, Category = "Story", meta = (MakeEditWidget))
+	FVector RevealTargetOffset = FVector::ZeroVector;
+
 private:
 	void Play();
+	void CheckLanding();
+	FTimerHandle LandingTimer;
 
 	bool bPlayed = false;
 };

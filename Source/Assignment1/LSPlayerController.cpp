@@ -497,12 +497,13 @@ void ALSPlayerController::BeginStory(TFunction<void()> OnFinished)
 	}
 }
 
-void ALSPlayerController::PlayIntro(const TArray<FLSIntroShot>& Shots, USoundBase* Music, USoundBase* VoiceOver)
+void ALSPlayerController::PlayIntro(const TArray<FLSIntroShot>& Shots, USoundBase* Music, USoundBase* VoiceOver,
+	bool bIsOpening, const FVector& RevealTarget)
 {
 	BeginStory(nullptr);
-	bOpeningIntro = true;
+	bOpeningIntro = bIsOpening;
 	ULSIntroWidget* Intro = CreateWidget<ULSIntroWidget>(this, ULSIntroWidget::StaticClass());
-	Intro->SetIntro(Shots, Music, VoiceOver);
+	Intro->SetIntro(Shots, Music, VoiceOver, bIsOpening, RevealTarget);
 	// It ends the same way the story cards do: close it, then hand back control.
 	Intro->OnFinished.AddDynamic(this, &ALSPlayerController::HandleStoryCardsFinished);
 	OpenMenu(Intro);

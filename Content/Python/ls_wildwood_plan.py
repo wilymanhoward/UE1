@@ -576,6 +576,7 @@ def place_pieces(trail, walk, floor, ground, high, halves, climbs):
     tut(tower_s, "Roll off the far edge, then hold Space to glide over the river.", half=TOWER_RADIUS, z=top)
     glide_note = far_edge + (g1 - far_edge) * 0.4
     p.add("note", glide_note, z=top - (glide_note - far_edge) / 3.5 - 150.0)
+    p.add("witch_ambush", g1 + 420, z=landing + 225, half=[640, 560, 245], target=[x,y,top+120])
 
     tut(p.s("blobs", -900.0), "Wither Blobs drain the colour from the world. Slam on them from above as Stone Shell.", half=400.0)
     for offset, d, sweep in ((500.0, 450.0, -900.0), (1300.0, -450.0, 900.0)):

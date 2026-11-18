@@ -76,7 +76,8 @@ class ASSIGNMENT1_API ULSIntroWidget : public UUserWidget
 
 public:
 	/** Sets what to play. Call before adding it to the viewport. Shots must not be empty. */
-	void SetIntro(const TArray<FLSIntroShot>& InShots, USoundBase* InMusic, USoundBase* InVoiceOver);
+	void SetIntro(const TArray<FLSIntroShot>& InShots, USoundBase* InMusic, USoundBase* InVoiceOver,
+		bool bInOpening, const FVector& InRevealTarget);
 
 	/** Fires once, when the cutscene ends or is skipped. */
 	UPROPERTY(BlueprintAssignable, Category = "Intro")
@@ -118,6 +119,9 @@ private:
 
 	FVector GameplayCameraLocation = FVector::ZeroVector;
 	FVector MatchedCameraLocation = FVector::ZeroVector;
+	FRotator GameplayCameraRotation = FRotator::ZeroRotator;
+	FVector RevealTarget = FVector::ZeroVector;
+	bool bOpening = true;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UImage> FrontImage;
@@ -156,4 +160,5 @@ private:
 	float SkipPictureOpacity = 1.f;
 	float SkipBarTranslation = 0.f;
 	FVector SkipCameraLocation = FVector::ZeroVector;
+	FRotator SkipCameraRotation = FRotator::ZeroRotator;
 };

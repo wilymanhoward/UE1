@@ -35,6 +35,7 @@ namespace
 	constexpr float BarHeightFraction = 0.12f;
 	constexpr float FlashTime = 0.7f;
 	constexpr float CaptionFade = 0.6f;
+	constexpr float RiverRevealDuration = 1.5f;
 
 	UOverlaySlot* Fill(UOverlaySlot* Slot)
 	{
@@ -140,8 +141,11 @@ void ULSIntroWidget::NativeOnInitialized()
 	BottomBar = AddBar(TEXT("BottomBar"), VAlign_Bottom);
 }
 
-void ULSIntroWidget::SetIntro(const TArray<FLSIntroShot>& InShots, USoundBase* InMusic, USoundBase* InVoiceOver)
+void ULSIntroWidget::SetIntro(const TArray<FLSIntroShot>& InShots, USoundBase* InMusic, USoundBase* InVoiceOver,
+	bool bInOpening, const FVector& InRevealTarget)
 {
+	bOpening = bInOpening;
+	RevealTarget = InRevealTarget;
 	Shots = InShots;
 	Music = InMusic;
 	VoiceOver = InVoiceOver;
@@ -152,7 +156,7 @@ void ULSIntroWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
 	// The opening pauses physics before a high PlayerStart can settle onto the path.
-	if (ASeedBall* Ball = GetOwningPlayer() ? Cast<ASeedBall>(GetOwningPlayer()->GetPawn()) : nullptr)
+	if (ASeedBall* Ball = bOpening && GetOwningPlayer() ? Cast<ASeedBall>(GetOwningPlayer()->GetPawn()) : nullptr)
 	{
 		if (UStaticMeshComponent* Body = Cast<UStaticMeshComponent>(Ball->GetRootComponent()))
 		{
@@ -172,6 +176,23 @@ void ULSIntroWidget::NativeConstruct()
 					Arm->bEnableCameraLag = bLag;
 				}
 				if (GetOwningPlayer()->PlayerCameraManager) GetOwningPlayer()->PlayerCameraManager->UpdateCamera(0.f);
+			}
+		}
+	}
+	if (!RevealTarget.IsNearlyZero())
+	{
+		PictureLayer->SetRenderOpacity(0.f);
+		APlayerController* PC = GetOwningPlayer();
+		if (PC && PC->PlayerCameraManager)
+		{
+			GameplayViewTarget = PC->GetViewTarget();
+			GameplayCameraLocation = PC->PlayerCameraManager->GetCameraLocation();
+			GameplayCameraRotation = PC->PlayerCameraManager->GetCameraRotation();
+			HandoffCamera = GetWorld()->SpawnActor<ACameraActor>(GameplayCameraLocation, GameplayCameraRotation);
+			if (HandoffCamera)
+			{
+				HandoffCamera->GetCameraComponent()->SetFieldOfView(PC->PlayerCameraManager->GetFOVAngle());
+				PC->SetViewTarget(HandoffCamera);
 			}
 		}
 	}
@@ -298,7 +319,10 @@ void ULSIntroWidget::RestoreCamera()
 	if (IsValid(HandoffCamera))
 	{
 		if (APlayerController* PC = GetOwningPlayer(); PC && PC->GetViewTarget() == HandoffCamera && IsValid(GameplayViewTarget))
+		{
 			PC->SetViewTarget(GameplayViewTarget);
+			if (PC->PlayerCameraManager) PC->PlayerCameraManager->UpdateCamera(0.f);
+		}
 		HandoffCamera->Destroy();
 		HandoffCamera = nullptr;
 	}
@@ -310,7 +334,11 @@ void ULSIntroWidget::RequestSkip()
 	SkipStartTime = FPlatformTime::Seconds();
 	SkipPictureOpacity = PictureLayer->GetRenderOpacity();
 	SkipBarTranslation = TopBar->GetRenderTransform().Translation.Y;
-	if (IsValid(HandoffCamera)) SkipCameraLocation = HandoffCamera->GetActorLocation();
+	if (IsValid(HandoffCamera))
+	{
+		SkipCameraLocation = HandoffCamera->GetActorLocation();
+		SkipCameraRotation = HandoffCamera->GetActorRotation();
+	}
 	SkipButton->SetIsEnabled(false);
 	if (IsValid(MusicAudio)) MusicAudio->FadeOut(0.7f, 0.f);
 	if (IsValid(VoiceOverAudio)) VoiceOverAudio->FadeOut(0.7f, 0.f);
@@ -350,9 +378,11 @@ void ULSIntroWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 	}
 
 	// The audio keeps running when the editor throttles the viewport.
-	const float Elapsed = static_cast<float>(FPlatformTime::Seconds() - PlaybackStartTime);
-	const float FadeStart = FMath::Max(0.f, TotalTime - EndFadeLead);
-	const float ReleaseStart = FadeStart + EndFadeDuration;
+	const float RevealTime = RevealTarget.IsNearlyZero() ? 0.f : RiverRevealDuration;
+	const float Elapsed = static_cast<float>(FPlatformTime::Seconds() - PlaybackStartTime) - RevealTime;
+	const float FadeStart = FMath::Max(0.f, TotalTime - (bOpening ? EndFadeLead : 1.65f));
+	const float ReleaseStart = FadeStart + (bOpening ? EndFadeDuration : 0.9f);
+	const float ReleaseDuration = bOpening ? CameraReleaseDuration : 0.75f;
 	const float BarHeight = MyGeometry.GetLocalSize().Y * BarHeightFraction;
 	TopBar->SetHeightOverride(BarHeight);
 	BottomBar->SetHeightOverride(BarHeight);
@@ -363,12 +393,32 @@ void ULSIntroWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 		const float BarOffset = FMath::Lerp(SkipBarTranslation, -BarHeight, Skip);
 		TopBar->SetRenderTranslation(FVector2D(0.f, BarOffset));
 		BottomBar->SetRenderTranslation(FVector2D(0.f, -BarOffset));
-		if (IsValid(HandoffCamera)) HandoffCamera->SetActorLocation(FMath::Lerp(SkipCameraLocation, GameplayCameraLocation, Skip));
-		if (IsValid(HandoffCamera)) GetOwningPlayer()->PlayerCameraManager->UpdateCamera(0.f);
+		if (IsValid(HandoffCamera))
+		{
+			HandoffCamera->SetActorLocation(FMath::Lerp(SkipCameraLocation, GameplayCameraLocation, Skip));
+			if (!bOpening) HandoffCamera->SetActorRotation(FQuat::Slerp(SkipCameraRotation.Quaternion(), GameplayCameraRotation.Quaternion(), Skip));
+			GetOwningPlayer()->PlayerCameraManager->UpdateCamera(0.f);
+		}
 		if (Skip >= 1.f) Finish();
 		return;
 	}
-	if (Elapsed >= ReleaseStart + CameraReleaseDuration)
+	if (Elapsed < 0.f)
+	{
+		const float Move = FMath::SmoothStep(0.f, RevealTime, RevealTime + Elapsed);
+		const float Offset = BarHeight * (1.f - FMath::SmoothStep(0.f, 0.5f, RevealTime + Elapsed));
+		TopBar->SetRenderTranslation(FVector2D(0.f, -Offset));
+		BottomBar->SetRenderTranslation(FVector2D(0.f, Offset));
+		if (IsValid(HandoffCamera))
+		{
+			const FVector Camera = GameplayCameraLocation + FVector(0.f, 0.f, 120.f * Move);
+			const FQuat Aim = (RevealTarget - Camera).Rotation().Quaternion();
+			HandoffCamera->SetActorLocationAndRotation(Camera, FQuat::Slerp(GameplayCameraRotation.Quaternion(), Aim, Move));
+			GetOwningPlayer()->PlayerCameraManager->UpdateCamera(0.f);
+		}
+		return;
+	}
+	if (!bOpening && Elapsed >= 0.4f && IsValid(HandoffCamera)) RestoreCamera();
+	if (Elapsed >= ReleaseStart + ReleaseDuration)
 	{
 		Finish();
 		return;
@@ -431,19 +481,20 @@ void ULSIntroWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 	const float Out = bSameAfter ? 1.f : FMath::Clamp((Shot.Duration - Local) / CaptionFade, 0.f, 1.f);
 	CaptionText->SetRenderOpacity(Shot.Caption.IsEmpty() ? 0.f : FMath::Min(In, Out));
 
-	if (Elapsed >= FadeStart && !bMatchingStarted)
+	if (bOpening && Elapsed >= FadeStart && !bMatchingStarted)
 	{
 		int32 Width, Height;
 		GetOwningPlayer()->GetViewportSize(Width, Height);
 		MatchSeedCamera(FVector2D(Width, Height));
 	}
 	const float Dissolve = FMath::SmoothStep(FadeStart, ReleaseStart, Elapsed);
-	const float Release = FMath::SmoothStep(ReleaseStart, ReleaseStart + CameraReleaseDuration, Elapsed);
-	PictureLayer->SetRenderOpacity(1.f - Dissolve);
+	const float Release = FMath::SmoothStep(ReleaseStart, ReleaseStart + ReleaseDuration, Elapsed);
+	const float Entrance = RevealTime > 0.f ? FMath::SmoothStep(0.f, 0.4f, Elapsed) : 1.f;
+	PictureLayer->SetRenderOpacity(Entrance * (1.f - Dissolve));
 	SkipButton->SetRenderOpacity(1.f - Dissolve);
 	TopBar->SetRenderTranslation(FVector2D(0.f, -BarHeight * Release));
 	BottomBar->SetRenderTranslation(FVector2D(0.f, BarHeight * Release));
-	if (IsValid(HandoffCamera))
+	if (bOpening && IsValid(HandoffCamera))
 	{
 		HandoffCamera->SetActorLocation(FMath::Lerp(MatchedCameraLocation, GameplayCameraLocation, Release));
 		// Gameplay remains paused until the bars are clear, so refresh the view explicitly.

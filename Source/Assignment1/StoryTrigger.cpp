@@ -5,6 +5,7 @@
 #include "Engine/World.h"
 #include "LevelSequence.h"
 #include "LSPlayerController.h"
+#include "SeedBall.h"
 #include "TimerManager.h"
 
 AStoryTrigger::AStoryTrigger()
@@ -28,7 +29,21 @@ void AStoryTrigger::BeginPlay()
 
 void AStoryTrigger::OnBallOverlap(ASeedBall* Ball)
 {
-	Play();
+	if (bPlayed || !Ball || Ball->IsDead()) return;
+	if (bWaitForLanding)
+	{
+		if (!GetWorldTimerManager().IsTimerActive(LandingTimer))
+			GetWorldTimerManager().SetTimer(LandingTimer, this, &AStoryTrigger::CheckLanding, 0.05f, true);
+	}
+	else Play();
+}
+
+void AStoryTrigger::CheckLanding()
+{
+	const ASeedBall* Ball = GetBallInside();
+	if (Ball && (!Ball->IsGrounded() || Ball->GetVelocity().Z > 40.f)) return;
+	GetWorldTimerManager().ClearTimer(LandingTimer);
+	if (Ball) Play();
 }
 
 void AStoryTrigger::Play()
@@ -43,7 +58,9 @@ void AStoryTrigger::Play()
 	{
 		if (!IntroShots.IsEmpty())
 		{
-			PlayerController->PlayIntro(IntroShots, IntroMusic, IntroVoiceOver);
+			const FVector RevealTarget = RevealTargetOffset.IsNearlyZero()
+				? FVector::ZeroVector : GetActorLocation() + RevealTargetOffset;
+			PlayerController->PlayIntro(IntroShots, IntroMusic, IntroVoiceOver, bPlayOnStart, RevealTarget);
 		}
 		else
 		{

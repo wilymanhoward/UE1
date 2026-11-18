@@ -26,6 +26,11 @@ The 42-second opening mix uses excerpts of the music and field recordings below.
 - “Wooden creaks.wav” by HOGGanimation, [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/). [Original recording](https://freesound.org/people/HOGGanimation/sounds/612694/). The recordist describes stepping on a creaky floorboard, recorded with a Zoom H5 in 2021. The public HQ preview's 0.30–1.18 second excerpt was slowed to 80%, converted to mono 48 kHz PCM, filtered, faded, level-adjusted and limited to −8 dBFS for `SFX_LS_WoodShake.wav`.
 - “crate_break4” by K-Forces, [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/). [Original recording](https://freesound.org/people/K-Forces/sounds/856631/). Foley recording of breaking wooden pallets in a warehouse with a Zoom H6. The public HQ preview was slowed to 80%, converted to mono 48 kHz PCM, filtered, faded, level-adjusted and limited to −5 dBFS for `SFX_LS_WoodFall.wav`. Both wood effects use recorded physical sounds, not AI synthesis.
 
+## Riverbank ambush
+
+- “Woman Screaming” by DanJFilms, [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/). Human scream recorded for a short film. The public HQ preview was trimmed, filtered, level-adjusted and given a short echo for the witch's scream. [Freesound recording](https://freesound.org/people/DanJFilms/sounds/845164/)
+- “flowing stream” by michelcik, [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/). Stream recorded with a Zoom H4n in Slovakia. The public HQ preview was excerpted and faded for the riverbank ambience. [Freesound recording](https://freesound.org/people/michelcik/sounds/436512/)
+
 ## Narration
 
 - The Heart Tree narration uses the supplied ElevenLabs v4 take with the Adam voice. The take was split into phrases and timed to the Wildwood captions. It plays on a separate track over the recorded soundtrack.

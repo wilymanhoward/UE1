@@ -55,7 +55,8 @@ public:
 	void PlayStory(ULevelSequence* Sequence, const TArray<FText>& Cards, TFunction<void()> OnFinished = nullptr);
 
 	/** Plays the painted opening cutscene (ULSIntroWidget) with gameplay input off. Shots must not be empty. */
-	void PlayIntro(const TArray<FLSIntroShot>& Shots, USoundBase* Music, USoundBase* VoiceOver);
+	void PlayIntro(const TArray<FLSIntroShot>& Shots, USoundBase* Music, USoundBase* VoiceOver,
+		bool bIsOpening, const FVector& RevealTarget);
 
 	/** Opens the results screen. */
 	void ShowResults(const FLSLevelResult& Result);

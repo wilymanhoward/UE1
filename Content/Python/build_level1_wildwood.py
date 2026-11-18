@@ -798,6 +798,9 @@ def place(entry, plates):
     kind, x, y, z, yaw = entry["kind"], entry["x"], entry["y"], entry["z"], entry["yaw"]
     if kind == "player_start":
         spawn(unreal.PlayerStart, x, y, z, "PlayerStart", "Flow", yaw)
+    elif kind == "witch_ambush":
+        from ls_witch_ambush import place as place_ambush
+        place_ambush(x, y, z, yaw, entry['half'], entry['target'])
     elif kind == "story":
         story = spawn(unreal.load_class(None, "/Script/Assignment1.StoryTrigger"), x, y, z, "OpeningStory", "Flow")
         story.set_editor_properties({"cards": [unreal.Text(card) for card in entry["cards"]], "play_on_start": entry["on_start"]})
