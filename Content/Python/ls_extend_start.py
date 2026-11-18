@@ -2,7 +2,7 @@
 import math
 from pathlib import Path
 import unreal
-from ls_generate_player_meshes import Mesh, write_obj
+from ls_generate_player_meshes import Mesh, smoothstep, write_obj
 
 NAME = 'SM_LS_WildwoodTrail_Approach'
 TAG = 'LS_StartApproach'
@@ -15,8 +15,7 @@ def build():
     import ls_world_common
     world = builder.require_map()
     actors = builder.actors.get_all_level_actors()
-    if any(TAG in map(str, a.tags) for a in actors):
-        return 'Opening approach already applied'
+    approach = next((a for a in actors if a.get_actor_label() == NAME and TAG in map(str, a.tags)), None)
     assert not unreal.EditorLoadingAndSavingUtils.get_dirty_map_packages(), 'Save existing map edits first'
     starts = [a for a in actors if isinstance(a, unreal.PlayerStart)]
     assert len(starts) == 1
@@ -40,7 +39,7 @@ def build():
     offsets = [(v[0]-origin[0])*side[0]+(v[1]-origin[1])*side[1] for v in vertices[:width]]
     back_wall = [a for a in actors if a.get_actor_label() == 'InvisibleWall'
                  and math.hypot(a.get_actor_location().x-origin[0], a.get_actor_location().y-origin[1]) < 2]
-    assert len(back_wall) == 1
+    assert approach or len(back_wall) == 1
     ignore = [a for a in actors if not isinstance(a, unreal.Landscape)]
 
     def point(s, d=0):
@@ -75,8 +74,14 @@ def build():
             x,y = point(s,d)
             crown = 0 if row in flat_rows and abs(d) <= 200 else .03*abs(d)
             z = max(heights[row]-crown,terrain[col]+8)
+            # Run the grass skirt below the landscape so there is no exposed mesh lip.
+            rear = 1-smoothstep(0, 620, s+LENGTH)
+            shoulder = smoothstep(380, 730, abs(d))*smoothstep(0, 250, -s)
+            taper = max(rear, shoulder)
+            z += (terrain[col]-18-z)*taper
             if row == row_count-1: x,y,z = vertices[col]
-            mesh.add_vertex((x,y,z),(s/400,uvs[col][1]))
+            grass = max(uvs[col][1], 1.3*(1-smoothstep(300, 980, s+LENGTH)))
+            mesh.add_vertex((x,y,z),(s/400,grass))
     for row in range(row_count-1):
         for col in range(width-1):
             a = row*width+col
@@ -84,6 +89,11 @@ def build():
     mesh.smooth_normals()
     write_obj(str(Path(builder.WORK)/(NAME+'.obj')),mesh)
     path = builder.import_trail_mesh(NAME)
+    if approach:
+        approach.static_mesh_component.set_static_mesh(unreal.load_asset(path))
+        approach.static_mesh_component.set_material(0,builder.trail_material())
+        assert unreal.get_editor_subsystem(unreal.LevelEditorSubsystem).save_current_level()
+        return 'Refreshed the opening trail mesh with tapered grass edges'
     approach = builder.mesh_actor(path,0,0,0,'Trail',label=NAME,material=builder.trail_material())
     approach.tags = list(approach.tags)+[TAG]
     approach.static_mesh_component.set_collision_profile_name('BlockAll')
