@@ -1137,6 +1137,8 @@ def set_opening_weather(driver):
         raise RuntimeError("Wildwood distant thunder did not import")
     driver.set_editor_properties({"weather_clouds": ls_world_common.find_actor(unreal.VolumetricCloud),
                                   "distant_thunder": thunder})
+    from ls_sky_lightning import configure
+    configure(driver)
 
 
 def world_setup():

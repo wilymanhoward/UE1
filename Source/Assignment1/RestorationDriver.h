@@ -22,6 +22,9 @@ class UMaterialInterface;
 class UMaterialParameterCollection;
 class URestorationSubsystem;
 class USoundBase;
+class UAudioComponent;
+class UStaticMesh;
+class UStaticMeshComponent;
 
 UCLASS()
 class ASSIGNMENT1_API ARestorationDriver : public AActor
@@ -102,6 +105,10 @@ protected:
 
 	UPROPERTY(EditAnywhere, Category = "Weather")
 	TObjectPtr<USoundBase> DistantThunder;
+	UPROPERTY(EditAnywhere, Category = "Weather")
+	TArray<TObjectPtr<UStaticMesh>> LightningMeshes;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weather")
+	TObjectPtr<UStaticMeshComponent> LightningBolt;
 
 private:
 	UFUNCTION()
@@ -121,6 +128,10 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<UMaterialInstanceDynamic> CloudInstance;
+	UPROPERTY(Transient)
+	TObjectPtr<UMaterialInstanceDynamic> LightningInstance;
+	UPROPERTY(Transient)
+	TObjectPtr<UAudioComponent> ThunderAudio;
 
 	FLinearColor ClearCloudAlbedo = FLinearColor::White;
 	float ClearCloudCoverage = 0.f;

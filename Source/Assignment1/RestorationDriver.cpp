@@ -4,6 +4,9 @@
 
 #include "Components/ExponentialHeightFogComponent.h"
 #include "Components/VolumetricCloudComponent.h"
+#include "Components/StaticMeshComponent.h"
+#include "Components/AudioComponent.h"
+#include "Camera/PlayerCameraManager.h"
 #include "Engine/ExponentialHeightFog.h"
 #include "Engine/PostProcessVolume.h"
 #include "Engine/World.h"
@@ -29,6 +32,14 @@ namespace
 ARestorationDriver::ARestorationDriver()
 {
 	PrimaryActorTick.bCanEverTick = true;
+	RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("WeatherRoot"));
+	LightningBolt = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("LightningBolt"));
+	LightningBolt->SetupAttachment(RootComponent);
+	LightningBolt->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	LightningBolt->SetGenerateOverlapEvents(false);
+	LightningBolt->SetCanEverAffectNavigation(false);
+	LightningBolt->SetCastShadow(false);
+	LightningBolt->SetVisibility(false);
 
 #if WITH_EDITORONLY_DATA
 	// In a World Partition level, a distant driver would otherwise unload and the colour would stop updating.
@@ -42,6 +53,11 @@ void ARestorationDriver::BeginPlay()
 
 	Restoration = GetWorld()->GetSubsystem<URestorationSubsystem>();
 	Restoration->OnNoteCollected.AddDynamic(this, &ARestorationDriver::HandleNoteCollected);
+	if (!LightningMeshes.IsEmpty() && LightningMeshes[0])
+	{
+		LightningBolt->SetStaticMesh(LightningMeshes[0]);
+		LightningInstance = LightningBolt->CreateAndSetMaterialInstanceDynamic(0);
+	}
 
 	if (PostProcessVolume)
 	{
@@ -102,7 +118,7 @@ void ARestorationDriver::Tick(float DeltaSeconds)
 
 void ARestorationDriver::UpdateWeather(float DeltaSeconds)
 {
-	if (!CloudInstance && !DistantThunder)
+	if (!CloudInstance && !DistantThunder && !LightningInstance)
 	{
 		return;
 	}
@@ -114,13 +130,39 @@ void ARestorationDriver::UpdateWeather(float DeltaSeconds)
 		TimeToLightning -= DeltaSeconds;
 		if (TimeToLightning <= 0.f)
 		{
-			TimeToLightning = FMath::FRandRange(25.f, 42.f);
+			TimeToLightning = FMath::FRandRange(12.f, 22.f);
 			LightningGlowTime = 0.65f;
+			if (LightningInstance)
+			{
+				if (APlayerCameraManager* Camera = UGameplayStatics::GetPlayerCameraManager(this, 0))
+				{
+					const float Yaw = Camera->GetCameraRotation().Yaw + FMath::FRandRange(-30.f, 30.f);
+					const FVector Direction = FRotator(0.f, Yaw, 0.f).Vector();
+					LightningBolt->SetStaticMesh(LightningMeshes[FMath::RandRange(0, LightningMeshes.Num() - 1)]);
+					LightningBolt->SetWorldLocationAndRotation(Camera->GetCameraLocation() + Direction * 35000.f + FVector(0.f, 0.f, 7000.f),
+						FRotator(0.f, FMath::FRandRange(0.f, 360.f), 0.f));
+					LightningBolt->SetWorldScale3D(FVector(FMath::FRandRange(160.f, 220.f)));
+				}
+			}
 			if (DistantThunder)
 			{
 				GetWorldTimerManager().SetTimer(ThunderTimer, this, &ARestorationDriver::PlayDistantThunder, 0.55f);
 			}
 		}
+	}
+	else
+	{
+		LightningGlowTime = 0.f;
+		GetWorldTimerManager().ClearTimer(ThunderTimer);
+		if (IsValid(ThunderAudio)) ThunderAudio->FadeOut(0.8f, 0.f);
+		ThunderAudio = nullptr;
+	}
+	if (LightningInstance)
+	{
+		const float Elapsed = 0.65f - LightningGlowTime;
+		const float Pulse = Elapsed < 0.10f ? 1.f : (Elapsed < 0.18f ? 0.04f : FMath::Square(LightningGlowTime / 0.47f));
+		LightningBolt->SetVisibility(LightningGlowTime > 0.f && Storm > 0.1f);
+		LightningInstance->SetScalarParameterValue(TEXT("Brightness"), 12.f * Pulse * Storm);
 	}
 
 	if (CloudInstance)
@@ -136,7 +178,7 @@ void ARestorationDriver::UpdateWeather(float DeltaSeconds)
 void ARestorationDriver::PlayDistantThunder()
 {
 	const float Storm = 1.f - FMath::SmoothStep(0.f, 0.75f, DisplayedRestoration);
-	UGameplayStatics::PlaySound2D(this, DistantThunder, 0.64f * Storm, 1.f, 0.f, nullptr, this, false);
+	ThunderAudio = UGameplayStatics::SpawnSound2D(this, DistantThunder, 0.64f * Storm, 1.f, 0.f, nullptr, false, true);
 }
 
 void ARestorationDriver::ApplyVisuals()

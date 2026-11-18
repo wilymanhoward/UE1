@@ -479,3 +479,9 @@ The main menu, pause menu, controls, HUD, story cards and results screen are bui
 2. `build_ui.run("menu_level")` remakes the menu level and its game mode, and `build_ui.run("wire")` points the player controller, the HUD and the main menu at their screens, icons and levels.
 3. The layouts themselves are the `WBP_` Widget Blueprints in `/Game/UI`. Edit them in the Widget Designer, keeping every widget name the C++ class binds to.
 
+### Cursed sky lightning
+
+The three `/Game/LastSeed/Weather/SM_LS_SkyLightning_0*` meshes were baked from the user-supplied `curve_to_lightning_generator.blend`. The original Blender file is unchanged. The existing restoration driver flashes a randomly placed bolt, brightens the clouds and plays the existing recorded distant thunder. Storm activity fades with restoration and stops as the weather clears.
+
+To rebake from that Blender file, run Blender with `--background --disable-autoexec <source.blend> --python Content/Python/ls_export_sky_lightning.py`, then run `import ls_sky_lightning; ls_sky_lightning.build()` in Unreal. The level builder also assigns these meshes through `set_opening_weather`. No Blender process or plugin is needed at game runtime.
+
