@@ -431,13 +431,14 @@ def crossing(p, start, end, layout, note_at=()):
 
 
 def trail01_extras(p):
-    """Easy rock and wood obstacles for the long open stretch of trail piece 01 (after the user's own rocks at s 14000-15100),
-    and two steps up to the user's tall BlockRock2. Every one is a short hop (at most 140 cm, Seed jumps about 250) or a
-    boulder to steer round. They are marked extra so the build can add them to a level that is already open."""
+    """Seed-only jumping and steering beats after the hand-placed rocks at s 14000-15100,
+    plus the two approach steps for BlockRock2. Raised reward routes have a low bypass.
+    Extras stay separate from hand-placed work when the editor applies the plan."""
     wh = p.wall_half
 
-    def log(s, height, lean=0.0):
-        p.add("fallen_log", s, z=p.z(s), length=2.0 * wh(s) + 260.0, height=height, lean=lean, name="Trail", extra="trail01", solid=wh(s))
+    def log(s, height, lean=0.0, d=0.0, length=None):
+        p.add("fallen_log", s, d, z=p.z(s), length=length or 2.0 * wh(s) + 260.0,
+              height=height, lean=lean, name="Trail", extra="trail01", solid=wh(s))
 
     def rock(s, top, length, d=0.0, width=None):
         width = width or 2.0 * wh(s)
@@ -449,16 +450,19 @@ def trail01_extras(p):
     rock(9915.0, 160.0, 420.0)  # Long, so it meets the hand-placed rock's slanted front edge with no pit between.
     p.add("tutorial", 15500.0, z=p.z(15500.0) + 200.0, message="Hop over the logs and rocks. Steer round the boulders.",
           half=[300.0, wh(15500.0), 300.0], extra="trail01")
-    log(16400.0, 90.0, 6.0)                       # on the uphill, a log across the path
-    rock(18200.0, 140.0, 330.0, d=-170.0, width=330.0)   # two boulders to weave between, on the flat
-    rock(18800.0, 140.0, 330.0, d=170.0, width=330.0)
-    rock(19400.0, 110.0, 420.0)                   # one rock to hop up onto and roll off
-    log(20650.0, 85.0, -8.0)                      # two logs with room to land between
-    log(21250.0, 100.0, 5.0)
-    rock(22550.0, 70.0, 300.0)                    # a little rock hill: up, up, down
-    rock(22850.0, 140.0, 300.0)
-    rock(23150.0, 70.0, 300.0)
-    log(25500.0, 110.0, -4.0)                     # the last one before the gorge
+    # Warm-up, steering, then optional higher lines, with landing room between beats.
+    log(16250.0, 90.0, -12.0)
+    rock(17650.0, 120.0, 330.0, d=-210.0, width=300.0)
+    rock(18750.0, 130.0, 330.0, d=210.0, width=300.0)
+    rock(19650.0, 110.0, 420.0)
+    log(21150.0, 85.0, -25.0, d=160.0, length=650.0)
+    log(22450.0, 85.0, 25.0, d=-160.0, length=650.0)
+    rock(23550.0, 70.0, 300.0, d=180.0, width=480.0)
+    rock(24000.0, 145.0, 300.0, d=180.0, width=480.0)
+    rock(24450.0, 70.0, 300.0, d=180.0, width=480.0)
+    log(25800.0, 80.0, -8.0)
+    for s, d, lift in [(21150.0, 160.0, 200.0), (24000.0, 180.0, 230.0)]:
+        p.add('petal', s, d, z=p.z(s) + lift, extra='trail01')
 
 
 MUSHROOM_NOTE_LIFT = 950.0  # A note this high over a mushroom is out of reach of a jump (about 250) but not a bounce (about 1300).
