@@ -498,9 +498,9 @@ void ALSPlayerController::BeginStory(TFunction<void()> OnFinished)
 }
 
 void ALSPlayerController::PlayIntro(const TArray<FLSIntroShot>& Shots, USoundBase* Music, USoundBase* VoiceOver,
-	bool bIsOpening, const FVector& RevealTarget)
+	bool bIsOpening, const FVector& RevealTarget, TFunction<void()> OnFinished)
 {
-	BeginStory(nullptr);
+	BeginStory(MoveTemp(OnFinished));
 	bOpeningIntro = bIsOpening;
 	ULSIntroWidget* Intro = CreateWidget<ULSIntroWidget>(this, ULSIntroWidget::StaticClass());
 	Intro->SetIntro(Shots, Music, VoiceOver, bIsOpening, RevealTarget);

@@ -12,6 +12,7 @@
 #include "LSGameMode.h"
 #include "RestorationSubsystem.h"
 #include "SeedBall.h"
+#include "RestorableActor.h"
 
 AWitheringStorm::AWitheringStorm()
 {
@@ -66,6 +67,7 @@ void AWitheringStorm::StartRising(ASeedBall* Ball)
 	}
 	TargetBall = Ball;
 	bRising = true;
+	DelayRemaining = StartDelay;
 
 	TargetBall->OnCheckpointSet.AddDynamic(this, &AWitheringStorm::HandleCheckpointSet);
 	TargetBall->OnRespawned.AddDynamic(this, &AWitheringStorm::HandleBallRespawned);
@@ -96,6 +98,8 @@ void AWitheringStorm::Tick(float DeltaSeconds)
 	{
 		return;
 	}
+	DelayRemaining = FMath::Max(0.f, DelayRemaining - DeltaSeconds);
+	if (DelayRemaining > 0.f) return;
 
 	if (FollowsPath())
 	{
@@ -106,6 +110,14 @@ void AWitheringStorm::Tick(float DeltaSeconds)
 		SetStormZ(GetActorLocation().Z + RiseSpeed * DeltaSeconds);
 	}
 	UpdateCloseEffects(DeltaSeconds);
+	for (ARestorableActor* Tree : CurseTrees)
+	{
+		if (!IsValid(Tree) || Tree->IsCursed()) continue;
+		const FVector Local = GetActorTransform().InverseTransformPosition(Tree->GetActorLocation());
+		const FVector Extent = Box->GetUnscaledBoxExtent();
+		if (FMath::Abs(Local.X) < Extent.X + 150.f && FMath::Abs(Local.Y) < Extent.Y + 200.f
+			&& FMath::Abs(Local.Z) < Extent.Z + 400.f) Tree->SetCursed(true);
+	}
 
 	// Checked every frame because the storm moves into the ball, and the ball may be standing still.
 	if (ASeedBall* Ball = GetBallInside())
@@ -162,6 +174,9 @@ void AWitheringStorm::HandleCheckpointSet(FVector Location)
 
 void AWitheringStorm::HandleBallRespawned()
 {
+	for (ARestorableActor* Tree : CurseTrees)
+		if (IsValid(Tree)) Tree->SetCursed(false);
+	if (!CurseTrees.IsEmpty()) bCheckpointInChase = false;
 	if (bRising)
 	{
 		if (FollowsPath() && !bCheckpointInChase)

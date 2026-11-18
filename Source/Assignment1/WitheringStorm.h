@@ -17,6 +17,7 @@ class ASeedBall;
 class UAudioComponent;
 class UCameraShakeBase;
 class UStaticMeshComponent;
+class ARestorableActor;
 
 UCLASS()
 class ASSIGNMENT1_API AWitheringStorm : public ALSVolumeBase
@@ -35,6 +36,10 @@ public:
 	/** Stops the storm for good. Runs when ALSGameMode reports that the level is complete. */
 	UFUNCTION(BlueprintCallable, Category = "Storm")
 	void StopRising();
+	UPROPERTY(EditAnywhere, Category = "Storm")
+	TArray<TObjectPtr<ARestorableActor>> CurseTrees;
+	UPROPERTY(EditAnywhere, Category = "Storm")
+	float StartDelay = 0.f;
 
 protected:
 	virtual void BeginPlay() override;
@@ -112,4 +117,5 @@ private:
 	float StartZ = 0.f;
 	float SavedZ = 0.f;
 	float ShakeTimeRemaining = 0.f;
+	float DelayRemaining = 0.f;
 };

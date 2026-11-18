@@ -25,6 +25,12 @@ public:
 	ARestorableActor();
 
 	virtual void Tick(float DeltaSeconds) override;
+	UFUNCTION(BlueprintCallable, Category = "Restorable")
+	void SetCursed(bool bValue);
+	UFUNCTION(BlueprintPure, Category = "Restorable")
+	bool IsCursed() const { return bCursed; }
+	UPROPERTY(EditAnywhere, Category = "Restorable")
+	bool bStartGrown = false;
 
 protected:
 	virtual void BeginPlay() override;
@@ -96,4 +102,7 @@ private:
 	bool bGrowthBegun = false;
 	bool bGrowing = false;
 	bool bGrown = false;
+	bool bCursed = false;
+	bool bRestoreAfterCurse = false;
+	FVector CurseScale = FVector::OneVector;
 };

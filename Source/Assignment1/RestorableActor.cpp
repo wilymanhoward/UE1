@@ -45,6 +45,37 @@ void ARestorableActor::BeginPlay()
 	URestorationSubsystem* Restoration = GetWorld()->GetSubsystem<URestorationSubsystem>();
 	Restoration->OnRestorationChanged.AddDynamic(this, &ARestorableActor::HandleRestorationChanged);
 	Restoration->OnNoteCollected.AddDynamic(this, &ARestorableActor::HandleNoteCollected);
+	if (bStartGrown)
+	{
+		bGrown = true;
+		Mesh->SetVisibility(true);
+		WitheredMesh->SetVisibility(false);
+	}
+}
+
+void ARestorableActor::SetCursed(bool bValue)
+{
+	if (bCursed == bValue) return;
+	bCursed = bValue;
+	if (bValue)
+	{
+		bRestoreAfterCurse = bGrown || bGrowing;
+		CurseScale = Mesh->GetRelativeScale3D();
+		bGrowing = false;
+		bGrown = false;
+		GrowElapsed = 0.f;
+		SetActorTickEnabled(true);
+	}
+	else
+	{
+		Mesh->SetVisibility(bRestoreAfterCurse);
+		Mesh->SetRelativeScale3D(FullScale);
+		WitheredMesh->SetVisibility(!bRestoreAfterCurse);
+		WitheredMesh->SetRelativeScale3D(WitheredScale);
+		bGrown = bRestoreAfterCurse;
+		bGrowthBegun = false;
+		SetActorTickEnabled(false);
+	}
 }
 
 void ARestorableActor::HandleRestorationChanged(float Restoration)
@@ -66,7 +97,7 @@ void ARestorableActor::HandleNoteCollected(FVector Location)
 
 void ARestorableActor::StartGrowing()
 {
-	if (bGrowing || bGrown)
+	if (bCursed || bGrowing || bGrown)
 	{
 		return;
 	}
@@ -102,6 +133,16 @@ void ARestorableActor::BeginGrowth()
 void ARestorableActor::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
+	if (bCursed)
+	{
+		GrowElapsed += DeltaSeconds;
+		const float Fade = FMath::SmoothStep(0.f, 0.65f, GrowElapsed);
+		Mesh->SetRelativeScale3D(CurseScale * (1.f - Fade));
+		WitheredMesh->SetVisibility(true);
+		WitheredMesh->SetRelativeScale3D(WitheredScale * Fade);
+		if (Fade >= 1.f) { Mesh->SetVisibility(false); SetActorTickEnabled(false); }
+		return;
+	}
 
 	GrowElapsed += DeltaSeconds;
 	if (GrowElapsed < 0.f)

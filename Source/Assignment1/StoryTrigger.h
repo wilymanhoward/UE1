@@ -14,6 +14,7 @@
 
 class ULevelSequence;
 class USoundBase;
+class AWitheringStorm;
 
 UCLASS()
 class ASSIGNMENT1_API AStoryTrigger : public ALSVolumeBase
@@ -57,6 +58,9 @@ protected:
 
 	UPROPERTY(EditAnywhere, Category = "Story", meta = (MakeEditWidget))
 	FVector RevealTargetOffset = FVector::ZeroVector;
+
+	UPROPERTY(EditAnywhere, Category = "Story")
+	TObjectPtr<AWitheringStorm> AfterCutsceneCurse;
 
 private:
 	void Play();

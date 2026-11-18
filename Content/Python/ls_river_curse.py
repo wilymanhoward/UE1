@@ -1,0 +1,104 @@
+"""The witch's green curse follows the far-bank trail after her cutscene."""
+import math
+import unreal
+
+FOLDER = '/Game/LastSeed/Materials'
+
+
+def material():
+    path = FOLDER + '/M_LS_RiverCurse'
+    if unreal.EditorAssetLibrary.does_asset_exist(path):
+        mat=unreal.load_asset(path)
+        mat.set_editor_property('allow_translucent_custom_depth_writes',True)
+        unreal.EditorAssetLibrary.save_loaded_asset(mat,False)
+        return mat
+    edit = unreal.MaterialEditingLibrary
+    mat = unreal.AssetToolsHelpers.get_asset_tools().create_asset('M_LS_RiverCurse', FOLDER, unreal.Material, unreal.MaterialFactoryNew())
+    mat.set_editor_properties({'blend_mode': unreal.BlendMode.BLEND_TRANSLUCENT, 'two_sided': True, 'allow_translucent_custom_depth_writes':True,
+                               'shading_model': unreal.MaterialShadingModel.MSM_UNLIT})
+    uv = edit.create_material_expression(mat, unreal.MaterialExpressionTextureCoordinate, -500, 0)
+    clock = edit.create_material_expression(mat, unreal.MaterialExpressionTime, -500, 200)
+    custom = edit.create_material_expression(mat, unreal.MaterialExpressionCustom, -200, 0)
+    pins = []
+    for name,node in [('UV',uv),('Time',clock)]:
+        pin = unreal.CustomInput()
+        pin.set_editor_property('input_name',name)
+        pins.append(pin)
+    custom.set_editor_properties({'inputs':pins,'output_type':unreal.CustomMaterialOutputType.CMOT_FLOAT4,
+        'code': '''float2 p=UV;
+float n=sin(p.x*31+sin(p.y*14-Time*1.8)*2+Time)*sin(p.y*26-Time*2.3);
+float wisps=pow(saturate(.5+.5*n),1.6);
+float edge=(1-smoothstep(.28,.5,abs(p.x-.5)))*(1-smoothstep(.28,.5,abs(p.y-.5)));
+return float4(lerp(float3(.015,.18,.05),float3(.18,1.6,.65),wisps),edge*(.18+.65*wisps));'''})
+    edit.connect_material_expressions(uv,'',custom,'UV')
+    edit.connect_material_expressions(clock,'',custom,'Time')
+    rgb = edit.create_material_expression(mat,unreal.MaterialExpressionComponentMask,50,0)
+    rgb.set_editor_properties({'r':True,'g':True,'b':True,'a':False})
+    alpha = edit.create_material_expression(mat,unreal.MaterialExpressionComponentMask,50,200)
+    alpha.set_editor_properties({'r':False,'g':False,'b':False,'a':True})
+    for node,prop in [(rgb,unreal.MaterialProperty.MP_EMISSIVE_COLOR),(alpha,unreal.MaterialProperty.MP_OPACITY)]:
+        assert edit.connect_material_expressions(custom,'',node,'')
+        assert edit.connect_material_property(node,'',prop)
+    edit.recompile_material(mat)
+    assert unreal.EditorAssetLibrary.save_loaded_asset(mat,False)
+    return mat
+
+
+def configure(story):
+    import build_level1_wildwood as builder
+    actors = builder.actors.get_all_level_actors()
+    storm = next((a for a in actors if a.get_actor_label()=='RiverbankCurse'),None)
+    if storm is None: storm=builder.spawn(unreal.WitheringStorm,14000,-2200,3300,'RiverbankCurse','Flow')
+    route=[unreal.Vector(14000,-2200,3300),unreal.Vector(15000,-2200,3300),
+           unreal.Vector(16700,-800,3200),unreal.Vector(19000,1300,3300)]
+    storm.set_editor_properties({'chase_points':route,'rise_speed':160.0,'note_pushback':100.0,
+        'start_delay':2.0,'max_rise_distance':4300.0,'close_distance':1800.0,'respawn_clearance':1400.0})
+    storm.get_editor_property('box').set_box_extent(unreal.Vector(350,1400,1500),True)
+    mesh=storm.get_editor_property('mesh')
+    mesh.set_static_mesh(unreal.load_asset('/Engine/BasicShapes/Plane'))
+    mesh.set_relative_location(unreal.Vector(350,0,0),False,False)
+    mesh.set_relative_rotation(unreal.Rotator(pitch=90),False,False)
+    mesh.set_relative_scale3d(unreal.Vector(30,28,1))
+    mesh.set_material(0,material())
+    mesh.set_render_custom_depth(True)
+    mesh.set_custom_depth_stencil_value(1)
+    trees=[]
+    # Trees in foliage batches need independent meshes before they can wither individually.
+    for actor in actors:
+        for component in actor.get_components_by_class(unreal.HierarchicalInstancedStaticMeshComponent):
+            source=component.static_mesh
+            if not source or not source.get_name().startswith('SM_Tree'): continue
+            remove=[]
+            for index in range(component.get_instance_count()):
+                pose=component.get_instance_transform(index,world_space=True)
+                p=pose.translation
+                if not (14000<p.x<18500 and -3500<p.y<1300): continue
+                closest=1e20
+                for a,b in zip(route,route[1:]):
+                    dx,dy=b.x-a.x,b.y-a.y
+                    t=max(0,min(1,((p.x-a.x)*dx+(p.y-a.y)*dy)/(dx*dx+dy*dy)))
+                    closest=min(closest,math.hypot(p.x-a.x-t*dx,p.y-a.y-t*dy))
+                if closest>1400: continue
+                tree=builder.restorable(p.x,p.y,p.z,pose.rotation.rotator().yaw,source.get_path_name(),pose.scale3d,
+                    builder.mesh('SM_DeadTrunk_01'),1.0,threshold=2,folder='Regrowth/RiverCurse',label='RiverCurseFoliageTree')
+                tree.set_editor_property('start_grown',True)
+                trees.append(tree)
+                remove.append(index)
+            if remove: assert component.remove_instances(remove)
+    trees += [a for a in actors if a.get_actor_label().startswith('RiverCurseFoliageTree')]
+    for i,(x,y) in enumerate([(14500,-2950),(14600,-1350),(15600,-2800),(15700,-1100),(16400,-1800),(17100,-300)]):
+        label=f'RiverCurseTree_{i+1}'
+        tree=next((a for a in actors if a.get_actor_label()==label),None)
+        if tree is None:
+            world=builder.require_map()
+            ignore=[a for a in actors if not isinstance(a,unreal.LandscapeProxy)]
+            hit=unreal.SystemLibrary.line_trace_single(world,unreal.Vector(x,y,6000),unreal.Vector(x,y,1000),
+                unreal.TraceTypeQuery.TRACE_TYPE_QUERY1,False,ignore,unreal.DrawDebugTrace.NONE,True)
+            assert hit and hit.to_tuple()[0]
+            tree=builder.restorable(x,y,hit.to_tuple()[4].z,0,builder.mesh('SM_Tree_03'),.8,
+                builder.mesh('SM_DeadTrunk_01'),1.0,threshold=2,folder='Regrowth/RiverCurse',label=label)
+        tree.set_editor_property('start_grown',True)
+        trees.append(tree)
+    storm.set_editor_property('curse_trees',trees)
+    story.set_editor_property('after_cutscene_curse',storm)
+    return storm

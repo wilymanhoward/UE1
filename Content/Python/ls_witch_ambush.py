@@ -114,6 +114,8 @@ def place(x, y, z, yaw, half, target):
     actor.get_editor_property('box').set_box_extent(unreal.Vector(*half), True)
     actor.set_editor_properties({'intro_shots': shots, 'intro_music': audio, 'play_on_start': False,
                                  'wait_for_landing': True, 'reveal_target_offset': unreal.Vector(*target)-location})
+    from ls_river_curse import configure
+    configure(actor)
     return actor
 
 

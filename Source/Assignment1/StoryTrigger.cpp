@@ -6,6 +6,7 @@
 #include "LevelSequence.h"
 #include "LSPlayerController.h"
 #include "SeedBall.h"
+#include "WitheringStorm.h"
 #include "TimerManager.h"
 
 AStoryTrigger::AStoryTrigger()
@@ -29,7 +30,7 @@ void AStoryTrigger::BeginPlay()
 
 void AStoryTrigger::OnBallOverlap(ASeedBall* Ball)
 {
-	if (bPlayed || !Ball || Ball->IsDead()) return;
+	if (!Ball || Ball->IsDead() || (bPlayed && !AfterCutsceneCurse)) return;
 	if (bWaitForLanding)
 	{
 		if (!GetWorldTimerManager().IsTimerActive(LandingTimer))
@@ -40,10 +41,11 @@ void AStoryTrigger::OnBallOverlap(ASeedBall* Ball)
 
 void AStoryTrigger::CheckLanding()
 {
-	const ASeedBall* Ball = GetBallInside();
+	ASeedBall* Ball = GetBallInside();
 	if (Ball && (!Ball->IsGrounded() || Ball->GetVelocity().Z > 40.f)) return;
 	GetWorldTimerManager().ClearTimer(LandingTimer);
-	if (Ball) Play();
+	if (Ball && bPlayed && AfterCutsceneCurse) AfterCutsceneCurse->StartRising(Ball);
+	else if (Ball) Play();
 }
 
 void AStoryTrigger::Play()
@@ -60,7 +62,10 @@ void AStoryTrigger::Play()
 		{
 			const FVector RevealTarget = RevealTargetOffset.IsNearlyZero()
 				? FVector::ZeroVector : GetActorLocation() + RevealTargetOffset;
-			PlayerController->PlayIntro(IntroShots, IntroMusic, IntroVoiceOver, bPlayOnStart, RevealTarget);
+			const TWeakObjectPtr<AWitheringStorm> Curse = AfterCutsceneCurse;
+			const TWeakObjectPtr<ASeedBall> Ball = Cast<ASeedBall>(PlayerController->GetPawn());
+			PlayerController->PlayIntro(IntroShots, IntroMusic, IntroVoiceOver, bPlayOnStart, RevealTarget,
+				[Curse, Ball]() { if (Curse.IsValid() && Ball.IsValid()) Curse->StartRising(Ball.Get()); });
 		}
 		else
 		{
