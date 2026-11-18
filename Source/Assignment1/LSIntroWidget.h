@@ -109,6 +109,8 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<UOverlay> PictureLayer;
 	UPROPERTY(Transient)
+	TObjectPtr<UImage> TransitionVeil;
+	UPROPERTY(Transient)
 	TObjectPtr<USizeBox> TopBar;
 	UPROPERTY(Transient)
 	TObjectPtr<USizeBox> BottomBar;
@@ -158,6 +160,7 @@ private:
 	bool bMatchingStarted = false;
 	double SkipStartTime = -1.0;
 	float SkipPictureOpacity = 1.f;
+	float SkipVeilOpacity = 0.f;
 	float SkipBarTranslation = 0.f;
 	FVector SkipCameraLocation = FVector::ZeroVector;
 	FRotator SkipCameraRotation = FRotator::ZeroRotator;

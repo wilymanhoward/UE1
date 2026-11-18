@@ -125,6 +125,12 @@ void ULSIntroWidget::NativeOnInitialized()
 	SkipSlot->SetPadding(FMargin(0.f, 152.f, 40.f, 0.f));
 	SkipButton->OnClicked.AddDynamic(this, &ULSIntroWidget::RequestSkip);
 
+	TransitionVeil = WidgetTree->ConstructWidget<UImage>(UImage::StaticClass(), TEXT("TransitionVeil"));
+	TransitionVeil->SetColorAndOpacity(FLinearColor::Black);
+	TransitionVeil->SetRenderOpacity(0.f);
+	TransitionVeil->SetVisibility(ESlateVisibility::HitTestInvisible);
+	Fill(Screen->AddChildToOverlay(TransitionVeil));
+
 	const auto AddBar = [this, Screen](const TCHAR* Name, EVerticalAlignment Align)
 	{
 		USizeBox* Bar = WidgetTree->ConstructWidget<USizeBox>(USizeBox::StaticClass(), Name);
@@ -182,6 +188,8 @@ void ULSIntroWidget::NativeConstruct()
 	if (!RevealTarget.IsNearlyZero())
 	{
 		PictureLayer->SetRenderOpacity(0.f);
+		TopBar->SetRenderTranslation(FVector2D(0.f, -10000.f));
+		BottomBar->SetRenderTranslation(FVector2D(0.f, 10000.f));
 		APlayerController* PC = GetOwningPlayer();
 		if (PC && PC->PlayerCameraManager)
 		{
@@ -334,6 +342,7 @@ void ULSIntroWidget::RequestSkip()
 	SkipStartTime = FPlatformTime::Seconds();
 	SkipPictureOpacity = PictureLayer->GetRenderOpacity();
 	SkipBarTranslation = TopBar->GetRenderTransform().Translation.Y;
+	SkipVeilOpacity = TransitionVeil->GetRenderOpacity();
 	if (IsValid(HandoffCamera))
 	{
 		SkipCameraLocation = HandoffCamera->GetActorLocation();
@@ -390,6 +399,7 @@ void ULSIntroWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 	{
 		const float Skip = FMath::SmoothStep(0.f, 0.8f, static_cast<float>(FPlatformTime::Seconds() - SkipStartTime));
 		PictureLayer->SetRenderOpacity(SkipPictureOpacity * (1.f - Skip));
+		TransitionVeil->SetRenderOpacity(SkipVeilOpacity * (1.f - Skip));
 		const float BarOffset = FMath::Lerp(SkipBarTranslation, -BarHeight, Skip);
 		TopBar->SetRenderTranslation(FVector2D(0.f, BarOffset));
 		BottomBar->SetRenderTranslation(FVector2D(0.f, -BarOffset));
@@ -404,7 +414,8 @@ void ULSIntroWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 	}
 	if (Elapsed < 0.f)
 	{
-		const float Move = FMath::SmoothStep(0.f, RevealTime, RevealTime + Elapsed);
+		const float Move = FMath::SmoothStep(0.25f, RevealTime, RevealTime + Elapsed);
+		TransitionVeil->SetRenderOpacity(FMath::SmoothStep(-0.65f, 0.f, Elapsed));
 		const float Offset = BarHeight * (1.f - FMath::SmoothStep(0.f, 0.5f, RevealTime + Elapsed));
 		TopBar->SetRenderTranslation(FVector2D(0.f, -Offset));
 		BottomBar->SetRenderTranslation(FVector2D(0.f, Offset));
@@ -417,7 +428,8 @@ void ULSIntroWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 		}
 		return;
 	}
-	if (!bOpening && Elapsed >= 0.4f && IsValid(HandoffCamera)) RestoreCamera();
+	if (!bOpening && Elapsed >= 0.65f && IsValid(HandoffCamera)) RestoreCamera();
+	TransitionVeil->SetRenderOpacity(RevealTime > 0.f ? 1.f - FMath::SmoothStep(0.f, 0.65f, Elapsed) : 0.f);
 	if (Elapsed >= ReleaseStart + ReleaseDuration)
 	{
 		Finish();
@@ -489,7 +501,7 @@ void ULSIntroWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 	}
 	const float Dissolve = FMath::SmoothStep(FadeStart, ReleaseStart, Elapsed);
 	const float Release = FMath::SmoothStep(ReleaseStart, ReleaseStart + ReleaseDuration, Elapsed);
-	const float Entrance = RevealTime > 0.f ? FMath::SmoothStep(0.f, 0.4f, Elapsed) : 1.f;
+	const float Entrance = RevealTime > 0.f ? FMath::SmoothStep(0.f, 0.65f, Elapsed) : 1.f;
 	PictureLayer->SetRenderOpacity(Entrance * (1.f - Dissolve));
 	SkipButton->SetRenderOpacity(1.f - Dissolve);
 	TopBar->SetRenderTranslation(FVector2D(0.f, -BarHeight * Release));
