@@ -45,6 +45,12 @@ def build():
     def point(s, d=0):
         return origin[0]+forward[0]*s+side[0]*d, origin[1]+forward[1]*s+side[1]*d
 
+    def cap_point(s, d):
+        # Pull the rear corners forward into an arc, returning to the existing trail width before spawn.
+        corner = min(abs(d) / 600, 1)
+        inset = 420 * corner**2 * (1 - smoothstep(0, 1050, s + LENGTH))
+        return point(s + inset, d)
+
     def ground(x, y):
         hit = unreal.SystemLibrary.line_trace_single(world, unreal.Vector(x,y,6500), unreal.Vector(x,y,1500),
             unreal.TraceTypeQuery.TRACE_TYPE_QUERY1, False, ignore, unreal.DrawDebugTrace.NONE, True)
@@ -55,7 +61,7 @@ def build():
     row_count = int(LENGTH/50)+1
     for row in range(row_count):
         s = -LENGTH + row*50
-        terrain = [ground(*point(s,d)) for d in offsets]
+        terrain = [ground(*cap_point(s,d)) for d in offsets]
         walk = terrain[width//2]+12
         heights.append(walk if row < row_count-1 else origin[2])
         rows.append((s,terrain))
@@ -71,7 +77,7 @@ def build():
     mesh = Mesh()
     for row, (s,terrain) in enumerate(rows):
         for col,d in enumerate(offsets):
-            x,y = point(s,d)
+            x,y = cap_point(s,d)
             crown = 0 if row in flat_rows and abs(d) <= 200 else .03*abs(d)
             z = max(heights[row]-crown,terrain[col]+8)
             # Run the grass skirt below the landscape so there is no exposed mesh lip.
@@ -80,7 +86,9 @@ def build():
             taper = max(rear, shoulder)
             z += (terrain[col]-18-z)*taper
             if row == row_count-1: x,y,z = vertices[col]
-            grass = max(uvs[col][1], 1.3*(1-smoothstep(300, 980, s+LENGTH)))
+            # An elliptical blend makes the visible dirt fade earlier toward the sides.
+            rear_blend = max(0, (900 - (s + LENGTH)) / 450)
+            grass = math.hypot(uvs[col][1], rear_blend)
             mesh.add_vertex((x,y,z),(s/400,grass))
     for row in range(row_count-1):
         for col in range(width-1):
