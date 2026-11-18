@@ -404,18 +404,37 @@ def fit_rock(mesh_path, x, y, top, yaw, size_x, size_y, size_z, folder, label):
                    folder, label)
 
 
-def rock_stack(x, y, top, radius, bottom, label):
+def add_collapsing_stone(cap, supports):
+    component = cap.get_component_by_class(unreal.CollapsingStoneComponent)
+    if not component:
+        subsystem = unreal.get_engine_subsystem(unreal.SubobjectDataSubsystem)
+        parent = subsystem.k2_gather_subobject_data_for_instance(cap)[0]
+        handle, reason = subsystem.add_new_subobject(unreal.AddNewSubobjectParams(
+            parent_handle=parent, new_class=unreal.CollapsingStoneComponent))
+        assert not str(reason), str(reason)
+        library = unreal.SubobjectDataBlueprintFunctionLibrary
+        component = library.get_object(library.get_data(handle))
+        assert isinstance(component, unreal.CollapsingStoneComponent)
+    component.set_editor_property('support_actors', sorted(supports, key=lambda a: a.get_actor_location().z))
+    component.set_editor_property('collapse_delay', 3.0)
+    return component
+
+
+def rock_stack(x, y, top, radius, bottom, label, collapses=False):
     """A natural column of rock standing up from the riverbed: rough cliff chunks stacked down from a broad flat rock on
     top, each at its own proportions and turned a different way."""
-    collide(fit_rock(TOP_ROCK, x, y, top, rng.uniform(0, 360), radius * 2.3, radius * 2.3, 120.0, "Parkour", label))
+    cap = collide(fit_rock(TOP_ROCK, x, y, top, rng.uniform(0, 360), radius * 2.3, radius * 2.3, 120.0, "Parkour", label))
+    supports = []
     z = top - 60.0
     while z > bottom:
         chunk = rng.choice(STACK_ROCKS)
         bounds = unreal.load_asset(chunk).get_bounds()
         scale = radius * 2.1 / (bounds.box_extent.x * 2.0)
-        collide(fit_box(chunk, x + rng.uniform(-20, 20), y + rng.uniform(-20, 20), z, rng.uniform(0, 360), bounds.box_extent.x * 2.0 * scale,
-                        bounds.box_extent.y * 2.0 * scale, bounds.box_extent.z * 2.0 * scale, "Parkour", label))
+        supports.append(collide(fit_box(chunk, x + rng.uniform(-20, 20), y + rng.uniform(-20, 20), z, rng.uniform(0, 360), bounds.box_extent.x * 2.0 * scale,
+                        bounds.box_extent.y * 2.0 * scale, bounds.box_extent.z * 2.0 * scale, "Parkour", label)))
         z -= bounds.box_extent.z * 2.0 * scale * 0.8
+    if collapses:
+        add_collapsing_stone(cap, supports)
 
 
 def platform_rock(component):
@@ -792,7 +811,7 @@ def place(entry, plates):
                              entry["length"] * 1.1, entry["width"] / count * 1.15, entry["depth"] + 40.0, "Parkour", name + "Rock"))
     elif kind == "pillar":
         r = entry["radius"]
-        rock_stack(x, y, z, r, entry["bottom"], "PillarRock")
+        rock_stack(x, y, z, r, entry["bottom"], "PillarRock", entry.get('collapses', False))
     elif kind == "tower":
         r = entry["radius"]
         rock_stack(x, y, z, r, entry["bottom"], "TowerRock")
@@ -1171,6 +1190,10 @@ def run(stage):
         result = fun()
     elif stage == "ghost":
         result = remove_ghost()
+    elif stage == "collapsing_crossing":
+        import ls_apply_collapsing_crossing
+        importlib.reload(ls_apply_collapsing_crossing)
+        result = ls_apply_collapsing_crossing.build()
     elif stage == "intro":
         result = intro()
     elif stage == "world":

@@ -107,6 +107,9 @@ Contains almost no code, because mass and friction produce the behaviour. `FellO
 ### `ACrumblingPlatform` and `ASinkingPad`: delayed collapse
 An `ECrumbleState` state machine: Solid, Shaking, Falling, Waiting, Returning. `ASinkingPad` only changes default values in its constructor. **Pattern:** state machine.
 
+### `UCollapsingStoneComponent`: gorge pillars
+Each of the first gorge's four stone caps owns this component and references its supporting rocks. Leaving the cap's sensor starts a three-second timer. The complete pillar then tumbles downward, loses collision, and stays hidden. `ASeedBall::OnRespawned` cancels pending timers and restores each visited pillar's original transforms, visibility, and collision. The component ticks only during the falling animation; waiting safely on a cap does not start its countdown.
+
 ### `AThinIce`: mass-limited surface
 `Tick` breaks the ice when the ball inside weighs at least `BreakMassKg`. A timer restores it. **Pattern:** data-driven.
 

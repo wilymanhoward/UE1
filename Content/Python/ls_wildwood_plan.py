@@ -410,7 +410,8 @@ def crossing(p, start, end, layout, note_at=()):
         x, y = p.trail.point(s)
         if kind == "stone":
             radius = (b - a) / 2.0
-            p.add("pillar", s, z=height(o), radius=radius, bottom=round(min(p.ground(x, y), WATER) - 150.0, 1), solid=radius)
+            p.add("pillar", s, z=height(o), radius=radius, bottom=round(min(p.ground(x, y), WATER) - 150.0, 1), solid=radius,
+                  collapses=start == 'cross1')
         elif kind == "log":
             p.add("log_bridge", s, z=height(o), length=b - a + 160.0, width=150.0)
         elif kind == "tilt":
@@ -534,7 +535,7 @@ def place_pieces(trail, walk, floor, ground, high, halves, climbs):
         ("stone", 160.0, 520.0, None), ("stone", 660.0, 1020.0, None), ("stone", 1140.0, 1660.0, None),
         ("log", 1660.0, 2560.0, None), ("stone", 2560.0, 3080.0, None), ("tilt", 3080.0, length + 40.0, None)],
         note_at=[(1400.0, 80.0), (2110.0, 90.0)])
-    tut(p.s("cross1", -400.0), "Hop across the rock stacks. Take the logs slowly.")
+    tut(p.s("cross1", -400.0), "Stone pillars collapse 3 seconds after you leave. Keep moving! They rebuild when you respawn.")
 
     # 1-2 Rootwood Heights
     p.add("flower", p.s("stone", 200.0), z=p.z(p.s("stone", 200.0)) + 80.0, form="STONE",
