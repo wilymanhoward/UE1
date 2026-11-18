@@ -301,6 +301,8 @@ def invisible_wall(x0, y0, x1, y1, bottom, top, folder="Boundaries"):
     component.set_static_mesh(unreal.load_asset("/Engine/BasicShapes/Cube"))
     component.set_collision_profile_name("BlockAll")
     component.set_collision_response_to_channel(unreal.CollisionChannel.ECC_CAMERA, unreal.CollisionResponseType.ECR_IGNORE)
+    if folder == 'Walls':
+        actor.tags = list(actor.tags) + ['LS_SoftTrailEdge']
     hide_component(component)
     return actor
 

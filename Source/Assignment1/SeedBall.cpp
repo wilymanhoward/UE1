@@ -2,6 +2,7 @@
 
 #include "SeedBall.h"
 
+#include "Engine/OverlapResult.h"
 #include "Camera/CameraComponent.h"
 #include "Components/AudioComponent.h"
 #include "Components/PointLightComponent.h"
@@ -175,6 +176,7 @@ void ASeedBall::Tick(float DeltaSeconds)
 	UpdateGrounded();
 	TryConsumeJump(Data);
 	ApplyMovement(Data);
+	ApplyTrailEdgeResistance();
 	ApplyGravityScale(Data);
 	ApplyGlide(Data);
 	UpdateRollAudio(Data, DeltaSeconds);
@@ -308,6 +310,42 @@ void ASeedBall::ApplyMovement(const FSeedFormData& Data)
 			BallMesh->AddForce(MoveDirection * AirAcceleration, NAME_None, true);
 		}
 	}
+}
+
+void ASeedBall::ApplyTrailEdgeResistance()
+{
+	static const FName SoftTrailEdge(TEXT("LS_SoftTrailEdge"));
+	constexpr float CushionWidth = 220.f;
+	const FVector Center = BallMesh->GetComponentLocation();
+	TArray<FOverlapResult> Nearby;
+	GetWorld()->OverlapMultiByObjectType(Nearby, Center, FQuat::Identity,
+		FCollisionObjectQueryParams(ECC_WorldStatic), FCollisionShape::MakeSphere(CushionWidth + BallRadius));
+
+	float ClosestClearance = CushionWidth;
+	FVector Inward = FVector::ZeroVector;
+	for (const FOverlapResult& Overlap : Nearby)
+	{
+		const AActor* Wall = Overlap.GetActor();
+		if (!Wall || !Wall->ActorHasTag(SoftTrailEdge)) continue;
+		// Wildwood boundaries are rotated 100 cm cubes scaled to the segment's length and height.
+		const FTransform Pose = Wall->GetActorTransform();
+		const FVector Local = Pose.InverseTransformPositionNoScale(Center);
+		const FVector Extent = Pose.GetScale3D().GetAbs() * 50.f;
+		if (FMath::Abs(Local.Z) > Extent.Z + BallRadius) continue;
+		const FVector Offset(Local.X - FMath::Clamp(Local.X, -Extent.X, Extent.X),
+			Local.Y - FMath::Clamp(Local.Y, -Extent.Y, Extent.Y), 0.f);
+		const float Clearance = Offset.Size() - BallRadius;
+		if (Clearance >= ClosestClearance || Offset.IsNearlyZero()) continue;
+		ClosestClearance = Clearance;
+		Inward = Pose.TransformVectorNoScale(Offset.GetSafeNormal()).GetSafeNormal2D();
+	}
+
+	if (Inward.IsNearlyZero()) return;
+	const float Depth = 1.f - FMath::Clamp(ClosestClearance / CushionWidth, 0.f, 1.f);
+	const float ApproachSpeed = FMath::Max(0.f, -FVector::DotProduct(PreImpactVelocity, Inward));
+	// Brake only motion toward the edge, leaving tangential rolling and jumps alone.
+	const float Acceleration = 2400.f * FMath::Square(Depth) + 7.f * Depth * ApproachSpeed;
+	BallMesh->AddForce(Inward * Acceleration, NAME_None, true);
 }
 
 float ASeedBall::GetMaxRollSpeed(const FSeedFormData& Data) const

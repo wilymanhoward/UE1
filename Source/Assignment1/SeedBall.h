@@ -286,6 +286,7 @@ private:
 	void UpdateTimers(float DeltaSeconds);
 	void TryConsumeJump(const FSeedFormData& Data);
 	void ApplyMovement(const FSeedFormData& Data);
+	void ApplyTrailEdgeResistance();
 	void ApplyGravityScale(const FSeedFormData& Data);
 	void ApplyGlide(const FSeedFormData& Data);
 	void UpdateRollAudio(const FSeedFormData& Data, float DeltaSeconds);
