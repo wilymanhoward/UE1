@@ -5,10 +5,11 @@
 #include "CollapsingStoneComponent.generated.h"
 
 class ASeedBall;
-class UBoxComponent;
+class UAudioComponent;
+class USoundBase;
 class UPrimitiveComponent;
 
-/** A stone pillar falls after the player leaves its cap; a respawn restores the whole pillar. */
+/** A stone pillar shakes on landing, falls after a short warning, and rebuilds on respawn. */
 UCLASS(ClassGroup = (LastSeed), meta = (BlueprintSpawnableComponent))
 class ASSIGNMENT1_API UCollapsingStoneComponent : public UActorComponent
 {
@@ -23,7 +24,12 @@ public:
 	TArray<TObjectPtr<AActor>> SupportActors;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collapsing Stone", meta = (ClampMin = "0"))
-	float CollapseDelay = 3.f;
+	float CollapseDelay = 1.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collapsing Stone")
+	TObjectPtr<USoundBase> ShakeSound;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collapsing Stone")
+	TObjectPtr<USoundBase> FallSound;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collapsing Stone", meta = (ClampMin = "0.1"))
 	float FallDuration = 0.8f;
@@ -33,6 +39,8 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Collapsing Stone")
 	bool IsCollapsing() const { return bCollapsing; }
+	UFUNCTION(BlueprintPure, Category = "Collapsing Stone")
+	bool IsShaking() const { return bTriggered && !bCollapsing; }
 
 protected:
 	virtual void BeginPlay() override;
@@ -40,17 +48,18 @@ protected:
 
 private:
 	UFUNCTION()
-	void HandleArrival(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp,
-		int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
-	UFUNCTION()
-	void HandleDeparture(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp,
-		int32 OtherBodyIndex);
+	void HandleStep(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp,
+		FVector NormalImpulse, const FHitResult& Hit);
 	UFUNCTION()
 	void Rebuild();
 	void BeginCollapse();
 
 	UPROPERTY(Transient)
-	TObjectPtr<UBoxComponent> Sensor;
+	TObjectPtr<UPrimitiveComponent> Surface;
+	UPROPERTY(Transient)
+	TObjectPtr<UAudioComponent> ShakeAudio;
+	UPROPERTY(Transient)
+	TObjectPtr<UAudioComponent> FallAudio;
 	UPROPERTY(Transient)
 	TObjectPtr<ASeedBall> Ball;
 
@@ -60,6 +69,8 @@ private:
 	TArray<bool> OriginalHidden;
 	FTimerHandle CollapseTimer;
 	float FallElapsed = 0.f;
+	float WarningElapsed = 0.f;
+	float SurfaceTop = 0.f;
 	bool bTriggered = false;
 	bool bCollapsing = false;
 };

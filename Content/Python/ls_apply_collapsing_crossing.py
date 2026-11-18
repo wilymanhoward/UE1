@@ -23,7 +23,7 @@ def build():
         builder.add_collapsing_stone(cap, supports[cap])
     tutorial = next(a for a in builder.actors.get_all_level_actors() if a.get_name() == 'TutorialTrigger_3')
     tutorial.set_editor_property('message', unreal.Text(
-        'Stone pillars collapse 3 seconds after you leave. Keep moving! They rebuild when you respawn.'))
+        'Pillars collapse 1 second after landing. Jump onward as they shake! They rebuild when you respawn.'))
     tutorial.set_editor_property('display_duration', 8.0)
     assert unreal.get_editor_subsystem(unreal.LevelEditorSubsystem).save_current_level()
     print('Saved four collapsing stone pillars; each restores its complete stack when the player respawns.')

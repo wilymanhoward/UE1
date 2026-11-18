@@ -404,6 +404,34 @@ def fit_rock(mesh_path, x, y, top, yaw, size_x, size_y, size_z, folder, label):
                    folder, label)
 
 
+def stone_sound(name):
+    folder = '/Game/LastSeed/Audio'
+    path = folder + '/' + name
+    if not unreal.EditorAssetLibrary.does_asset_exist(path):
+        task = unreal.AssetImportTask()
+        task.filename = os.path.join(unreal.Paths.project_content_dir(), 'LastSeed', 'SourceSounds', name + '.wav')
+        task.destination_path = folder
+        task.destination_name = name
+        task.automated = True
+        task.save = True
+        unreal.AssetToolsHelpers.get_asset_tools().import_asset_tasks([task])
+        assert task.imported_object_paths, task.filename
+    sound = unreal.load_asset(path)
+    falloff_path = folder + '/SA_LS_CrossingStone'
+    falloff = unreal.load_asset(falloff_path) if unreal.EditorAssetLibrary.does_asset_exist(falloff_path) else None
+    if not falloff:
+        falloff = unreal.AssetToolsHelpers.get_asset_tools().create_asset(
+            'SA_LS_CrossingStone', folder, unreal.SoundAttenuation, unreal.SoundAttenuationFactory())
+        settings = falloff.get_editor_property('attenuation')
+        settings.set_editor_property('attenuation_shape_extents', unreal.Vector(450, 0, 0))
+        settings.set_editor_property('falloff_distance', 2000.0)
+        falloff.set_editor_property('attenuation', settings)
+        unreal.EditorAssetLibrary.save_loaded_asset(falloff)
+    sound.set_editor_property('attenuation_settings', falloff)
+    unreal.EditorAssetLibrary.save_loaded_asset(sound)
+    return sound
+
+
 def add_collapsing_stone(cap, supports):
     component = cap.get_component_by_class(unreal.CollapsingStoneComponent)
     if not component:
@@ -416,7 +444,9 @@ def add_collapsing_stone(cap, supports):
         component = library.get_object(library.get_data(handle))
         assert isinstance(component, unreal.CollapsingStoneComponent)
     component.set_editor_property('support_actors', sorted(supports, key=lambda a: a.get_actor_location().z))
-    component.set_editor_property('collapse_delay', 3.0)
+    component.set_editor_property('collapse_delay', 1.0)
+    component.set_editor_property('shake_sound', stone_sound('SFX_LS_StoneShake'))
+    component.set_editor_property('fall_sound', stone_sound('SFX_LS_StoneFall'))
     return component
 
 

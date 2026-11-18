@@ -75,7 +75,7 @@ def drive(delta):
     pc.set_control_rotation(unreal.Rotator(pitch=-20,yaw=0,roll=0))
     subsystem.inject_input_vector_for_action(actions['InputAction_0'],unreal.Vector(ay,ax,0),[],[])
     jump=False
-    for i in range(2):
+    for i in range(4):
         if i not in state['jumps'] and nodes[i][0]-70<=pos.x<nodes[i][0]+120 and pawn.is_grounded():
             state['jumps'].append(i);jump=True;break
     subsystem.inject_input_vector_for_action(actions['InputAction_2'],unreal.Vector(1 if jump else 0,0,0),[],[])
