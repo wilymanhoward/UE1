@@ -17,7 +17,7 @@ for intro in unreal.ObjectIterator(unreal.LSIntroWidget):
 pc=unreal.GameplayStatics.get_player_controller(world,0)
 pawn=unreal.GameplayStatics.get_player_pawn(world,0)
 assert pawn.get_current_form()==unreal.SeedForm.SEED
-for ghost in unreal.GameplayStatics.get_all_actors_of_class(world,unreal.GhostRacer): ghost.set_actor_hidden_in_game(True)
+assert not unreal.GameplayStatics.get_all_actors_of_class(world,unreal.GhostRacer), 'Replay ghosts should not be spawned'
 actions={a.get_name():a for a in unreal.ObjectIterator(unreal.InputAction) if a.get_outer()==pc}
 subsystem=next(s for s in unreal.ObjectIterator(unreal.EnhancedInputLocalPlayerSubsystem)
                if isinstance(s.get_outer(),unreal.LocalPlayer))

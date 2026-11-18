@@ -723,41 +723,12 @@ def intro():
     return "no opening story in this level"
 
 
-GHOST_MATERIAL = LS + "M_LS_Ghost"
-
-
-def place_ghost():
-    """Places the ghost of the player's best run (AGhostRacer), with a pale see-through glow. Made once."""
-    if not unreal.EditorAssetLibrary.does_asset_exist(GHOST_MATERIAL):
-        lib = unreal.MaterialEditingLibrary
-        folder, name = GHOST_MATERIAL.rsplit("/", 1)
-        built = unreal.AssetToolsHelpers.get_asset_tools().create_asset(name, folder, unreal.Material, unreal.MaterialFactoryNew())
-        # Masked with a dither rather than translucent: a masked material writes custom depth, so the colour mask
-        # keeps the ghost in colour while the forest is grey, and the dither still lets the world show through it.
-        built.set_editor_property("blend_mode", unreal.BlendMode.BLEND_MASKED)
-        built.set_editor_property("shading_model", unreal.MaterialShadingModel.MSM_UNLIT)
-        glow = lib.create_material_expression(built, unreal.MaterialExpressionConstant3Vector, -500, 0)
-        glow.set_editor_property("constant", unreal.LinearColor(1.2, 2.6, 4.0, 1.0))
-        lib.connect_material_property(glow, "", unreal.MaterialProperty.MP_EMISSIVE_COLOR)
-        # Faint in the middle, solid at the edges, like a soap bubble.
-        rim = lib.create_material_expression(built, unreal.MaterialExpressionFresnel, -700, 200)
-        rim.set_editor_property("exponent", 2.0)
-        rim.set_editor_property("base_reflect_fraction", 0.5)
-        dither = lib.create_material_expression(built, unreal.MaterialExpressionMaterialFunctionCall, -400, 200)
-        dither.set_editor_property("material_function", unreal.load_asset("/Engine/Functions/Engine_MaterialFunctions02/Utility/DitherTemporalAA"))
-        lib.connect_material_expressions(rim, "", dither, "Alpha Threshold")
-        lib.connect_material_property(dither, "", unreal.MaterialProperty.MP_OPACITY_MASK)
-        lib.recompile_material(built)
-        unreal.EditorAssetLibrary.save_loaded_asset(built)
-    for actor in actors.get_all_level_actors():
-        if actor.get_class().get_name() == "GhostRacer":
-            return False
-    ghost = spawn(unreal.load_class(None, "/Script/Assignment1.GhostRacer"), 0, 0, 8100, "GhostRacer", "Flow")
-    ghost.get_editor_property("ghost").set_material(0, unreal.load_asset(GHOST_MATERIAL))
-    # In colour while the forest is grey.
-    ghost.get_editor_property("ghost").set_render_custom_depth(True)
-    ghost.get_editor_property("ghost").set_custom_depth_stencil_value(ls_world_common.FULL_COLOUR_STENCIL)
-    return True
+def remove_ghost():
+    """Remove legacy replay actors without touching the player's saved progress."""
+    ghosts = [actor for actor in actors.get_all_level_actors() if isinstance(actor, unreal.GhostRacer)]
+    for actor in ghosts:
+        assert actors.destroy_actor(actor), 'Could not remove replay ghost'
+    return len(ghosts)
 
 
 def set_music(sounds):
@@ -1119,7 +1090,7 @@ def world_setup():
     set_opening_weather(driver)
     spawn(unreal.load_class(None, "/Script/Assignment1.MusicManager"), 0, 0, 8100, "MusicManager", "Flow")
     set_music(fun_assets())
-    place_ghost()
+    remove_ghost()
     # The project's game mode (BP_LSGameMode) runs the level, not any override the demo map had.
     settings = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_editor_world().get_world_settings()
     settings.set_editor_property("default_game_mode", None)
@@ -1199,7 +1170,7 @@ def run(stage):
     elif stage == "fun":
         result = fun()
     elif stage == "ghost":
-        result = place_ghost()
+        result = remove_ghost()
     elif stage == "intro":
         result = intro()
     elif stage == "world":

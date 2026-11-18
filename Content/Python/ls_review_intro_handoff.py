@@ -5,8 +5,7 @@ import unreal
 
 editor = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)
 world = editor.get_game_world()
-for ghost in unreal.GameplayStatics.get_all_actors_of_class(world, unreal.GhostRacer):
-    ghost.set_actor_hidden_in_game(True)
+assert not unreal.GameplayStatics.get_all_actors_of_class(world, unreal.GhostRacer), 'Replay ghosts should not be spawned'
 output = Path(unreal.Paths.project_saved_dir()) / 'Screenshots/IntroHandoff'
 output.mkdir(parents=True, exist_ok=True)
 steps = [(3.0, 'Bars'), (39.3, 'Illustration'), (40.65, 'Dissolve'),

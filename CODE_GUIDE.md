@@ -153,8 +153,8 @@ When `ChasePoints` is set, the storm chases along that path instead of rising: `
 ### `ABounceMushroom`: a giant mushroom that bounces the ball
 `OnBallHit` launches a ball that lands on the cap (more than `BounceAboveHeight` above the base) upward at `LaunchSpeed` through `ASeedBall::Knockback`, keeping most of its sideways speed, and plays `BounceSound` at a slightly random pitch. `Tick` squashes the cap and lets it spring back for 0.8 s. Its meshes and textures come from `Content/Python/ls_generate_mushroom.py`. In Level 1, two notes float above mushrooms where only a bounce reaches them. **Pattern:** interface (`ILSInteractable`).
 
-### `AGhostRacer` and `ULSGhostSave`: race your best run
-`Tick` records the ball's position each time `ALSGameMode`'s level clock passes another `SampleInterval`, so the ghost and the player share a clock that stops during story cards. When `OnLevelCompleted` fires and the time beats the saved one (or there is none), the run is written to its own save slot, `Ghost_<level>`. On the next attempt `Tick` replays it, blending between the two points around the current level time, and hides the ghost at its finishing time. The ghost is a sphere the size of the ball, with `M_LS_Ghost` (an unlit, dithered, masked glow, so it stays in colour while the forest is grey). **Pattern:** observer, with `ULSGhostSave` as a memento.
+### `AGhostRacer` and `ULSGhostSave`: legacy replay, disabled
+The white best-run replay ball has been removed from the level. The builder removes legacy replay actors instead of spawning them, so gameplay no longer records or displays a ghost. The C++ classes and existing `Ghost_<level>` save files remain for compatibility; normal progression and best times are unaffected.
 
 ### `UAdaptiveMusicComponent` and `AMusicManager`: music that grows back
 `AMusicManager` is a placeable actor that stays loaded and holds the component. `BeginPlay` starts every stem together at near-zero volume and fades in stem 0. `HandleMilestoneReached` fades in the next stem at each restoration milestone. `PlayFinale` fades out the stems and fades in the finale when the level completes. **Pattern:** observer.
@@ -214,7 +214,7 @@ Each rubric area, with what to show and where it is.
 | The storm chase | `AWitheringStorm::Tick` and `HandleNoteCollected`, then the race to the Heart Tree |
 | Bouncy mushrooms and raised notes | `ABounceMushroom::OnBallHit`, then bouncing up to a note |
 | Notes that play a rising tune | `ALifeNote::GetCollectPitch` |
-| Racing your own ghost | `AGhostRacer::Tick` and `HandleLevelCompleted`, then a second run with the ghost beside you |
+| No replay ball | Verify no `AGhostRacer` actors exist during the intro and gameplay, including when a legacy ghost save exists |
 
 ### Clarity
 | Show | Where |
