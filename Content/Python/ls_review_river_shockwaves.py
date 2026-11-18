@@ -1,4 +1,4 @@
-"""Run in fresh PIE: three input-driven jumps, a grounded hit, screams, timing and respawn reset."""
+"""Fresh PIE: input-driven jumps, grounded/curved hits, screams, timing and respawn reset."""
 import json
 from pathlib import Path
 import unreal
@@ -78,7 +78,28 @@ def check(_):
         elif state['phase']=='respawn' and not p.is_dead():
             assert storm.get_editor_property('hidden')
             assert not any(t.is_cursed() for t in trees)
-            state.update(phase='passed',reset=now,visible=False)
+            state.update(phase='curve_wait',reset=now,visible=False)
+            storm.set_editor_properties({'rise_speed':0.0,'start_delay':0.0,
+                'chase_points':[unreal.Vector(15300,-2115,2350),unreal.Vector(17000,-2115,2350)]})
+            body.set_simulate_physics(False)
+            p.set_actor_tick_enabled(False)
+            p.set_actor_enable_collision(False)
+            p.set_actor_location(unreal.Vector(15300,-1115,2800),False,True)
+            storm.start_rising(p)
+        elif state['phase']=='curve_wait' and visible:
+            assert not p.is_dead()
+            p.set_actor_location(storm.get_actor_location()+unreal.Vector(0,1000,0),False,True)
+            state.update(phase='curve_safe',at=now)
+        elif state['phase']=='curve_safe' and now-state['at']>.12:
+            assert not p.is_dead(), 'The old straight hitbox still hits the empty space ahead of the arc.'
+            state['curve_hole_safe']=True
+            bend=storm.get_editor_property('shockwave_bend')
+            p.set_actor_location(storm.get_actor_location()+unreal.Vector(-bend*(1000/1400)**2,1000,0),False,True)
+            state.update(phase='curve_hit',at=now)
+        elif state['phase']=='curve_hit' and now-state['at']>.12:
+            assert p.is_dead(), 'The visible curved wing must hit the seed.'
+            p.set_actor_tick_enabled(True)
+            state.update(phase='passed',curve_hit=True,visible=False)
             report.write_text(json.dumps(state,indent=2))
             print('SHOCKWAVE_REVIEW_PASSED',state)
             unreal.unregister_slate_post_tick_callback(handle)

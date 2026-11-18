@@ -42,6 +42,8 @@ public:
 	float StartDelay = 0.f;
 	UPROPERTY(EditAnywhere, Category = "Storm")
 	bool bShockwaveAttacks = false;
+	UPROPERTY(EditAnywhere, Category = "Storm", meta = (ClampMin = "0"))
+	float ShockwaveBend = 650.f;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	TObjectPtr<UAudioComponent> AttackAudio;
 

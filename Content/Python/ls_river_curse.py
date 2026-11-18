@@ -1,8 +1,49 @@
 """Repeated, jumpable green shockwaves along the far-bank trail."""
 import math
+from pathlib import Path
 import unreal
 
 FOLDER = '/Game/LastSeed/Materials'
+BEND = 650.0
+HALF_WIDTH = 1400.0
+
+
+def crescent_mesh():
+    from ls_generate_player_meshes import Mesh, write_obj
+    path='/Game/LastSeed/Generated/SM_LS_CurseCrescent'
+    if unreal.EditorAssetLibrary.does_asset_exist(path): return unreal.load_asset(path)
+    mesh=Mesh()
+    # Upright wisps and a horizontal energy skirt keep the arc visible from the rolling camera and above.
+    for upright in (True,False):
+        start=len(mesh.points)
+        for i in range(97):
+            v=i/96
+            y=(v*2-1)*HALF_WIDTH
+            x=-BEND*(y/HALF_WIDTH)**2
+            for u in (0.0,1.0):
+                mesh.points.append((x if upright else x+(u-.5)*190,y,(u-.5)*220 if upright else 0))
+                mesh.uvs.append((u,v))
+            if i:
+                a=start+(i-1)*2
+                mesh.triangles.extend([(a,a+1,a+2),(a+1,a+3,a+2)])
+    mesh.smooth_normals()
+    assert abs(mesh.points[0][0]+BEND)<.01 and abs(mesh.points[96][0])<.01
+    source=Path(unreal.Paths.project_content_dir())/'LastSeed/SourceMeshes/SM_LS_CurseCrescent.obj'
+    source.parent.mkdir(parents=True,exist_ok=True)
+    write_obj(str(source),mesh)
+    task=unreal.AssetImportTask()
+    task.filename=str(source)
+    task.destination_path='/Game/LastSeed/Generated'
+    task.destination_name='SM_LS_CurseCrescent'
+    task.automated=True
+    task.save=True
+    unreal.AssetToolsHelpers.get_asset_tools().import_asset_tasks([task])
+    result=unreal.load_asset(path)
+    assert result and abs(result.get_bounds().box_extent.y-HALF_WIDTH)<1
+    nanite=result.get_editor_property('nanite_settings')
+    nanite.set_editor_property('enabled',False)
+    unreal.get_editor_subsystem(unreal.StaticMeshEditorSubsystem).set_nanite_settings(result,nanite,True)
+    return result
 
 
 def material():
@@ -14,6 +55,7 @@ def material():
     else:
         mat = unreal.AssetToolsHelpers.get_asset_tools().create_asset('M_LS_RiverCurse', FOLDER, unreal.Material, unreal.MaterialFactoryNew())
     mat.set_editor_properties({'blend_mode': unreal.BlendMode.BLEND_TRANSLUCENT, 'two_sided': True, 'allow_translucent_custom_depth_writes':True,
+                               'opacity_mask_clip_value':.333,
                                'shading_model': unreal.MaterialShadingModel.MSM_UNLIT})
     uv = edit.create_material_expression(mat, unreal.MaterialExpressionTextureCoordinate, -500, 0)
     clock = edit.create_material_expression(mat, unreal.MaterialExpressionTime, -500, 200)
@@ -24,12 +66,32 @@ def material():
         pin.set_editor_property('input_name',name)
         pins.append(pin)
     custom.set_editor_properties({'inputs':pins,'output_type':unreal.CustomMaterialOutputType.CMOT_FLOAT4,
-        'code': '''float2 p=UV;
-float ribbon=p.x-.5+.045*sin(p.y*35-Time*12);
-float core=exp(-pow(ribbon/.15,2));
-float haze=exp(-pow(ribbon/.35,2))*(.5+.5*sin(p.y*80-Time*17));
-float edge=1-smoothstep(.32,.5,abs(p.y-.5));
-return float4(lerp(float3(.015,.25,.04),float3(.08,.9,.2),core),edge*saturate(core*.9+haze*.25));'''})
+        'code': '''struct CurseNoise {
+ float hash(float2 q) { return frac(sin(dot(q,float2(127.1,311.7)))*43758.5453); }
+ float noise(float2 q) {
+  float2 i=floor(q), f=frac(q); f=f*f*(3-2*f);
+  return lerp(lerp(hash(i),hash(i+float2(1,0)),f.x),lerp(hash(i+float2(0,1)),hash(i+1),f.x),f.y);
+ }
+ float flow(float2 q) { return .57*noise(q)+.28*noise(q*2.07+17)+.15*noise(q*4.13-11); }
+};
+CurseNoise N;
+float2 p=UV;
+float warp=N.flow(float2(p.y*17,p.x*4-Time*.6));
+float ribbon=p.x-.5+(warp-.5)*.24;
+float n=N.flow(float2(p.y*105+warp*5,p.x*7-Time*1.8));
+float core=exp(-pow(ribbon/.06,2))*smoothstep(.22,.7,n);
+float wisps=exp(-abs(ribbon)*5)*pow(saturate(n*1.5),3);
+float2 grid=float2(p.y*210,p.x*15-Time*2.1);
+float2 cell=floor(grid);
+float hash=N.hash(cell);
+float2 center=float2(.2+.6*hash,.2+.6*frac(hash*7.3));
+float mote=(1-smoothstep(.045,.17,length(frac(grid)-center)))*step(.38,hash);
+mote*=exp(-abs(p.x-.5)*3);
+float edge=(1-smoothstep(.42,.5,abs(p.y-.5)))*(1-smoothstep(.4,.5,abs(p.x-.5)));
+float alpha=edge*saturate(core*.5+wisps*1.2+mote);
+float3 green=lerp(float3(.003,.08,.018),float3(.015,.85,.18),saturate(core+wisps));
+float3 spark=lerp(float3(.06,1.5,.45),float3(1.4,.55,.08),step(.97,hash));
+return float4(lerp(green,spark,mote),alpha);'''})
     edit.connect_material_expressions(uv,'',custom,'UV')
     edit.connect_material_expressions(clock,'',custom,'Time')
     rgb = edit.create_material_expression(mat,unreal.MaterialExpressionComponentMask,50,0)
@@ -70,6 +132,7 @@ def configure(story):
         assert hit and hit.to_tuple()[0], f'No trail below {p}'
         p.z=hit.to_tuple()[4].z
     storm.set_editor_properties({'chase_points':route,'rise_speed':1800.0,'note_pushback':0.0,'shockwave_attacks':True,
+        'shockwave_bend':BEND,
         'start_delay':2.0,'max_rise_distance':4300.0,'close_distance':1800.0,'respawn_clearance':1400.0})
     storm.get_editor_property('box').set_box_extent(unreal.Vector(70,1400,25),True)
     audio_path='/Game/LastSeed/Audio/SFX_LS_WitchAttackScream'
@@ -83,11 +146,13 @@ def configure(story):
         assert task.imported_object_paths
     storm.get_editor_property('attack_audio').set_sound(unreal.load_asset(audio_path))
     mesh=storm.get_editor_property('mesh')
-    mesh.set_static_mesh(unreal.load_asset('/Engine/BasicShapes/Plane'))
+    mesh.set_static_mesh(crescent_mesh())
     mesh.set_relative_location(unreal.Vector(0,0,0),False,False)
-    mesh.set_relative_rotation(unreal.Rotator(pitch=90),False,False)
-    mesh.set_relative_scale3d(unreal.Vector(1.2,28,1))
+    mesh.set_relative_rotation(unreal.Rotator(),False,False)
+    mesh.set_relative_scale3d(unreal.Vector(1,1,1))
     mesh.set_material(0,material())
+    mesh.static_mesh.set_material(0,mesh.get_material(0))
+    assert unreal.EditorAssetLibrary.save_loaded_asset(mesh.static_mesh,False)
     mesh.set_render_custom_depth(True)
     mesh.set_custom_depth_stencil_value(1)
     trees=[]

@@ -165,15 +165,21 @@ void AWitheringStorm::TickShockwave(float DeltaSeconds)
 	Extent.X += Travel.Size() * .5f;
 	Extent.Z += FMath::Abs(Travel.Z) * .5f;
 	const FVector Local = Pose.InverseTransformPosition(TargetBall->GetActorLocation());
+	const auto CurveX = [this, Extent](float Y)
+	{
+		return -ShockwaveBend * FMath::Square(FMath::Clamp(Y / Extent.Y, -1.f, 1.f));
+	};
 	const UStaticMeshComponent* Body = TargetBall->FindComponentByClass<UStaticMeshComponent>();
-	const float Radius = Body ? Body->Bounds.BoxExtent.GetMin() : 50.f;
-	if (FMath::Abs(Local.X) < Extent.X + Radius && FMath::Abs(Local.Y) < Extent.Y + Radius
+	FVector BodyMin, BodyMax;
+	if (Body) Body->GetLocalBounds(BodyMin, BodyMax);
+	const float Radius = Body ? (BodyMax - BodyMin).GetMin() * .5f * Body->GetComponentScale().GetAbsMin() : 50.f;
+	if (FMath::Abs(Local.X - CurveX(Local.Y)) < Extent.X + Radius && FMath::Abs(Local.Y) < Extent.Y + Radius
 		&& FMath::Abs(Local.Z) < Extent.Z + Radius) TargetBall->Die();
 	for (ARestorableActor* Tree : CurseTrees)
 	{
 		if (!IsValid(Tree) || Tree->IsCursed()) continue;
 		const FVector TreeLocal = Pose.InverseTransformPosition(Tree->GetActorLocation());
-		if (FMath::Abs(TreeLocal.X) < Extent.X + 150.f && FMath::Abs(TreeLocal.Y) < Extent.Y + 200.f
+		if (FMath::Abs(TreeLocal.X - CurveX(TreeLocal.Y)) < Extent.X + 150.f && FMath::Abs(TreeLocal.Y) < Extent.Y + 200.f
 			&& FMath::Abs(TreeLocal.Z) < Extent.Z + 400.f) Tree->SetCursed(true);
 	}
 	if (Progress >= FMath::Min(GetPathLength(), MaxRiseDistance))
