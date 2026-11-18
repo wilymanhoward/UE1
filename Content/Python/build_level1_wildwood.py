@@ -796,6 +796,9 @@ def set_music(sounds):
 
 def place(entry, plates):
     kind, x, y, z, yaw = entry["kind"], entry["x"], entry["y"], entry["z"], entry["yaw"]
+    # Older cached plans still include the purple chase replaced by the riverbank witch curse.
+    if entry.get('id') == 'storm1' or entry.get('storm') == 'storm1' or str(entry.get('message', '')).startswith('The Withering is coming!'):
+        return
     if kind == "player_start":
         spawn(unreal.PlayerStart, x, y, z, "PlayerStart", "Flow", yaw)
     elif kind == "witch_ambush":

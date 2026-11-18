@@ -468,18 +468,10 @@ def trail01_extras(p):
 
 
 MUSHROOM_NOTE_LIFT = 950.0  # A note this high over a mushroom is out of reach of a jump (about 250) but not a bounce (about 1300).
-# The Withering's chase: it starts once the ball passes the trigger, a little after the blob arena, from this far
-# behind, and stops this far short of the goal.
-CHASE_TRIGGER = ("blobs", 2200.0)
-CHASE_HEAD_START = 2700.0
-CHASE_END = ("goal", -1500.0)
-STORM_HALF = (900.0, CROSSING_HALF + WALL_GAP + 300.0, 1300.0)
 
 
 def fun_extras(p):
-    """Bouncy mushrooms and the Withering's chase to the Heart Tree, marked extra so the build can add them to a level
-    that is already open."""
-    trail = p.trail
+    """Bouncy mushrooms, marked extra so they can be added to an existing level."""
 
     def mushroom(s, d, scale=0.8, launch=1600.0):
         p.add("mushroom", s, d, z=p.surface(s, d) - 5.0, scale=scale, launch=launch, extra="fun", solid=200.0 * scale)
@@ -491,17 +483,6 @@ def fun_extras(p):
     mushroom(p.s("dandelion", -3500.0), 120.0)    # Under the second raised note.
     mushroom(p.s("blobs", 900.0), 600.0, scale=0.9, launch=1500.0)  # In the arena: bounce up, then slam a blob as Stone.
 
-    s_trigger = p.s(*CHASE_TRIGGER)
-    s0, s1 = s_trigger - CHASE_HEAD_START, p.s(*CHASE_END)
-    points = []
-    for s in np.arange(s0, s1, 400.0):
-        x, y = trail.point(float(s))
-        points.append([round(x, 1), round(y, 1), round(p.z(float(s)) + STORM_HALF[2] - 300.0, 1)])
-    x, y = trail.point(s0)
-    p.add("storm", s0, z=points[0][2], half=list(STORM_HALF), points=points, speed=360.0, pushback=700.0, id="storm1", extra="fun")
-    p.add("storm_trigger", s_trigger, z=p.z(s_trigger) + 300.0, half=[250.0, p.wall_half(s_trigger), 500.0], storm="storm1", extra="fun")
-    p.add("tutorial", s_trigger, z=p.z(s_trigger) + 200.0, message="The Withering is coming! Race it to the Heart Tree. Every note you find pushes it back.",
-          half=[300.0, p.wall_half(s_trigger), 300.0], extra="fun")
 
 
 def place_pieces(trail, walk, floor, ground, high, halves, climbs):
