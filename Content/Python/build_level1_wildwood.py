@@ -138,11 +138,11 @@ def trail_material():
     return built
 
 
-def import_trail_mesh(name):
+def import_trail_mesh(name, source=None):
     """Imports one trail piece with its exact triangles as collision, so the ball rolls on the surface it sees."""
     path = "{}/{}".format(TRAIL_FOLDER, name)
     task = unreal.AssetImportTask()
-    task.filename = WORK + name + ".obj"
+    task.filename = str(source) if source else WORK + name + ".obj"
     task.destination_path = TRAIL_FOLDER
     task.destination_name = name
     task.automated = True
@@ -163,9 +163,12 @@ def import_trail_mesh(name):
 
 
 def trail(plan):
+    from ls_blend_trail_banks import NAMES, blend_source
+
     surface = trail_material()
     for name in plan["trail_meshes"]:
-        actor = mesh_actor(import_trail_mesh(name), 0.0, 0.0, 0.0, "Trail", label=name, material=surface)
+        source = blend_source(name) if name in NAMES else None
+        actor = mesh_actor(import_trail_mesh(name, source), 0.0, 0.0, 0.0, "Trail", label=name, material=surface)
         actor.static_mesh_component.set_collision_profile_name("BlockAll")
     return len(plan["trail_meshes"])
 
