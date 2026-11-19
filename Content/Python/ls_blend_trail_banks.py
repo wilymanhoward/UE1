@@ -55,12 +55,16 @@ def blend_source(name):
                 blend = strength * smoothstep(1, 2.25, across)
                 if name == NAMES[1]:
                     # Settle the shoulders at the gorge without lowering the center of the launch ledge.
-                    at_crossing = 1 - smoothstep(0, 1.0, uvs[-1][0] - u)
-                    blend = max(blend, at_crossing * smoothstep(.65, 1.6, across))
+                    at_crossing = 1 - smoothstep(0, 1.5, uvs[-1][0] - u)
+                    blend = max(blend, at_crossing * smoothstep(.28, .90, across))
                 if blend > 0:
                     ground = terrain_height(x, y)
                     z += (ground - 20 - z) * blend
-                mesh.add_vertex((x,y,z), (u,across))
+                grass = across
+                if name == NAMES[1]:
+                    fade = 1 - smoothstep(0, .52, uvs[-1][0] - u)
+                    grass = across + max(0, 1.12 - across) * fade
+                mesh.add_vertex((x,y,z), (u,grass))
         new_width = len(mesh.points)-row_start
         assert not row_width or new_width == row_width
         row_width = new_width
@@ -74,16 +78,17 @@ def blend_source(name):
         dx = end[mid][0] - mesh.points[-2*row_width+mid][0]
         dy = end[mid][1] - mesh.points[-2*row_width+mid][1]
         forward = (dx*dx + dy*dy)**.5
-        # Close the open underside with a short grass face that sinks into the bank.
-        foot = []
-        for x, y, z in end:
-            x, y = x + 35*dx/forward, y + 35*dy/forward
-            foot.append((x,y,min(z-4, terrain_height(x,y)-24)))
-        for t in (.35, .7, 1):
+        # Follow the actual bank profile and ease out the lip's remaining height over it.
+        lip_lift = [z - terrain_height(x, y) for x, y, z in end]
+        blend_length = 125
+        for distance in (25, 50, 75, 100, blend_length):
             start = len(mesh.points)
-            for top, bottom in zip(end, foot):
-                pos = tuple(a+(b-a)*t for a,b in zip(top,bottom))
-                mesh.add_vertex(pos,(uvs[-1][0]+t*.1, 1.1))
+            blend = smoothstep(0, blend_length, distance)
+            for (x, y, _), lift in zip(end, lip_lift):
+                x += distance * dx / forward
+                y += distance * dy / forward
+                z = terrain_height(x, y) + lift * (1 - blend) - 24 * blend
+                mesh.add_vertex((x,y,z),(uvs[-1][0]+distance/400, 1.12))
             for col in range(row_width-1):
                 a = start-row_width+col
                 mesh.triangles += [(a,a+row_width,a+1),(a+1,a+row_width,a+row_width+1)]
