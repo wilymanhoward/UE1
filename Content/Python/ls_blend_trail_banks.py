@@ -1,4 +1,4 @@
-"""Blend the grass shoulders of the first Wildwood trail run into the live landscape."""
+"""Blend the first Wildwood trail run into the live landscape."""
 from pathlib import Path
 import shutil
 import unreal
@@ -24,6 +24,13 @@ def blend_source(name):
     assert width == 17 and len(vertices) == len(uvs) and len(vertices) % width == 0
 
     ignore = [a for a in builder.actors.get_all_level_actors() if not isinstance(a, unreal.LandscapeProxy)]
+
+    def terrain_height(x, y):
+        hit = unreal.SystemLibrary.line_trace_single(world, unreal.Vector(x,y,6500), unreal.Vector(x,y,500),
+            unreal.TraceTypeQuery.TRACE_TYPE_QUERY1, False, ignore, unreal.DrawDebugTrace.NONE, True)
+        assert hit and hit.to_tuple()[0], (name,x,y)
+        return hit.to_tuple()[4].z
+
     mesh = Mesh()
     row_width = 0
     for start in range(0, len(vertices), width):
@@ -46,11 +53,12 @@ def blend_source(name):
                     x,y,z = (lo+(hi-lo)*t for lo,hi in zip(a,b))
                     across += (uvs[start+col+1][1]-v)*t
                 blend = strength * smoothstep(1, 2.25, across)
+                if name == NAMES[1]:
+                    # Settle the shoulders at the gorge without lowering the center of the launch ledge.
+                    at_crossing = 1 - smoothstep(0, 1.0, uvs[-1][0] - u)
+                    blend = max(blend, at_crossing * smoothstep(.65, 1.6, across))
                 if blend > 0:
-                    hit = unreal.SystemLibrary.line_trace_single(world, unreal.Vector(x,y,6500), unreal.Vector(x,y,1000),
-                        unreal.TraceTypeQuery.TRACE_TYPE_QUERY1, False, ignore, unreal.DrawDebugTrace.NONE, True)
-                    assert hit and hit.to_tuple()[0], (name,x,y)
-                    ground = hit.to_tuple()[4].z
+                    ground = terrain_height(x, y)
                     z += (ground - 20 - z) * blend
                 mesh.add_vertex((x,y,z), (u,across))
         new_width = len(mesh.points)-row_start
@@ -59,6 +67,25 @@ def blend_source(name):
         if row_start:
             for col in range(row_width-1):
                 a = row_start-row_width+col
+                mesh.triangles += [(a,a+row_width,a+1),(a+1,a+row_width,a+row_width+1)]
+    if name == NAMES[1]:
+        end = mesh.points[-row_width:]
+        mid = row_width // 2
+        dx = end[mid][0] - mesh.points[-2*row_width+mid][0]
+        dy = end[mid][1] - mesh.points[-2*row_width+mid][1]
+        forward = (dx*dx + dy*dy)**.5
+        # Close the open underside with a short grass face that sinks into the bank.
+        foot = []
+        for x, y, z in end:
+            x, y = x + 35*dx/forward, y + 35*dy/forward
+            foot.append((x,y,min(z-4, terrain_height(x,y)-24)))
+        for t in (.35, .7, 1):
+            start = len(mesh.points)
+            for top, bottom in zip(end, foot):
+                pos = tuple(a+(b-a)*t for a,b in zip(top,bottom))
+                mesh.add_vertex(pos,(uvs[-1][0]+t*.1, 1.1))
+            for col in range(row_width-1):
+                a = start-row_width+col
                 mesh.triangles += [(a,a+row_width,a+1),(a+1,a+row_width,a+row_width+1)]
     mesh.smooth_normals()
     output = work / 'BlendedBanks' / (name + '.obj')
