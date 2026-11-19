@@ -13,7 +13,9 @@
 
 class ALever;
 class APressurePlate;
+class UAudioComponent;
 class UCurveFloat;
+class USoundBase;
 class UStaticMeshComponent;
 class UTimelineComponent;
 
@@ -36,6 +38,9 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	TObjectPtr<UStaticMeshComponent> Door;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	TObjectPtr<UStaticMeshComponent> RightDoor;
+
 	/** Plays the open and close motion. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	TObjectPtr<UTimelineComponent> OpenTimeline;
@@ -56,6 +61,16 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tuning")
 	FVector OpenOffset = FVector(0.f, 0.f, 320.f);
 
+	/** Distance from the gate centre to each side hinge along local Y. Zero uses the sliding door. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tuning", meta = (ClampMin = "0"))
+	float HingeOffset = 0.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tuning", meta = (ClampMin = "0", ClampMax = "115"))
+	float SwingAngle = 90.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Gate")
+	TObjectPtr<USoundBase> OpeningSound;
+
 	/** Seconds to open when no Open Curve is assigned. An assigned curve sets its own timing. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tuning", meta = (ClampMin = "0.1"))
 	float DefaultOpenDuration = 1.f;
@@ -69,4 +84,8 @@ private:
 	void RefreshGate();
 
 	UCurveFloat* CreateDefaultCurve();
+
+	FTransform ClosedDoor;
+	FTransform ClosedRightDoor;
+	TWeakObjectPtr<UAudioComponent> OpeningAudio;
 };

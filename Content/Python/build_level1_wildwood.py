@@ -496,7 +496,6 @@ def collide(actor):
 LOG = "/Game/LastSeed/Meshes/SM_LS_Log"  # Runs along its X from 0 to about 800 cm, 110 cm thick.
 WALL_STONES = ["/Game/Wildwood/Model/Rocks/SM_Boulder_04", "/Game/Wildwood/Model/Rocks/SM_Boulder_05", "/Game/Wildwood/Model/Rocks/SM_Boulder_06",
                "/Game/StyleHex_Studio/Free_Packs/FREE_Stylized_Rocks_and_Stones/Meshes/SM_Stone_Large_1"]
-DOOR_WIDTH = 440.0
 WALL_HEIGHT_GATE = 560.0
 STONE_COURSES = 3
 
@@ -511,66 +510,104 @@ def log_between(a, b, thickness, folder, label, solid=True):
 
 
 def palisade_gate(gate, x, y, z, yaw, width, height):
-    """Dresses a gate as a palisade in a stockade wall. The door is a row of sharpened stakes attached to the gate's
-    moving Door, so they rise together when the plates are held. On each side a timber frame (posts, beams and X braces)
-    is packed with stones, and runs on past the trail's walls into the forest. Every piece collides as its own shape."""
-    door = gate.get_editor_property("door")
-    door.set_visibility(False, False)
-    door.set_collision_profile_name("NoCollision")
-    gate.set_editor_property("open_offset", unreal.Vector(0.0, 0.0, height - 30.0))
-    h = math.radians(yaw)
-    along, across = (math.cos(h), math.sin(h)), (-math.sin(h), math.cos(h))
-    at = lambda c, a=0.0, up=0.0: (x + across[0] * c + along[0] * a, y + across[1] * c + along[1] * a, up)
-    walls = [w for w in actors.get_all_level_actors() if w.get_actor_label() == "InvisibleWall"]
+    """Build two timber doors between buttresses and stockade wings."""
+    hinge = 380.0
+    peak = max(1190.0, height * 1.65)
+    opening = unreal.load_asset("/Game/LastSeed/Audio/SFX_LS_TrailGateOpen")
+    bark = material("M_LS_Bark")
+    iron = unreal.load_asset("/Game/LastSeed/Meshes/Lever/M_LS_LeverIron")
+    assert opening and bark and iron, "Missing Trail 2 gate assets"
+    gate.set_editor_properties({"hinge_offset": hinge, "swing_angle": 92.0, "default_open_duration": 3.6,
+                                "open_curve": None, "opening_sound": opening})
+    folder = "Puzzles/Trail 2 Gate"
+    cube = "/Engine/BasicShapes/Cube"
+    cone = "/Engine/BasicShapes/Cone"
+    gate_rng = random.Random(982)
+    angle = math.radians(yaw)
+    world = require_map()
+    walls = [actor for actor in actors.get_all_level_actors() if actor.get_actor_label() == "InvisibleWall"]
 
-    def ground(c):
-        px, py, _ = at(c)
-        hit = unreal.SystemLibrary.line_trace_single(unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_editor_world(),
-                                                     unreal.Vector(px, py, z + 2000.0), unreal.Vector(px, py, z - 2000.0),
-                                                     unreal.TraceTypeQuery.TRACE_TYPE_QUERY1, False, walls, unreal.DrawDebugTrace.NONE, True)
-        return hit.to_tuple()[4].z if hit else z
+    def at(cross, forward, up):
+        return (x - math.sin(angle) * cross + math.cos(angle) * forward,
+                y + math.cos(angle) * cross + math.sin(angle) * forward, z + up)
 
-    def stake(c, top, thickness, moving):
-        px, py, _ = at(c)
-        base = (ground(c) if not moving else z) - 40.0
-        log = log_between((px, py, base), (px, py, top), thickness, "Puzzles", "GateStake")
-        tip = mesh_actor("/Engine/BasicShapes/Cone", px, py, top + thickness * 0.6, "Puzzles", (thickness / 100.0, thickness / 100.0, thickness * 1.2 / 100.0),
-                         0.0, material("M_LS_Bark"), "GateStakeTip")
-        if moving:
-            for piece in (log, tip):
-                piece.static_mesh_component.set_mobility(unreal.ComponentMobility.MOVABLE)
-                piece.attach_to_component(door, "", unreal.AttachmentRule.KEEP_WORLD, unreal.AttachmentRule.KEEP_WORLD,
-                                          unreal.AttachmentRule.KEEP_WORLD, False)
+    def ground(cross):
+        hit = unreal.SystemLibrary.line_trace_single(
+            world, unreal.Vector(*at(cross, 0.0, 1900.0)), unreal.Vector(*at(cross, 0.0, -1900.0)),
+            unreal.TraceTypeQuery.TRACE_TYPE_QUERY1, False, walls, unreal.DrawDebugTrace.NONE, True)
+        return hit.to_tuple()[4].z - z if hit else 0.0
 
-    # The door: stakes side by side, each a little taller or shorter than the next.
-    count = int(round(DOOR_WIDTH / 46.0))
-    for k in range(count):
-        stake(-DOOR_WIDTH / 2.0 + (k + 0.5) * DOOR_WIDTH / count, z + height + rng.uniform(-35.0, 35.0), 50.0, True)
-    for side in (-1.0, 1.0):
-        inner, outer = DOOR_WIDTH / 2.0 + 45.0, width / 2.0 + 300.0
-        cells = max(1, int(math.ceil((outer - inner) / 260.0)))
-        posts = [side * (inner + (outer - inner) * k / cells) for k in range(cells + 1)]
-        floor = [ground(c) for c in posts]  # Before anything stands there for the trace to hit.
-        stake(side * inner, z + height + 160.0, 80.0, False)  # A tall post either side of the door.
-        for k in range(1, len(posts)):
-            stake(posts[k], floor[k] + WALL_HEIGHT_GATE + 80.0 + rng.uniform(-20.0, 20.0), 58.0, False)  # Sharpened, like the door.
+    def stake(cross, forward, base, top, thickness, label, solid=False):
+        timber = log_between(at(cross, forward, base), at(cross, forward, top), thickness, folder, label, solid)
+        tip = mesh_actor(cone, *at(cross, forward, top + thickness * 0.45), folder,
+                         (thickness / 100.0, thickness / 100.0, thickness * 0.0095), yaw, bark, label + " Tip")
+        return timber, tip
+
+    def attach(piece, leaf):
+        piece.static_mesh_component.set_mobility(unreal.ComponentMobility.MOVABLE)
+        assert piece.attach_to_component(leaf, "", unreal.AttachmentRule.KEEP_WORLD, unreal.AttachmentRule.KEEP_WORLD,
+                                         unreal.AttachmentRule.KEEP_WORLD, False)
+
+    inner, outer = hinge + 100.0, width / 2.0 + 300.0
+    cells = max(1, math.ceil((outer - inner) / 260.0))
+    # Take all foundation samples before placing geometry.
+    posts = {side: [side * (inner + (outer - inner) * k / cells) for k in range(cells + 1)] for side in (-1, 1)}
+    floor = {side: [ground(cross) for cross in points] for side, points in posts.items()}
+    for side in (-1, 1):
+        leaf = gate.get_editor_property("door" if side < 0 else "right_door")
+        leaf.set_static_mesh(unreal.load_asset(cube))
+        leaf.set_relative_location(unreal.Vector(20.0, side * hinge / 2.0, peak * 0.44), False, False)
+        leaf.set_relative_scale3d(unreal.Vector(0.96, hinge / 100.0, peak * 0.0095))
+        ls_world_common.hide_component(leaf)
+        leaf.set_collision_profile_name("BlockAll")
+        leaf.set_collision_enabled(unreal.CollisionEnabled.QUERY_AND_PHYSICS)
+        leaf.set_collision_response_to_channel(unreal.CollisionChannel.ECC_CAMERA, unreal.CollisionResponseType.ECR_IGNORE)
+
+        for index in range(6):
+            t = (index + 0.5) / 6.0
+            top = peak - 245.0 * t + gate_rng.uniform(-19.0, 19.0)
+            for piece in stake(side * hinge * t, 20.0, -32.0, top, 75.0, "Gate Door Timber"):
+                attach(piece, leaf)
+        for up in (195.0, 670.0, 885.0):
+            strap = fit_box(cube, *at(side * hinge / 2.0, -28.0, up + 21.0), yaw, 24.0, hinge - 17.0, 42.0,
+                            folder, "Gate Iron Strap", iron)
+            attach(strap, leaf)
+            for cross in (46.0, 190.0, 335.0):
+                boss = mesh_actor("/Engine/BasicShapes/Sphere", *at(side * cross, -43.0, up), folder,
+                                  (0.15, 0.22, 0.22), yaw, iron, "Gate Iron Rivet")
+                attach(boss, leaf)
+        brace = log_between(at(side * 321.0, -23.0, 225.0), at(side * 42.0, -23.0, 647.0),
+                            72.0, folder, "Gate Diagonal Brace", False)
+        attach(brace, leaf)
+
+        points, levels = posts[side], floor[side]
+        foot = min(levels[0], 0.0) - 35.0
+        dimensions = ((325.0, 285.0, 330.0), (284.0, 240.0, 315.0), (258.0, 220.0, 310.0), (230.0, 210.0, 300.0))
+        for row, (breadth, depth, rise) in enumerate(dimensions):
+            collide(fit_box(WALL_STONES[row], *at(side * (inner + 24.0), -22.0 + row * 7.0, foot + rise),
+                            yaw + side * (6.0 - 3.0 * row), depth, breadth, rise + 40.0, folder, "Gate Stone Buttress"))
+            foot += rise - 24.0
+        stake(side * inner, -94.0, min(levels[0], 0.0) - 35.0, peak + 125.0, 145.0, "Gate Crown Post", True)
+        stake(side * (hinge + 43.0), 20.0, -55.0, peak - 120.0, 108.0, "Gate Hinge Post", True)
+
+        for cross, low in zip(points[1:], levels[1:]):
+            stake(cross, 0.0, low - 40.0, low + WALL_HEIGHT_GATE + 80.0 + gate_rng.uniform(-20.0, 20.0),
+                  58.0, "Gate Wing Post", True)
         for k in range(cells):
-            c0, c1 = posts[k], posts[k + 1]
-            base = min(floor[k], floor[k + 1])
+            c0, c1 = points[k:k + 2]
+            low, high = levels[k:k + 2]
             cell = abs(c1 - c0)
-            # Stones packed between the posts, course on course, pressed flat into the frame.
             for row in range(STONE_COURSES):
                 for col in range(2):
-                    c = c0 + (c1 - c0) * (col + 0.5) / 2.0
-                    px, py, _ = at(c, rng.uniform(-8.0, 8.0))
-                    top = base + WALL_HEIGHT_GATE * (row + 1) / STONE_COURSES + 10.0
-                    collide(fit_box(rng.choice(WALL_STONES), px, py, top, yaw + rng.uniform(-8.0, 8.0), 80.0, cell / 2.0 * 1.15,
-                                    WALL_HEIGHT_GATE / STONE_COURSES * 1.2, "Puzzles", "WallStone"))
-            # A beam along the bottom and the top, and an X brace across the face the player walks up to.
+                    cross = c0 + (c1 - c0) * (col + 0.5) / 2.0
+                    top = min(low, high) + WALL_HEIGHT_GATE * (row + 1) / STONE_COURSES + 10.0
+                    collide(fit_box(gate_rng.choice(WALL_STONES), *at(cross, gate_rng.uniform(-8.0, 8.0), top),
+                                    yaw + gate_rng.uniform(-8.0, 8.0), 80.0, cell * 0.575,
+                                    WALL_HEIGHT_GATE / STONE_COURSES * 1.2, folder, "Gate Wing Stone"))
             for up in (20.0, WALL_HEIGHT_GATE / 2.0, WALL_HEIGHT_GATE):
-                log_between(at(c0, -42.0, floor[k] + up), at(c1, -42.0, floor[k + 1] + up), 36.0, "Puzzles", "WallBeam")
-            log_between(at(c0, -50.0, floor[k] + 30.0), at(c1, -50.0, floor[k + 1] + WALL_HEIGHT_GATE - 10.0), 30.0, "Puzzles", "WallBrace")
-            log_between(at(c0, -50.0, floor[k] + WALL_HEIGHT_GATE - 10.0), at(c1, -50.0, floor[k + 1] + 30.0), 30.0, "Puzzles", "WallBrace")
+                log_between(at(c0, -42.0, low + up), at(c1, -42.0, high + up), 36.0, folder, "Gate Wing Beam")
+            for a, b in ((30.0, WALL_HEIGHT_GATE - 10.0), (WALL_HEIGHT_GATE - 10.0, 30.0)):
+                log_between(at(c0, -50.0, low + a), at(c1, -50.0, high + b), 30.0, folder, "Gate Wing Brace")
 
 
 LEVER_SOURCE = os.path.join(ls_world_common.SOURCE_FOLDER, "Lever")

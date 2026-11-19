@@ -2,10 +2,12 @@
 
 #include "Gate.h"
 
+#include "Components/AudioComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/TimelineComponent.h"
 #include "Curves/CurveFloat.h"
 #include "Engine/CollisionProfile.h"
+#include "Kismet/GameplayStatics.h"
 #include "LSDefaultMeshes.h"
 #include "Lever.h"
 #include "PressurePlate.h"
@@ -22,12 +24,19 @@ AGate::AGate()
 	Door->SetStaticMesh(LSDefaultMeshes::Cube());
 	Door->SetRelativeScale3D(FVector(0.5f, 3.f, 3.f));
 
+	RightDoor = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("RightDoor"));
+	RightDoor->SetupAttachment(Root);
+	RightDoor->SetMobility(EComponentMobility::Movable);
+	RightDoor->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
 	OpenTimeline = CreateDefaultSubobject<UTimelineComponent>(TEXT("OpenTimeline"));
 }
 
 void AGate::BeginPlay()
 {
 	Super::BeginPlay();
+	ClosedDoor = Door->GetRelativeTransform();
+	ClosedRightDoor = RightDoor->GetRelativeTransform();
 
 	FOnTimelineFloat OnProgress;
 	OnProgress.BindDynamic(this, &AGate::HandleOpenProgress);
@@ -85,15 +94,39 @@ void AGate::RefreshGate()
 	// Both continue from the current position, so a half-open door reverses smoothly.
 	if (bAllPressed)
 	{
+		const bool bStarting = !OpenTimeline->IsPlaying() || OpenTimeline->IsReversing();
+		if (OpeningSound && bStarting && OpenTimeline->GetPlaybackPosition() < OpenTimeline->GetTimelineLength())
+		{
+			OpeningAudio = UGameplayStatics::SpawnSoundAttached(OpeningSound, Root);
+		}
 		OpenTimeline->Play();
 	}
 	else
 	{
+		if (UAudioComponent* Audio = OpeningAudio.Get())
+		{
+			Audio->FadeOut(0.18f, 0.f);
+			OpeningAudio.Reset();
+		}
 		OpenTimeline->Reverse();
 	}
 }
 
 void AGate::HandleOpenProgress(float Alpha)
 {
-	Door->SetRelativeLocation(OpenOffset * Alpha);
+	if (HingeOffset <= 0.f)
+	{
+		Door->SetRelativeLocation(ClosedDoor.GetLocation() + OpenOffset * Alpha);
+		return;
+	}
+
+	const auto Swing = [this, Alpha](UStaticMeshComponent* Leaf, const FTransform& Closed, float Side)
+	{
+		const FVector Pivot(Closed.GetLocation().X, Side * HingeOffset, Closed.GetLocation().Z);
+		const FQuat Rotation(FVector::UpVector, FMath::DegreesToRadians(Side * SwingAngle * Alpha));
+		Leaf->SetRelativeLocationAndRotation(
+			Pivot + Rotation.RotateVector(Closed.GetLocation() - Pivot), Rotation * Closed.GetRotation());
+	};
+	Swing(Door, ClosedDoor, -1.f);
+	Swing(RightDoor, ClosedRightDoor, 1.f);
 }
