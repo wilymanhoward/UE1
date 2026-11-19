@@ -19,9 +19,9 @@ The 42-second opening mix uses excerpts of the music and field recordings below.
 
 ## Player movement effects
 
-- “Wood, movement, balls, wood_balls, few, wood_marbles, small, roll, rolling, impact” by Oldome, [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/). The recordist used a Zoom F6 and RØDE NTG5. The public HQ preview was filtered and edited into a crossfaded Seed roll loop and a short wooden takeoff tap. [Freesound recording](https://freesound.org/people/Oldome/sounds/854006/)
+- “Wood, movement, balls, wood_balls, few, wood_marbles, small, roll, rolling, impact” by Oldome, [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/). The recordist used a Zoom F6 and RØDE NTG5. The public HQ preview was filtered and edited into a crossfaded Seed roll loop, a short wooden takeoff tap, and a lower-pitched landing impact. [Freesound recording](https://freesound.org/people/Oldome/sounds/854006/)
 - “boot scuffle small rocks 2” by oscaraudiogeek, [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/). A boot scraping dirt and small stones, recorded with a RØDE NTG3 and Zoom H5. The public HQ preview was pitched down, filtered, and crossfaded for the Stone roll loop. [Freesound recording](https://freesound.org/people/oscaraudiogeek/sounds/328933/)
-- Fission9's “Tumbling Rocks”, credited below, also supplies the Stone takeoff hit. A single impact from the public HQ preview was pitched down, filtered, and trimmed. All four effects are mono 48 kHz PCM edits of recorded sounds.
+- Fission9's “Tumbling Rocks”, credited below, also supplies the Stone takeoff hit. A single impact from the public HQ preview was pitched down, filtered, and trimmed. These effects are mono 48 kHz PCM edits of recorded sounds.
 
 ## Gorge pillar effects
 

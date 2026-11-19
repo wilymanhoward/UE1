@@ -282,7 +282,7 @@ protected:
 
 private:
 	// The per-frame steps, called in order by Tick.
-	void UpdateGrounded();
+	void UpdateGrounded(const FSeedFormData& Data);
 	void UpdateTimers(float DeltaSeconds);
 	void TryConsumeJump(const FSeedFormData& Data);
 	void ApplyMovement(const FSeedFormData& Data);

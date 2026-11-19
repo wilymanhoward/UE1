@@ -173,7 +173,7 @@ void ASeedBall::Tick(float DeltaSeconds)
 
 	const FSeedFormData& Data = GetCurrentFormData();
 	UpdateTimers(DeltaSeconds);
-	UpdateGrounded();
+	UpdateGrounded(Data);
 	TryConsumeJump(Data);
 	ApplyMovement(Data);
 	ApplyTrailEdgeResistance();
@@ -208,7 +208,7 @@ void ASeedBall::UpdateTimers(float DeltaSeconds)
 	FormCooldownRemaining = FMath::Max(FormCooldownRemaining - DeltaSeconds, 0.f);
 }
 
-void ASeedBall::UpdateGrounded()
+void ASeedBall::UpdateGrounded(const FSeedFormData& Data)
 {
 	const bool bWasGrounded = bIsGrounded;
 
@@ -222,7 +222,7 @@ void ASeedBall::UpdateGrounded()
 	else if (!bWasGrounded && AirFallSpeed >= LandMinSpeed)
 	{
 		const float Volume = FMath::Min(AirFallSpeed / LandFullVolumeSpeed, 1.f);
-		UGameplayStatics::PlaySoundAtLocation(this, LandSound, GetActorLocation(), Volume);
+		UGameplayStatics::PlaySoundAtLocation(this, Data.LandSound ? Data.LandSound.Get() : LandSound.Get(), GetActorLocation(), Volume);
 	}
 
 	if (bIsGrounded)
