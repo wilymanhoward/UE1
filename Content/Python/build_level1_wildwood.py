@@ -894,21 +894,12 @@ def place(entry, plates):
         end = entry["end"]
         path.set_location_at_spline_point(1, unreal.Vector(end[0], end[1], end[2] - drop), unreal.SplineCoordinateSpace.WORLD)
     elif kind == "cracked_wall":
-        h = math.radians(yaw)
+        from ls_wildwood_wall import configure
         height, width = entry["height"], entry["width"]
         actor = spawn(unreal.load_class(None, "/Script/Assignment1.CrackedWall"), x, y, z + height / 2.0, "CrackedWall", "Puzzles", yaw)
         # Its mesh is its root, so the actor's scale is the wall's whole size (a 1 m cube scaled to fit).
         actor.set_actor_scale3d(unreal.Vector(0.5, width / 100.0, height / 100.0))
-        # Still the wall that breaks, but hidden. The rock pile is what the player sees, and it goes when the wall does.
-        hide_component(actor.get_component_by_class(unreal.StaticMeshComponent))
-        rubble = []
-        for side in (-1.0, 0.0, 1.0):
-            d = side * width / 3.2
-            rubble.append(fit_box(mesh(rng.choice(BOULDERS)), x - d * math.sin(h), y + d * math.cos(h), z + height + 40.0, yaw + rng.uniform(-20, 20),
-                                  320.0, width / 2.6, height + 120.0, "Puzzles", "WallRubble"))
-        for item in rubble:
-            item.static_mesh_component.set_mobility(unreal.ComponentMobility.MOVABLE)
-        actor.set_editor_property("rubble_actors", rubble)
+        configure(actor)
     elif kind == "lever":
         # Faces down the trail (local -X toward the player), so a block pushed along the trail meets the plinth's front end.
         lever_assets()

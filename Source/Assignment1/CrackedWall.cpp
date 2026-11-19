@@ -84,14 +84,20 @@ void ACrackedWall::SpawnDebrisChunk(const FBox& WallBounds, const FVector& Impac
 	UStaticMeshComponent* ChunkMesh = Chunk->GetStaticMeshComponent();
 	ChunkMesh->SetMobility(EComponentMobility::Movable);
 	ChunkMesh->SetStaticMesh(DebrisMesh);
-	ChunkMesh->SetWorldScale3D(FVector(DebrisScale));
+	ChunkMesh->SetWorldScale3D(FVector(DebrisScale * FMath::FRandRange(0.45f, 1.45f)));
 	ChunkMesh->SetCollisionProfileName(UCollisionProfile::PhysicsActor_ProfileName);
+	// Keep the rubble physical against the terrain without stopping the ball or hitting other fragments.
+	ChunkMesh->SetCollisionResponseToChannel(ECC_PhysicsBody, ECR_Ignore);
+	ChunkMesh->SetCollisionResponseToChannel(ECC_Pawn, ECR_Ignore);
 	ChunkMesh->SetSimulatePhysics(true);
 	ChunkMesh->SetMassOverrideInKg(NAME_None, DebrisMassKg, true);
 
 	// Mostly the way the ball was travelling, with a random spread.
-	const FVector LaunchDirection = (ImpactDirection + FMath::VRand()).GetSafeNormal();
-	ChunkMesh->AddImpulse(LaunchDirection * DebrisSpeed, NAME_None, true);
+	const FVector Forward = ImpactDirection.GetSafeNormal2D();
+	const FVector Spread = FMath::VRand() * 0.65f + FVector(0.f, 0.f, 0.75f);
+	const FVector LaunchDirection = (Forward + Spread).GetSafeNormal();
+	ChunkMesh->AddImpulse(LaunchDirection * DebrisSpeed * FMath::FRandRange(0.45f, 1.15f), NAME_None, true);
+	ChunkMesh->SetPhysicsAngularVelocityInDegrees(FMath::VRand() * FMath::FRandRange(90.f, 310.f));
 
 	Chunk->SetLifeSpan(DebrisLifetime);
 }
