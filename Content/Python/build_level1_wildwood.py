@@ -838,9 +838,11 @@ def place(entry, plates):
         actor = spawn(gameplay_class("BP_FormFlower_Stone", "FormFlower"), x, y, z, "FormFlower", "Pickups")
         form = getattr(unreal.SeedForm, entry["form"])
         actor.set_editor_properties({"form_to_unlock": form, "prompt_message": unreal.Text(entry["message"])})
-        art = ("/Game/StyleHex_Studio/Free_Packs/FREE_Stylized_Forest_Sample/Meshes/Foliage/SM_Fol_Flower_Clump_1" if entry["form"] == "STONE"
-               else mesh("SM_Flowers_White_03"))
-        fit_mesh(keep_coloured(actor), art, 160.0, -80.0)
+        if entry["form"] == "STONE":
+            from ls_stone_unlock import configure
+            configure(actor)
+        else:
+            fit_mesh(keep_coloured(actor), mesh("SM_Flowers_White_03"), 160.0, -80.0)
     elif kind == "block":
         name = entry.get("name", "Block")  # Extras are named apart, so rebuilding the hand-placed rocks never touches them.
         # Rocks side by side across the width, each kept close to its own proportions, solid as their own shape.

@@ -28,6 +28,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Form Flower")
 	FText PromptMessage;
 
+	UPROPERTY(EditAnywhere, Category = "Effects")
+	TObjectPtr<UStaticMesh> CollectChipMesh;
+
 	/** How long the prompt stays on screen, in seconds. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tuning", meta = (ClampMin = "0"))
 	float PromptDuration = 5.f;
