@@ -152,16 +152,17 @@ def seed_appearance(mesh, material):
 
 
 def build_stone_material():
-    """Grey rock plates with glowing golden light in the cracks between them."""
+    """Rough slate with a restrained amber mineral seam."""
     material = fresh_material("M_LS_Stone")
     uv = node(material, unreal.MaterialExpressionTextureCoordinate)
     crack = mask(material, uv, True)
     tone = mask(material, uv, False)
-    rock = blend(material, colour(material, 0.13, 0.13, 0.14), colour(material, 0.27, 0.26, 0.25), tone)
-    base = blend(material, rock, colour(material, 0.03, 0.02, 0.01), crack)
+    rock = blend(material, colour(material, 0.065, 0.095, 0.12), colour(material, 0.19, 0.24, 0.29), tone)
+    base = blend(material, rock, colour(material, 0.095, 0.055, 0.023), crack)
     library.connect_material_property(base, "", unreal.MaterialProperty.MP_BASE_COLOR)
     library.connect_material_property(number(material, 0.92), "", unreal.MaterialProperty.MP_ROUGHNESS)
-    glow = combine(material, unreal.MaterialExpressionMultiply, crack, colour(material, 9.0, 5.0, 1.2))
+    library.connect_material_property(number(material, 0.19), "", unreal.MaterialProperty.MP_SPECULAR)
+    glow = combine(material, unreal.MaterialExpressionMultiply, crack, colour(material, 2.4, 1.05, 0.24))
     library.connect_material_property(glow, "", unreal.MaterialProperty.MP_EMISSIVE_COLOR)
     return finish(material)
 
@@ -286,7 +287,7 @@ def main():
         unreal.SeedForm.STONE: {
             "mesh": meshes["SM_LS_StoneShell"], "material": stone_material,
             "upright_mesh": None, "upright_material": None,
-            "glow_effect": None, "glow_color": unreal.LinearColor(1.0, 0.6, 0.2, 1.0), "glow_brightness": 12.0,
+            "glow_effect": None, "glow_color": unreal.LinearColor(1.0, 0.6, 0.2, 1.0), "glow_brightness": 0.0,
             "physical_material": build_physical_material("PM_Stone", 1.5, 0.0, combine_max=True),
         },
         unreal.SeedForm.DANDELION: {

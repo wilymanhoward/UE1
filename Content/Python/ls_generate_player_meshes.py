@@ -243,24 +243,31 @@ def build_seed_sprout():
 
 
 def build_stone_shell():
-    """Chunky rock plates with deep grooves between them. The plates are Voronoi cells on the sphere."""
-    rng = random.Random(20261031)
-    cells = fibonacci_directions(24)
-    cells = [normalize(add(c, (rng.uniform(-0.25, 0.25), rng.uniform(-0.25, 0.25), rng.uniform(-0.25, 0.25)))) for c in cells]
-    heights = [rng.uniform(0.0, 3.0) for _ in cells]
-    tones = [rng.uniform(0.0, 1.0) for _ in cells]
-
+    """An asymmetric boulder with broad rock faces and one partial mineral fissure."""
+    planes = [(normalize(direction), distance) for direction, distance in (
+        ((1, .25, .18), 43), ((-.8, .37, -.3), 42), ((.05, 1, .3), 45),
+        ((.3, -1, .16), 46), ((.14, -.27, 1), 39), ((-.17, .3, -1), 44),
+        ((.65, .7, -.4), 43), ((-.6, -.5, .75), 45), ((-.6, -.8, -.3), 46),
+    )]
     mesh = Mesh()
-    points, mesh.triangles = icosphere(5)
+    points, mesh.triangles = icosphere(4)
     for p in points:
-        nearest, second = sorted(range(len(cells)), key=lambda i: -dot(p, cells[i]))[:2]
-        # How far past the border to the next plate this point is, in radians. 0 is exactly on a border.
-        edge = math.acos(min(dot(p, cells[second]), 1.0)) - math.acos(min(dot(p, cells[nearest]), 1.0))
-        crack = 1.0 - smoothstep(0.015, 0.075, edge)
-        bevel = smoothstep(0.0, 0.3, edge)
-        lumps = 0.7 * math.sin(p[0] * 9.0 + 1.0) * math.sin(p[1] * 8.0 + 2.0) * math.sin(p[2] * 7.0)
-        radius = BALL_RADIUS - 3.5 + heights[nearest] * bevel + lumps - crack * 3.5
-        mesh.add_vertex(scale(p, radius), (crack, tones[nearest]))
+        x, y, z = p
+        roughness = (1.5 * math.sin(8*x + 3*y) * math.cos(7*z - y)
+                     + .6 * math.sin(24*x - 15*y + 11*z))
+        radius = min(49.8, 49.2 + roughness,
+                     *(distance / max(dot(p, normal), .01) for normal, distance in planes))
+
+        # A broken vein on one side, rather than a closed pattern around the shell.
+        line = y - .29*z + .08*math.sin(13*z) + .035*math.sin(34*z + x*8)
+        end_fade = (1 - smoothstep(.43, .86, abs(z))) * smoothstep(.18, .72, -x)
+        vein = (1 - smoothstep(.008, .048, abs(line))) * end_fade
+        branch = (1 - smoothstep(.007, .032, abs(line + .65*(z-.04))))
+        branch *= smoothstep(.02, .17, z) * (1 - smoothstep(.34, .57, z)) * end_fade * .42
+        crack = max(vein, branch)
+        tone = .46 + .20*math.sin(7*z + 3*x + math.sin(5*y)) + .12*math.cos(14*y - 11*x)
+        tone += .09*math.sin(38*x + 17*y) * math.cos(32*z - 12*y)
+        mesh.add_vertex(scale(p, radius - crack*1.8), (crack, tone))
     mesh.smooth_normals()
     return mesh
 
