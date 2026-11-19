@@ -149,7 +149,7 @@ void AWitheringStorm::TickShockwave(float DeltaSeconds)
 		HeightTier = HeightTier < 0 ? FMath::RandRange(0, 2) : (HeightTier + FMath::RandRange(1, 2)) % 3;
 		WaveHeight = 25.f + HeightTier * 25.f;
 		SetProgress(0.f);
-		DelayRemaining = FMath::FRandRange(2.6f, 3.8f);
+		DelayRemaining = FMath::FRandRange(6.f, 8.f);
 		bWaveActive = true;
 		SetActorHiddenInGame(false);
 		AttackAudio->Play();

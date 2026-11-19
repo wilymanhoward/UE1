@@ -13,6 +13,7 @@ for widget in unreal.ObjectIterator(unreal.LSIntroWidget):
 story=next(a for a in unreal.GameplayStatics.get_all_actors_of_class(world,unreal.StoryTrigger) if a.get_actor_label()=='RiverbankWitchAmbush')
 story.set_actor_enable_collision(False)
 storm=story.get_editor_property('after_cutscene_curse')
+assert storm.get_editor_property('rise_speed')==900.0
 trees=list(storm.get_editor_property('curse_trees'))
 body=p.get_editor_property('ball_mesh')
 jump=next(a for a in unreal.ObjectIterator(unreal.InputAction) if a.get_outer()==pc and a.get_name()=='InputAction_2')
@@ -32,7 +33,7 @@ def check(_):
         return
     try:
         now=unreal.GameplayStatics.get_time_seconds(world)
-        assert now-state['start']<25, state
+        assert now-state['start']<40, state
         pos=p.get_actor_location()
         state['max_z']=max(state['max_z'],pos.z)
         if not p.is_dead():
@@ -56,7 +57,7 @@ def check(_):
                 if len(state['attacks'])==1: assert now-state['started']>=1.9
                 else:
                     a,b=state['attacks'][-2:]
-                    assert 2.5<b['time']-a['time']<4.05, state
+                    assert 5.9<b['time']-a['time']<8.2, state
                     assert a['height']!=b['height'], state
                 state['jumped']=False
             if visible:
