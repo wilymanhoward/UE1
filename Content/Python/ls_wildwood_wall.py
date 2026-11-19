@@ -56,6 +56,7 @@ def configure(wall):
         assert editor.add_simple_collisions(debris, unreal.ScriptCollisionShapeType.NDOP18) >= 0
         assert assets.save_loaded_asset(debris, False)
     assert unreal.get_editor_subsystem(unreal.StaticMeshEditorSubsystem).get_convex_collision_count(debris) > 0
-    wall.set_editor_properties({'rubble_actors': rocks, 'debris_mesh': debris, 'debris_count': 14,
+    # Stone loses speed on the uphill approach to this gate.
+    wall.set_editor_properties({'break_speed': 175.0, 'rubble_actors': rocks, 'debris_mesh': debris, 'debris_count': 14,
         'debris_scale': .085, 'debris_speed': 480.0, 'debris_lifetime': 2.8,
         'break_sound': unreal.load_asset('/Game/LastSeed/Audio/SFX_LS_StoneFall')})

@@ -527,10 +527,10 @@ def place_pieces(trail, walk, floor, ground, high, halves, climbs):
     p.add("flower", p.s("stone", 200.0), z=p.z(p.s("stone", 200.0)) + 80.0, form="STONE",
           message="Stone Shell unlocked! Press 2 to transform. Stone is heavy and can smash walls.")
     note(p.s("stone", 700.0), 150.0)
-    tut(p.s("wall", -600.0), "Rocks block the way. Roll into them as Stone Shell. Press 2 first.")
-    wall_s = p.s("wall", 100.0)
+    tut(p.s("wall", 600.0), "Rocks block the way. Roll into them as Stone Shell. Press 2 first.")
+    wall_s = p.s("wall", 1300.0)
     p.add("cracked_wall", wall_s, z=p.z(wall_s), width=2.0 * p.wall_half(wall_s) + 100.0, height=520.0, solid=p.wall_half(wall_s))
-    note(p.s("wall", 420.0))
+    note(wall_s + 460.0)
     # Each at the trail's height where it stands. The level stretch starts 400 cm past the mark, so the mark's own
     # height is about 1 m under it, which once buried the plate and the block.
     plate_s, block_s, gate_s = p.s("plates", 1100.0), p.s("plates", 750.0), p.s("plates", 2700.0)
