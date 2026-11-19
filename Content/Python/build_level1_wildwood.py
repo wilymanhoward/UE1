@@ -496,8 +496,7 @@ def collide(actor):
 LOG = "/Game/LastSeed/Meshes/SM_LS_Log"  # Runs along its X from 0 to about 800 cm, 110 cm thick.
 WALL_STONES = ["/Game/Wildwood/Model/Rocks/SM_Boulder_04", "/Game/Wildwood/Model/Rocks/SM_Boulder_05", "/Game/Wildwood/Model/Rocks/SM_Boulder_06",
                "/Game/StyleHex_Studio/Free_Packs/FREE_Stylized_Rocks_and_Stones/Meshes/SM_Stone_Large_1"]
-WALL_HEIGHT_GATE = 560.0
-STONE_COURSES = 3
+STONE_COURSES = 5
 
 
 def log_between(a, b, thickness, folder, label, solid=True):
@@ -509,23 +508,27 @@ def log_between(a, b, thickness, folder, label, solid=True):
     return collide(actor) if solid else actor
 
 
-def palisade_gate(gate, x, y, z, yaw, width, height):
-    """Build two timber doors between buttresses and stockade wings."""
+def palisade_gate(gate, x, y, z, yaw, width, height, *, wings_only=False):
+    """Build the gate and stockade, or rebuild the static wings around an installed gate."""
     hinge = 380.0
     peak = max(1190.0, height * 1.65)
     opening = unreal.load_asset("/Game/LastSeed/Audio/SFX_LS_TrailGateOpen")
     bark = material("M_LS_Bark")
     iron = unreal.load_asset("/Game/LastSeed/Meshes/Lever/M_LS_LeverIron")
     assert opening and bark and iron, "Missing Trail 2 gate assets"
-    gate.set_editor_properties({"hinge_offset": hinge, "swing_angle": 92.0, "default_open_duration": 3.6,
-                                "open_curve": None, "opening_sound": opening})
+    if not wings_only:
+        gate.set_editor_properties({"hinge_offset": hinge, "swing_angle": 92.0, "default_open_duration": 3.6,
+                                    "open_curve": None, "opening_sound": opening})
     folder = "Puzzles/Trail 2 Gate"
     cube = "/Engine/BasicShapes/Cube"
     cone = "/Engine/BasicShapes/Cone"
     gate_rng = random.Random(982)
     angle = math.radians(yaw)
     world = require_map()
-    walls = [actor for actor in actors.get_all_level_actors() if actor.get_actor_label() == "InvisibleWall"]
+    ignored = [
+        actor for actor in actors.get_all_level_actors()
+        if actor.get_actor_label() == "InvisibleWall" or str(actor.get_folder_path()) == "World/" + folder
+    ]
 
     def at(cross, forward, up):
         return (x - math.sin(angle) * cross + math.cos(angle) * forward,
@@ -534,7 +537,7 @@ def palisade_gate(gate, x, y, z, yaw, width, height):
     def ground(cross):
         hit = unreal.SystemLibrary.line_trace_single(
             world, unreal.Vector(*at(cross, 0.0, 1900.0)), unreal.Vector(*at(cross, 0.0, -1900.0)),
-            unreal.TraceTypeQuery.TRACE_TYPE_QUERY1, False, walls, unreal.DrawDebugTrace.NONE, True)
+            unreal.TraceTypeQuery.TRACE_TYPE_QUERY1, False, ignored, unreal.DrawDebugTrace.NONE, True)
         return hit.to_tuple()[4].z - z if hit else 0.0
 
     def stake(cross, forward, base, top, thickness, label, solid=False):
@@ -553,7 +556,7 @@ def palisade_gate(gate, x, y, z, yaw, width, height):
     # Take all foundation samples before placing geometry.
     posts = {side: [side * (inner + (outer - inner) * k / cells) for k in range(cells + 1)] for side in (-1, 1)}
     floor = {side: [ground(cross) for cross in points] for side, points in posts.items()}
-    for side in (-1, 1):
+    def build_doors_and_buttress(side, ground_level):
         leaf = gate.get_editor_property("door" if side < 0 else "right_door")
         leaf.set_static_mesh(unreal.load_asset(cube))
         leaf.set_relative_location(unreal.Vector(20.0, side * hinge / 2.0, peak * 0.44), False, False)
@@ -580,34 +583,59 @@ def palisade_gate(gate, x, y, z, yaw, width, height):
                             72.0, folder, "Gate Diagonal Brace", False)
         attach(brace, leaf)
 
-        points, levels = posts[side], floor[side]
-        foot = min(levels[0], 0.0) - 35.0
+        foot = min(ground_level, 0.0) - 35.0
         dimensions = ((325.0, 285.0, 330.0), (284.0, 240.0, 315.0), (258.0, 220.0, 310.0), (230.0, 210.0, 300.0))
         for row, (breadth, depth, rise) in enumerate(dimensions):
             collide(fit_box(WALL_STONES[row], *at(side * (inner + 24.0), -22.0 + row * 7.0, foot + rise),
                             yaw + side * (6.0 - 3.0 * row), depth, breadth, rise + 40.0, folder, "Gate Stone Buttress"))
             foot += rise - 24.0
-        stake(side * inner, -94.0, min(levels[0], 0.0) - 35.0, peak + 125.0, 145.0, "Gate Crown Post", True)
+        stake(side * inner, -94.0, min(ground_level, 0.0) - 35.0, peak + 125.0, 145.0, "Gate Crown Post", True)
         stake(side * (hinge + 43.0), 20.0, -55.0, peak - 120.0, 108.0, "Gate Hinge Post", True)
 
-        for cross, low in zip(points[1:], levels[1:]):
-            stake(cross, 0.0, low - 40.0, low + WALL_HEIGHT_GATE + 80.0 + gate_rng.uniform(-20.0, 20.0),
-                  58.0, "Gate Wing Post", True)
+    for side in (-1, 1):
+        points, levels = posts[side], floor[side]
+        if not wings_only:
+            build_doors_and_buttress(side, levels[0])
+
+        crests = [peak - 88.0 - 96.0 * k / cells for k in range(cells + 1)]
+        for cross, low, crest in zip(points[1:], levels[1:], crests[1:]):
+            stake(cross, -102.0, low - 55.0, crest + 47.0, 108.0, "Gate Wing Post", True)
+            for up in (crest - 35.0, low + 180.0):
+                fit_box(cube, *at(cross, -101.0, up + 18.0), yaw, 122.0, 122.0, 36.0,
+                        folder, "Gate Wing Iron Collar", iron)
+
         for k in range(cells):
             c0, c1 = points[k:k + 2]
-            low, high = levels[k:k + 2]
+            low0, low1 = levels[k:k + 2]
+            crest0, crest1 = crests[k:k + 2]
             cell = abs(c1 - c0)
             for row in range(STONE_COURSES):
-                for col in range(2):
-                    cross = c0 + (c1 - c0) * (col + 0.5) / 2.0
-                    top = min(low, high) + WALL_HEIGHT_GATE * (row + 1) / STONE_COURSES + 10.0
-                    collide(fit_box(gate_rng.choice(WALL_STONES), *at(cross, gate_rng.uniform(-8.0, 8.0), top),
-                                    yaw + gate_rng.uniform(-8.0, 8.0), 80.0, cell * 0.575,
-                                    WALL_HEIGHT_GATE / STONE_COURSES * 1.2, folder, "Gate Wing Stone"))
-            for up in (20.0, WALL_HEIGHT_GATE / 2.0, WALL_HEIGHT_GATE):
-                log_between(at(c0, -42.0, low + up), at(c1, -42.0, high + up), 36.0, folder, "Gate Wing Beam")
-            for a, b in ((30.0, WALL_HEIGHT_GATE - 10.0), (WALL_HEIGHT_GATE - 10.0, 30.0)):
-                log_between(at(c0, -50.0, low + a), at(c1, -50.0, high + b), 30.0, folder, "Gate Wing Brace")
+                depth = 236.0 - 17.0 * row
+                split = gate_rng.uniform(0.43, 0.57)
+                for start, end in ((0.0, split), (split, 1.0)):
+                    t = (start + end) * 0.5
+                    cross = c0 + (c1 - c0) * t
+                    bottom = low0 + (low1 - low0) * t - 58.0
+                    crest = crest0 + (crest1 - crest0) * t
+                    rise = (crest - bottom) / STONE_COURSES
+                    top = bottom + (row + 1) * rise + gate_rng.uniform(-17.0, 17.0)
+                    collide(fit_box(gate_rng.choice(WALL_STONES), *at(cross, 14.0, top),
+                                    yaw + gate_rng.uniform(-6.0, 6.0), depth, cell * (end - start) + 24.0,
+                                    rise + 62.0, folder, "Gate Wing Stone"))
+
+            for fraction, thickness in ((0.08, 62.0), (0.50, 47.0), (0.98, 69.0)):
+                up0 = low0 + (crest0 - low0) * fraction
+                up1 = low1 + (crest1 - low1) * fraction
+                log_between(at(c0, -107.0, up0), at(c1, -107.0, up1), thickness, folder, "Gate Wing Beam")
+            for a, b in ((0.13, 0.92), (0.92, 0.13)):
+                up0 = low0 + (crest0 - low0) * a
+                up1 = low1 + (crest1 - low1) * b
+                log_between(at(c0, -130.0, up0), at(c1, -130.0, up1), 55.0, folder, "Gate Wing Brace")
+
+            for t in (0.32, 0.68):
+                cross = c0 + (c1 - c0) * t
+                crest = crest0 + (crest1 - crest0) * t
+                stake(cross, -29.0, crest - 165.0, crest + gate_rng.uniform(15.0, 47.0), 65.0, "Gate Wing Spike")
 
 
 LEVER_SOURCE = os.path.join(ls_world_common.SOURCE_FOLDER, "Lever")
