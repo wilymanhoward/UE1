@@ -60,6 +60,10 @@ struct FSeedFormData
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Assets")
 	TObjectPtr<USoundBase> RollSound = nullptr;
 
+	/** Takeoff sound for this form. Leave empty to use the ball's default jump sound. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Assets")
+	TObjectPtr<USoundBase> JumpSound = nullptr;
+
 	/** Colour of the light this form gives off. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tuning")
 	FLinearColor GlowColor = FLinearColor(1.f, 0.72f, 0.3f);

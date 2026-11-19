@@ -276,7 +276,7 @@ void ASeedBall::TryConsumeJump(const FSeedFormData& Data)
 	// bVelChange = true means this is a direct speed change, so mass does not affect jump height.
 	BallMesh->AddImpulse(FVector(0.f, 0.f, Data.JumpImpulse - FallingSpeed), NAME_None, true);
 
-	UGameplayStatics::PlaySoundAtLocation(this, JumpSound, GetActorLocation());
+	UGameplayStatics::PlaySoundAtLocation(this, Data.JumpSound ? Data.JumpSound.Get() : JumpSound.Get(), GetActorLocation());
 }
 
 void ASeedBall::ApplyMovement(const FSeedFormData& Data)
