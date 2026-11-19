@@ -471,17 +471,21 @@ MUSHROOM_NOTE_LIFT = 950.0  # A note this high over a mushroom is out of reach o
 
 
 def fun_extras(p):
-    """Bouncy mushrooms, marked extra so they can be added to an existing level."""
+    """Natural opening obstacles; springcaps are introduced later beside their raised reward."""
 
-    def mushroom(s, d, scale=0.8, launch=1600.0):
+    def mushroom(s, d, scale=0.6, launch=1600.0):
         p.add("mushroom", s, d, z=p.surface(s, d) - 5.0, scale=scale, launch=launch, extra="fun", solid=200.0 * scale)
 
-    p.add("tutorial", 1500.0, z=p.z(1500.0) + 200.0, message="Roll onto the giant mushroom to bounce. Some notes are only up high.",
+    p.add("tutorial", 1500.0, z=p.z(1500.0) + 200.0, message="Follow the music notes. Press Space to hop over fallen branches.",
           half=[300.0, p.wall_half(1500.0), 300.0], extra="fun")
-    mushroom(2000.0, 150.0)                       # Under the first raised note.
-    mushroom(p.s("jump1", 1500.0), -170.0)        # Just for fun, beside the trail.
+    p.add('fallen_log',3000.0,-100.0,z=p.z(3000.0),length=500.0,height=55.0,lean=-18.0,name='Opening',extra='fun',solid=330.0)
+    for s,d in [(3800.0,240.0),(4600.0,-240.0)]:
+        p.add('block',s,d,z=p.surface(s,d)+65.0,length=240.0,width=220.0,depth=200.0,name='Opening',extra='fun',solid=180.0)
+    s=p.s('dandelion',-4200.0)
+    p.add('tutorial',s,z=p.z(s)+200.0,message='Jump onto the springcap to reach the high music note.',
+          half=[300.0,p.wall_half(s),300.0],extra='fun')
     mushroom(p.s("dandelion", -3500.0), 120.0)    # Under the second raised note.
-    mushroom(p.s("blobs", 900.0), 600.0, scale=0.9, launch=1500.0)  # In the arena: bounce up, then slam a blob as Stone.
+    mushroom(p.s("blobs", 900.0), 600.0, launch=1500.0)  # In the arena: bounce up, then slam a blob as Stone.
 
 
 
@@ -495,7 +499,7 @@ def place_pieces(trail, walk, floor, ground, high, halves, climbs):
     p.add("player_start", 250.0, z=p.z(250.0) + 150.0)
     p.add("story", 300.0, z=p.z(300.0) + 600.0, cards=STORY_START, on_start=True)
     tut(700.0, "WASD to roll, and the mouse to look.")
-    p.add("note", 2000.0, 150.0, z=p.surface(2000.0, 150.0) + MUSHROOM_NOTE_LIFT, raised=True)
+    note(2000.0,150.0)
     note(3800.0, -150.0)
     jump = p.s("jump1")
     p.add("fallen_log", jump, z=p.z(jump), length=2.0 * p.wall_half(jump) + 200.0, height=90.0, solid=p.wall_half(jump))

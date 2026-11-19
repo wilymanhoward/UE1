@@ -63,7 +63,8 @@ def mesh(name):
 
 
 def load_plan():
-    return json.load(open(WORK + "plan.json"))
+    from ls_natural_trail01 import patch_plan
+    return patch_plan(json.load(open(WORK + "plan.json")))
 
 
 def require_map():
@@ -390,7 +391,7 @@ def fit_box(mesh_path, x, y, top, yaw, size_x, size_y, size_z, folder, label, ma
 
 
 FLAT_ROCKS = ["/Game/Wildwood/Model/Rocks/SM_Boulder_08", "/Game/Wildwood/Model/Rocks/SM_Boulder_09", "/Game/Wildwood/Model/Rocks/SM_Boulder_10",
-              "/Game/Stylized_PBR_Nature/Rocks/Assets/SM_S_Rock_09", "/Game/Wildwood/Model/Rocks/SM_Boulder_07"]
+              "/Game/Wildwood/Model/Rocks/SM_Boulder_07"]
 STACK_ROCKS = ["/Game/RocksPackDEMO/Environment/Rocks/SM_RockPack_Cliff_07_B", "/Game/RocksPackDEMO/Environment/Rocks/SM_RockPack_Cliff_07_D"]
 TOP_ROCK = "/Game/RocksPackDEMO/Environment/Rocks/SM_RockPack_Rock_02"  # Low and broad, so a stone's top reads as flat.
 
@@ -970,9 +971,7 @@ def place(entry, plates):
             component = actor.get_editor_property(prop)
             component.set_static_mesh(unreal.load_asset("{}/SM_LS_Mushroom{}".format(MUSHROOM_FOLDER, part)))
             component.set_material(0, unreal.load_asset("{}/M_LS_Mushroom{}".format(MUSHROOM_FOLDER, part)))
-            # In colour while the forest is grey, so it reads as something to play with.
-            component.set_render_custom_depth(True)
-            component.set_custom_depth_stencil_value(ls_world_common.FULL_COLOUR_STENCIL)
+            component.set_render_custom_depth(False)
         actor.get_editor_property("cap").set_relative_location(unreal.Vector(0.0, 0.0, 145.0), False, False)
     elif kind == "storm":
         sounds = fun_assets()
@@ -1208,7 +1207,7 @@ def clear():
     return removed
 
 
-STAGES = ["foliage", "clear", "trail", "scenery", "gameplay", "hand", "start_approach", "world", "leaves", "save"]
+STAGES = ["foliage", "clear", "trail", "scenery", "gameplay", "hand", "start_approach", "natural_trail01", "world", "leaves", "save"]
 
 
 def run(stage):
@@ -1243,6 +1242,10 @@ def run(stage):
         importlib.reload(ls_extend_start)
         assert unreal.get_editor_subsystem(unreal.LevelEditorSubsystem).save_current_level()
         result = ls_extend_start.build()
+    elif stage == "natural_trail01":
+        import ls_natural_trail01
+        importlib.reload(ls_natural_trail01)
+        result = ls_natural_trail01.build()
     elif stage == "intro":
         result = intro()
     elif stage == "world":

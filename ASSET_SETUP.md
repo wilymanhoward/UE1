@@ -485,3 +485,9 @@ The three `/Game/LastSeed/Weather/SM_LS_SkyLightning_0*` meshes were baked from 
 
 To rebake from that Blender file, run Blender with `--background --disable-autoexec <source.blend> --python Content/Python/ls_export_sky_lightning.py`, then run `import ls_sky_lightning; ls_sky_lightning.build()` in Unreal. The level builder also assigns these meshes through `set_opening_weather`. No Blender process or plugin is needed at game runtime.
 
+### Natural opening and Trail 01
+
+`build_level1_wildwood.run('natural_trail01')` replaces the two early bounce mushrooms with a low branch and staggered stones, lowers the first Life Note, and adds small non-colliding shoulder details. Trail 01's obstacle rocks use the Wildwood boulder family. The two later springcaps keep their bounce mechanic at reduced scale and follow the world's curse colouring. The migration preserves the trail, crossings, note count and optional petals; a pre-change map copy is kept in `Saved/BeforeNaturalTrail01`.
+
+In fresh PIE, run `ls_review_trail01.py` through `runpy.run_path` with `MODE` set to `opening`, `main`, `log_reward`, or `hill_reward` to check the routes with real Seed input and physics.
+

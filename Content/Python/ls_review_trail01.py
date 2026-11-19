@@ -1,6 +1,6 @@
 """PIE traversal check using the real Seed inputs and physics, without teleporting past obstacles.
 
-Run with MODE='main', 'log_reward', or 'hill_reward' through runpy.run_path.
+Run with MODE='opening', 'main', 'log_reward', or 'hill_reward' through runpy.run_path.
 Each check teleports once to its start, then drives Enhanced Input along the route.
 """
 from pathlib import Path
@@ -34,7 +34,7 @@ def point(s,d=0):
 
 def project(loc):
     best=(1e30,0,0)
-    for i in range(74,134):
+    for i in (range(0,35) if mode=='opening' else range(74,134)):
         a,b=trail[i],trail[i+1];dx,dy=b[0]-a[0],b[1]-a[1]
         t=max(0,min(1,((loc.x-a[0])*dx+(loc.y-a[1])*dy)/(dx*dx+dy*dy)))
         x,y=a[0]+t*dx,a[1]+t*dy;distance=(loc.x-x)**2+(loc.y-y)**2
@@ -42,7 +42,11 @@ def project(loc):
     return best[1],best[2]
 
 
-if mode=='main':
+if mode=='opening':
+    start,end,speed=0,5000,350
+    line=[(0,0),(1700,150),(2300,150),(3000,0),(3450,-150),(4050,-150),(4400,150),(5000,0)]
+    jumps=[2700]
+elif mode=='main':
     start,end,speed=15500,26400,420
     line=[(15500,0),(17000,0),(17500,200),(17850,200),(18450,-200),(19000,-200),
           (19300,0),(19900,0),(20500,-245),(21450,-245),(22200,245),(22750,245),
@@ -73,10 +77,15 @@ output=Path(unreal.Paths.project_saved_dir())/'Screenshots/Trail01';output.mkdir
 
 
 def finish(success,reason):
-    if success and mode!='main':
+    if success and mode in ('log_reward','hill_reward'):
         label='Trail01_OptionalPetal_'+('1' if mode=='log_reward' else '2')
         if any(a.get_actor_label()==label for a in unreal.GameplayStatics.get_all_actors_of_class(world,unreal.GoldenPetal)):
             success=False;reason='reached the exit but missed the optional reward'
+    if success and mode=='opening':
+        target=point(2000,150)
+        if any(math.hypot(a.get_actor_location().x-target[0],a.get_actor_location().y-target[1])<150
+               for a in unreal.GameplayStatics.get_all_actors_of_class(world,unreal.LifeNote)):
+            success=False;reason='first note was not collected without a bounce mushroom'
     subsystem.inject_input_vector_for_action(actions['InputAction_0'],unreal.Vector(0,0,0),[],[])
     body.set_physics_linear_velocity(unreal.Vector(0,0,0))
     body.set_physics_angular_velocity_in_radians(unreal.Vector(0,0,0))
