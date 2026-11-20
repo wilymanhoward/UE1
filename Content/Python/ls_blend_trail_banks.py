@@ -4,7 +4,8 @@ import shutil
 import unreal
 from ls_generate_player_meshes import Mesh, smoothstep, write_obj
 
-NAMES = ('SM_LS_WildwoodTrail_00', 'SM_LS_WildwoodTrail_01', 'SM_LS_WildwoodTrail_02')
+RIVERBANK = 'SM_LS_WildwoodTrail_05'
+NAMES = ('SM_LS_WildwoodTrail_00', 'SM_LS_WildwoodTrail_01', 'SM_LS_WildwoodTrail_02', RIVERBANK)
 
 
 def blend_source(name):
@@ -26,7 +27,7 @@ def blend_source(name):
     ignore = [a for a in builder.actors.get_all_level_actors() if not isinstance(a, unreal.LandscapeProxy)]
 
     def terrain_height(x, y):
-        hit = unreal.SystemLibrary.line_trace_single(world, unreal.Vector(x,y,6500), unreal.Vector(x,y,500),
+        hit = unreal.SystemLibrary.line_trace_single(world, unreal.Vector(x,y,6500), unreal.Vector(x,y,-2500),
             unreal.TraceTypeQuery.TRACE_TYPE_QUERY1, False, ignore, unreal.DrawDebugTrace.NONE, True)
         assert hit and hit.to_tuple()[0], (name,x,y)
         return hit.to_tuple()[4].z
@@ -62,6 +63,10 @@ def blend_source(name):
                     at_landing = 1 - smoothstep(0, 1.5, u - uvs[0][0])
                     blend = max(smoothstep(.85, 1.85, across), at_landing * smoothstep(.35, 1.05, across))
                     blend *= smoothstep(0, .85, uvs[-1][0] - u)
+                elif name == RIVERBANK:
+                    # The river-facing shoulder settles into the bank while the landing and travel lane keep their height.
+                    waterside = col > width // 2
+                    blend = smoothstep(.80 if waterside else 1.02, 1.60 if waterside else 1.72, across)
                 if blend > 0:
                     ground = terrain_height(x, y)
                     z += (ground - 20 - z) * blend
@@ -129,4 +134,4 @@ def build():
     for name, source in sources.items():
         builder.import_trail_mesh(name, source)
     assert unreal.get_editor_subsystem(unreal.LevelEditorSubsystem).save_current_level()
-    print('Blended both grass shoulders along the first Wildwood trail run.')
+    print('Blended the Wildwood trail banks into the landscape.')

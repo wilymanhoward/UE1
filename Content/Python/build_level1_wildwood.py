@@ -64,7 +64,11 @@ def mesh(name):
 
 def load_plan():
     from ls_natural_trail01 import patch_plan
-    return patch_plan(json.load(open(WORK + "plan.json")))
+    from ls_trail05_riverbank import obsolete_obstacle
+
+    plan = patch_plan(json.load(open(WORK + "plan.json")))
+    plan["actors"] = [entry for entry in plan["actors"] if not obsolete_obstacle(entry)]
+    return plan
 
 
 def require_map():
@@ -1274,7 +1278,7 @@ def clear():
     return removed
 
 
-STAGES = ["foliage", "clear", "trail", "scenery", "gameplay", "hand", "start_approach", "natural_trail01", "world", "leaves", "save"]
+STAGES = ["foliage", "clear", "trail", "scenery", "gameplay", "hand", "start_approach", "natural_trail01", "riverbank_trail05", "world", "leaves", "save"]
 
 
 def run(stage):
@@ -1313,6 +1317,10 @@ def run(stage):
         import ls_natural_trail01
         importlib.reload(ls_natural_trail01)
         result = ls_natural_trail01.build()
+    elif stage == "riverbank_trail05":
+        import ls_trail05_riverbank
+        importlib.reload(ls_trail05_riverbank)
+        result = ls_trail05_riverbank.build()
     elif stage == "intro":
         result = intro()
     elif stage == "world":
