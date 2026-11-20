@@ -64,7 +64,9 @@ void AStoryTrigger::Play()
 				? FVector::ZeroVector : GetActorLocation() + RevealTargetOffset;
 			const TWeakObjectPtr<AWitheringStorm> Curse = AfterCutsceneCurse;
 			const TWeakObjectPtr<ASeedBall> Ball = Cast<ASeedBall>(PlayerController->GetPawn());
-			PlayerController->PlayIntro(IntroShots, IntroMusic, IntroVoiceOver, bPlayOnStart, RevealTarget,
+			const ELSIntroTransition Transition = bArrivalCutscene ? ELSIntroTransition::Arrival
+				: (bPlayOnStart ? ELSIntroTransition::Opening : ELSIntroTransition::Gameplay);
+			PlayerController->PlayIntro(IntroShots, IntroMusic, IntroVoiceOver, Transition, RevealTarget,
 				[Curse, Ball]() { if (Curse.IsValid() && Ball.IsValid()) Curse->StartRising(Ball.Get()); });
 		}
 		else

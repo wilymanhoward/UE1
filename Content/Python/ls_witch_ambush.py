@@ -7,12 +7,12 @@ AUDIO = 'SFX_LS_RiverAmbush'
 ART = '/Game/LastSeed/Intro/RiverAmbush'
 
 
-def shot_art(name):
-    path = f'{ART}/T_LS_{name}'
+def shot_art(name, folder=ART, source_folder='RiverAmbush'):
+    path = f'{folder}/T_LS_{name}'
     if not unreal.EditorAssetLibrary.does_asset_exist(path):
-        source = Path(unreal.Paths.project_content_dir()) / 'LastSeed/SourceIntro/RiverAmbush'
+        source = Path(unreal.Paths.project_content_dir()) / 'LastSeed/SourceIntro' / source_folder
         task = unreal.AssetImportTask()
-        task.set_editor_properties({'filename': str(source / (name + '.png')), 'destination_path': ART,
+        task.set_editor_properties({'filename': str(source / (name + '.png')), 'destination_path': folder,
                                     'destination_name': 'T_LS_' + name, 'automated': True})
         unreal.AssetToolsHelpers.get_asset_tools().import_asset_tasks([task])
         assert task.imported_object_paths, task.filename
@@ -24,12 +24,12 @@ def shot_art(name):
     return unreal.load_asset(path)
 
 
-def shot_motion(name, art, surge):
+def shot_motion(name, art, surge, folder=ART, material_name='M_LS_RiverAmbushMotion', shader=None):
     editor = unreal.MaterialEditingLibrary
     assets = unreal.AssetToolsHelpers.get_asset_tools()
-    material_path = f'{ART}/M_LS_RiverAmbushMotion'
+    material_path = f'{folder}/{material_name}'
     if not unreal.EditorAssetLibrary.does_asset_exist(material_path):
-        material = assets.create_asset('M_LS_RiverAmbushMotion', ART, unreal.Material, unreal.MaterialFactoryNew())
+        material = assets.create_asset(material_name, folder, unreal.Material, unreal.MaterialFactoryNew())
         material.set_editor_property('material_domain', unreal.MaterialDomain.MD_UI)
         material.set_editor_property('blend_mode', unreal.BlendMode.BLEND_TRANSLUCENT)
         uv = editor.create_material_expression(material, unreal.MaterialExpressionTextureCoordinate, -500, 0)
@@ -48,7 +48,7 @@ def shot_motion(name, art, surge):
             pin.set_editor_property('input_name', label)
             pins.append(pin)
         render.set_editor_properties({'inputs': pins, 'output_type': unreal.CustomMaterialOutputType.CMOT_FLOAT3,
-                                      'code': Path(__file__).with_suffix('.hlsl').read_text()})
+                                      'code': (shader or Path(__file__).with_suffix('.hlsl')).read_text()})
         for label, node in inputs.items():
             assert editor.connect_material_expressions(node, '', render, label)
         assert editor.connect_material_property(render, '', unreal.MaterialProperty.MP_EMISSIVE_COLOR)
@@ -60,9 +60,9 @@ def shot_motion(name, art, surge):
     else:
         material = unreal.load_asset(material_path)
     instance_name = 'MI_LS_' + name
-    instance_path = f'{ART}/{instance_name}'
+    instance_path = f'{folder}/{instance_name}'
     if not unreal.EditorAssetLibrary.does_asset_exist(instance_path):
-        instance = assets.create_asset(instance_name, ART, unreal.MaterialInstanceConstant,
+        instance = assets.create_asset(instance_name, folder, unreal.MaterialInstanceConstant,
                                        unreal.MaterialInstanceConstantFactoryNew())
     else:
         instance = unreal.load_asset(instance_path)

@@ -8,6 +8,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "LSIntroWidget.h"
 #include "LSVolumeBase.h"
 #include "LevelGoal.generated.h"
 
@@ -31,6 +32,13 @@ public:
 	/** Story text shown before the results if there is no Ending Sequence. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Level Goal", meta = (MultiLine = "true"))
 	TArray<FText> EndingCards;
+
+	/** When a destination is assigned, these shots replace the results screen and lead into that level. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Level Goal")
+	TArray<FLSIntroShot> TravelShots;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Level Goal")
+	TObjectPtr<USoundBase> TravelAudio;
 
 	/** Opened by the results screen's Next button. Leave empty on the last level. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Level Goal")

@@ -25,6 +25,14 @@ class UOverlay;
 class USizeBox;
 class UTexture2D;
 
+enum class ELSIntroTransition : uint8
+{
+	Gameplay,
+	Opening,
+	Travel,
+	Arrival
+};
+
 USTRUCT(BlueprintType)
 struct FLSIntroShot
 {
@@ -62,6 +70,10 @@ struct FLSIntroShot
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Shot")
 	bool bFlash = false;
 
+	/** Optional seed centre (X/Y) and height (Z) as fractions of the final frame. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Shot")
+	FVector SeedMatch = FVector::ZeroVector;
+
 	/** Shown at the bottom of the screen. A caption the same as the shot before stays up without fading. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Shot", meta = (MultiLine = "true"))
 	FText Caption;
@@ -77,7 +89,7 @@ class ASSIGNMENT1_API ULSIntroWidget : public UUserWidget
 public:
 	/** Sets what to play. Call before adding it to the viewport. Shots must not be empty. */
 	void SetIntro(const TArray<FLSIntroShot>& InShots, USoundBase* InMusic, USoundBase* InVoiceOver,
-		bool bInOpening, const FVector& InRevealTarget);
+		ELSIntroTransition InTransition, const FVector& InRevealTarget);
 
 	/** Fires once, when the cutscene ends or is skipped. */
 	UPROPERTY(BlueprintAssignable, Category = "Intro")
@@ -97,6 +109,7 @@ private:
 	void RequestSkip();
 	void MatchSeedCamera(const FVector2D& ViewportSize);
 	void RestoreCamera();
+	bool MatchesSeed() const { return Transition == ELSIntroTransition::Opening || Transition == ELSIntroTransition::Arrival; }
 
 	/** Places a shot's picture for local time Seconds into the shot. */
 	void ApplyShot(UImage* Image, const FLSIntroShot& Shot, float Seconds) const;
@@ -123,7 +136,7 @@ private:
 	FVector MatchedCameraLocation = FVector::ZeroVector;
 	FRotator GameplayCameraRotation = FRotator::ZeroRotator;
 	FVector RevealTarget = FVector::ZeroVector;
-	bool bOpening = true;
+	ELSIntroTransition Transition = ELSIntroTransition::Opening;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UImage> FrontImage;

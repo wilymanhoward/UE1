@@ -117,6 +117,12 @@ void ALSGameMode::CompleteLevel(ALevelGoal* Goal)
 
 	if (ALSPlayerController* PlayerController = GetLSPlayerController())
 	{
+		if (!Goal->TravelShots.IsEmpty() && !Goal->NextLevel.IsNull())
+		{
+			PlayerController->PlayIntro(Goal->TravelShots, Goal->TravelAudio, nullptr,
+				ELSIntroTransition::Travel, FVector::ZeroVector, [this]() { ContinueAfterResults(); });
+			return;
+		}
 		PlayerController->PlayStory(Goal->EndingSequence, Goal->EndingCards, [this, PlayerController]()
 		{
 			PlayerController->ShowResults(LastResult);

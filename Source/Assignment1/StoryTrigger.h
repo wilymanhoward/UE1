@@ -53,6 +53,10 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Story")
 	bool bPlayOnStart = false;
 
+	/** Fade in after travel and dissolve into the live seed camera. */
+	UPROPERTY(EditAnywhere, Category = "Story")
+	bool bArrivalCutscene = false;
+
 	UPROPERTY(EditAnywhere, Category = "Story")
 	bool bWaitForLanding = false;
 

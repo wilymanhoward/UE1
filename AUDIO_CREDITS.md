@@ -42,6 +42,10 @@ The 42-second opening mix uses excerpts of the music and field recordings below.
   The repeated shockwave warning, `SFX_LS_WitchAttackScream.wav`, uses a separate 1.25-second excerpt of this recording, filtered, faded and peak-limited to −4 dBFS, in mono 48 kHz PCM.
 - “flowing stream” by michelcik, [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/). Stream recorded with a Zoom H4n in Slovakia. The public HQ preview was excerpted and faded for the riverbank ambience. [Freesound recording](https://freesound.org/people/michelcik/sounds/436512/)
 
+## The Witch’s Exile
+
+- The teleport cue uses the recordings already credited above for tree regrowth, witch scream, thunder and falling stone. The Emberwood bed uses “Fireplace” by myLoop under [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/). The recordist captured an outdoor campfire in Munich using a Zoom H1essential. The public HQ preview was filtered and crossfaded for the fire loop and the end of the teleport cue. [Freesound recording](https://freesound.org/people/myLoop/sounds/852107/)
+
 ## Narration
 
 - The riverbank witch dialogue uses the user-supplied ElevenLabs v4 Kristen “Cold Evil Queen Villain” take from 18 November 2026. The original MP3 is retained as `VO_LS_WitchKristen.mp3`. The recording plays at its original speed, starting 1.70 seconds into the ambush. It was filtered, level-adjusted and mixed with the river ambience and recorded scream into `SFX_LS_RiverAmbush.wav`. The scream starts at 6.95 seconds, after the dialogue. The final mix peaks at or below −3 dBFS.
