@@ -44,6 +44,9 @@ public:
 	bool bShockwaveAttacks = false;
 	UPROPERTY(EditAnywhere, Category = "Storm", meta = (ClampMin = "0"))
 	float ShockwaveBend = 650.f;
+	/** Minimum distance down the path the ball must be from the wave's launch point. Zero always allows launches. */
+	UPROPERTY(EditAnywhere, Category = "Storm", meta = (ClampMin = "0"))
+	float ShockwaveMinLaunchDistance = 0.f;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	TObjectPtr<UAudioComponent> AttackAudio;
 

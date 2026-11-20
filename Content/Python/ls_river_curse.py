@@ -131,9 +131,9 @@ def configure(story):
             unreal.TraceTypeQuery.TRACE_TYPE_QUERY1,False,ignore,unreal.DrawDebugTrace.NONE,True)
         assert hit and hit.to_tuple()[0], f'No trail below {p}'
         p.z=hit.to_tuple()[4].z
-    storm.set_editor_properties({'chase_points':route,'rise_speed':900.0,'note_pushback':0.0,'shockwave_attacks':True,
-        'shockwave_bend':BEND,
-        'start_delay':2.0,'max_rise_distance':4300.0,'close_distance':1800.0,'respawn_clearance':1400.0})
+    storm.set_editor_properties({'chase_points':list(reversed(route)),'rise_speed':900.0,'note_pushback':0.0,'shockwave_attacks':True,
+        'shockwave_bend':BEND,'shockwave_min_launch_distance':1050.0,
+        'start_delay':2.0,'max_rise_distance':5200.0,'close_distance':1800.0,'respawn_clearance':1400.0})
     storm.get_editor_property('box').set_box_extent(unreal.Vector(70,1400,25),True)
     audio_path='/Game/LastSeed/Audio/SFX_LS_WitchAttackScream'
     if not unreal.EditorAssetLibrary.does_asset_exist(audio_path):

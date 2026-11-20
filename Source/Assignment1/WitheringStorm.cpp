@@ -145,6 +145,12 @@ void AWitheringStorm::TickShockwave(float DeltaSeconds)
 	DelayRemaining -= DeltaSeconds;
 	if (!bWaveActive && DelayRemaining <= 0.f)
 	{
+		if (ShockwaveMinLaunchDistance > 0.f
+			&& PathDistanceOf(TargetBall->GetActorLocation()) < ShockwaveMinLaunchDistance)
+		{
+			return;
+		}
+
 		// Exclude the previous tier so successive attacks always change height.
 		HeightTier = HeightTier < 0 ? FMath::RandRange(0, 2) : (HeightTier + FMath::RandRange(1, 2)) % 3;
 		WaveHeight = 25.f + HeightTier * 25.f;
