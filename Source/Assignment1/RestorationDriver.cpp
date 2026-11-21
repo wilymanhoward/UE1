@@ -130,7 +130,8 @@ void ARestorationDriver::UpdateWeather(float DeltaSeconds)
 		TimeToLightning -= DeltaSeconds;
 		if (TimeToLightning <= 0.f)
 		{
-			TimeToLightning = FMath::FRandRange(12.f, 22.f);
+			// At least 6.5 s apart so the 5.6 s thunder (played 0.55 s after the flash) ends before the next one.
+			TimeToLightning = FMath::FRandRange(6.5f, 10.f);
 			LightningGlowTime = 0.65f;
 			if (LightningInstance)
 			{
