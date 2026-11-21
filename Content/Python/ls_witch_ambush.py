@@ -24,7 +24,7 @@ def shot_art(name, folder=ART, source_folder='RiverAmbush'):
     return unreal.load_asset(path)
 
 
-def shot_motion(name, art, surge, folder=ART, material_name='M_LS_RiverAmbushMotion', shader=None):
+def shot_motion(name, art, surge, folder=ART, material_name='M_LS_RiverAmbushMotion', shader=None, textures=None):
     editor = unreal.MaterialEditingLibrary
     assets = unreal.AssetToolsHelpers.get_asset_tools()
     material_path = f'{folder}/{material_name}'
@@ -42,6 +42,11 @@ def shot_motion(name, art, surge, folder=ART, material_name='M_LS_RiverAmbushMot
         cue.set_editor_property('parameter_name', 'Surge')
         render = editor.create_material_expression(material, unreal.MaterialExpressionCustom, -100, 0)
         inputs = {'UV': uv, 'FrameTex': frame, 'ShotTime': clock, 'Surge': cue}
+        for index, (parameter, texture) in enumerate((textures or {}).items()):
+            node = editor.create_material_expression(material, unreal.MaterialExpressionTextureObjectParameter, -500, 490 + index * 130)
+            node.set_editor_properties({'parameter_name': parameter, 'texture': texture,
+                                        'sampler_type': unreal.MaterialSamplerType.SAMPLERTYPE_COLOR})
+            inputs[parameter] = node
         pins = []
         for label in inputs:
             pin = unreal.CustomInput()

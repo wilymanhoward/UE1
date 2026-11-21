@@ -31,7 +31,11 @@ void ALevelGoal::Tick(float DeltaSeconds)
 
 void ALevelGoal::OnBallOverlap(ASeedBall* Ball)
 {
-	if (!IsValid(Ball) || Ball->IsDead() || (bRequireJump && (!Ball->IsInJump() || Ball->GetVelocity().Z < 80.f)))
+	if (!IsValid(Ball) || Ball->IsDead())
+	{
+		return;
+	}
+	if (bRequireJump && (Ball->GetCurrentForm() != ESeedForm::Seed || !Ball->JustLandedFromJump()))
 	{
 		return;
 	}

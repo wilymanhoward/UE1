@@ -73,8 +73,8 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Seed|State")
 	bool IsGrounded() const { return bIsGrounded; }
 
-	/** True until landing after a successful jump input. */
-	bool IsInJump() const { return bJumpInProgress; }
+	/** True for the tick where a jump ends in a landing. */
+	bool JustLandedFromJump() const { return bJustLandedFromJump; }
 
 	/** True from the start of a slam until the ball lands. Cracked walls and blobs check this later. */
 	UFUNCTION(BlueprintPure, Category = "Seed|State")
@@ -329,6 +329,7 @@ private:
 
 	bool bIsGrounded = false;
 	bool bJumpInProgress = false;
+	bool bJustLandedFromJump = false;
 	bool bJumpHeld = false;
 	bool bIsSlamming = false;
 	bool bIsDead = false;

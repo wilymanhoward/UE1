@@ -41,7 +41,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Level Goal")
 	TObjectPtr<USoundBase> TravelAudio;
 
-	/** Complete only while the ball is rising from a jump inside this volume. */
+	/** Complete only when Seed lands from a jump inside this volume. */
 	UPROPERTY(EditAnywhere, Category = "Level Goal")
 	bool bRequireJump = false;
 

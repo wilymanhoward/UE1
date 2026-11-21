@@ -1,42 +1,76 @@
 float t = max(ShotTime, 0.0);
 float2 uv = UV;
 float3 light = 0.0;
+
 if (Surge < 0.5) {
-    float leap = smoothstep(0.0, 1.25, t);
-    float2 arc = float2(0.037 * leap, -0.025 * sin(leap * 3.14159));
-    float2 seed = float2(0.530, 0.489) + arc;
-    float local = 1.0 - smoothstep(0.067, 0.20, length((UV - seed) * float2(1.75, 1.0)));
-    uv -= local * arc;
-    uv = (uv - 0.5) * 0.955 + float2(0.486 + 0.026 * leap, 0.5);
-    float crack = 1.0 - smoothstep(0.009, 0.065, length((uv - float2(0.505, 0.588)) * float2(1.5, 0.7)));
-    light += crack * smoothstep(0.54, 1.42, t) * float3(0.028, 0.13, 0.078);
-} else if (Surge < 1.5) {
-    float push = smoothstep(0.0, 4.6, t);
-    uv = lerp(uv, float2(0.47, 0.43), 0.065 * push);
-    float cape = 1.0 - smoothstep(0.10, 0.30, length((uv - float2(0.23, 0.54)) * float2(1.25, 1.0)));
-    uv.x += cape * 0.004 * sin(25.0 * uv.y + 3.2 * t);
-    float wisp = 1.0 - smoothstep(0.072, 0.17, length((uv - float2(0.624, 0.665)) * float2(1.55, 1.0)));
-    float seethe = 0.35 + 0.65 * smoothstep(2.45, 4.52, t);
+    float fall = pow(saturate(t / 0.83), 1.7);
+    float bury = smoothstep(0.80, 1.34, t);
+    float2 center = float2(lerp(0.475, 0.532, fall), 0.405 + 0.248 * fall + 0.226 * bury);
+    float2 coord = (uv - center) / float2(0.147, 0.240) + 0.5;
+    float4 seed = Texture2DSample(SeedTex, SeedTexSampler, saturate(coord));
+    float soilLine = 0.755 + 0.002 * sin(uv.x * 324.0);
+    float visible = step(0.0, coord.x) * step(coord.x, 1.0) * step(0.0, coord.y) * step(coord.y, 1.0);
+    visible *= 1.0 - smoothstep(soilLine - 0.001, soilLine + 0.001, uv.y);
+
+    float3 dirt = Texture2DSample(FrameTex, FrameTexSampler, uv).rgb;
+    float shadow = 1.0 - smoothstep(0.36, 1.0, length((uv - float2(0.532, 0.760)) / float2(0.046, 0.012)));
+    dirt *= 1.0 - shadow * 0.24 * smoothstep(0.17, 0.78, t) * (1.0 - 0.6 * bury);
+    float3 scene = lerp(dirt, seed.rgb, seed.a * visible);
+
+    float kick = max(t - 0.81, 0.0);
+    [unroll]
+    for (int i = 0; i < 9; ++i) {
+        float signX = i % 2 == 0 ? -1.0 : 1.0;
+        float drift = 0.055 + 0.014 * i;
+        float2 fleck = float2(0.533 + signX * (0.006 + kick * drift),
+                            0.756 - kick * (0.12 + 0.018 * i) + 0.32 * kick * kick);
+        float size = 0.0023 + 0.0003 * (i % 4);
+        float chip = 1.0 - smoothstep(size * 0.68, size, length((uv - fleck) * float2(1.68, 0.9)));
+        float active = step(0.81, t) * step(fleck.y, 0.756) * (1.0 - smoothstep(0.19, 0.53, kick));
+        scene = lerp(scene, float3(0.24, 0.115, 0.047), chip * active);
+    }
+    return scene;
+}
+
+if (Surge < 1.5) {
+    float lean = smoothstep(0.0, 3.45, t);
+    uv = lerp(uv, float2(0.47, 0.57), 0.061 * lean);
+    float cape = 1.0 - smoothstep(0.08, 0.24, length((uv - float2(0.18, 0.43)) * float2(1.3, 1.0)));
+    uv.x += cape * 0.005 * sin(29.0 * uv.y + 3.15 * t);
+    float wisp = 1.0 - smoothstep(0.015, 0.072, length((uv - float2(0.559, 0.776)) * float2(1.68, 1.0)));
     float3 ink = Texture2DSample(FrameTex, FrameTexSampler, saturate(uv)).rgb;
-    float magic = smoothstep(0.015, 0.20, ink.g - max(ink.r, ink.b));
-    uv.x += wisp * magic * seethe * 0.011 * sin(5.0 * t + uv.y * 35.0);
-    light += float3(0.035, 0.175, 0.09) * wisp * magic * seethe * (0.65 + 0.35 * sin(4.0 * t));
+    float magic = smoothstep(0.06, 0.22, ink.g - max(ink.r, ink.b));
+    uv.x += wisp * magic * 0.008 * sin(4.2 * t + uv.y * 43.0);
+    light += float3(0.024, 0.14, 0.07) * wisp * magic * smoothstep(1.4, 3.3, t);
 } else if (Surge < 2.5) {
-    float drop = smoothstep(0.78, 3.25, t);
-    float strike = exp(-6.2 * t);
-    float spread = smoothstep(0.04, 1.05, t);
-    uv = lerp(uv, float2(0.554, 0.649), 0.19 * drop);
-    uv += strike * float2(0.011 * sin(45.0 * t), 0.008 * sin(59.0 * t));
-    float2 offset = uv - float2(0.552, 0.66);
-    float rim = (1.0 - smoothstep(0.074, 0.122, abs(offset.y)))
-              * (1.0 - smoothstep(0.18, 0.25, abs(offset.x)));
-    uv += offset * (1.0 - spread) * rim * float2(0.88, 0.62);
-    float2 seed = float2(0.552, 0.484 + 0.115 * drop);
-    float pull = 1.0 - smoothstep(0.056, 0.145, length((uv - seed) * float2(1.75, 1.0)));
-    uv.y -= pull * 0.115 * drop;
-    uv.x += rim * 0.004 * sin(53.0 * uv.y - 6.0 * t);
-    light += rim * spread * float3(0.031, 0.14, 0.070) * (0.36 + 0.27 * sin(4.0 * t + uv.x * 29.0));
-    light += float3(0.055, 0.19, 0.087) * exp(-12.0 * t);
+    float lift = smoothstep(0.12, 1.44, t);
+    float travel = smoothstep(1.36, 3.58, t);
+    float rush = smoothstep(2.0, 4.18, t);
+    float shake = exp(-5.9 * t);
+    uv = lerp(uv, float2(0.789, 0.357), 0.29 * rush);
+    uv += shake * float2(0.007 * sin(47.0 * t), 0.005 * sin(59.0 * t));
+    float ribbon = (1.0 - smoothstep(0.11, 0.29, abs(uv.x - 0.71)))
+                 * (1.0 - smoothstep(0.13, 0.31, abs(uv.y - 0.54)));
+    float3 paint = Texture2DSample(FrameTex, FrameTexSampler, saturate(uv)).rgb;
+    float mint = smoothstep(0.028, 0.27, paint.g - max(paint.r, paint.b)) * ribbon;
+    uv.x += mint * 0.0047 * sin(50.0 * uv.y - 7.0 * t);
+    paint = Texture2DSample(FrameTex, FrameTexSampler, saturate(uv)).rgb;
+
+    // Reuse the soft green behind the painted seed while the sprite travels up from the mound.
+    float replacement = (1.0 - smoothstep(0.027, 0.040, abs(uv.x - 0.688)))
+                      * (1.0 - smoothstep(0.080, 0.097, abs(uv.y - 0.620)));
+    float3 behind = Texture2DSample(FrameTex, FrameTexSampler, saturate(uv + float2(0.047, 0.0))).rgb;
+    paint = lerp(paint, behind, replacement);
+    float2 center = float2(0.688 + 0.100 * travel, 0.863 - 0.229 * lift - 0.285 * travel);
+    float2 size = float2(0.087, 0.150) * (1.0 - 0.57 * travel);
+    float2 coord = (uv - center) / size + 0.5;
+    float4 seed = Texture2DSample(SeedTex, SeedTexSampler, saturate(coord));
+    float visible = step(0.0, coord.x) * step(coord.x, 1.0) * step(0.0, coord.y) * step(coord.y, 1.0);
+    visible *= 1.0 - smoothstep(0.752, 0.763, uv.y);
+    visible *= 1.0 - smoothstep(0.80, 1.0, travel);
+    paint = lerp(paint, seed.rgb, seed.a * visible);
+    light = mint * float3(0.035, 0.19, 0.088) * (0.4 + 0.33 * sin(6.0 * t + uv.x * 27.0));
+    return saturate(paint * (0.90 + 0.10 * lift) + light);
 } else {
     float settle = 1.0 - smoothstep(0.0, 1.75, t);
     uv.y = lerp(UV.y, 0.706, settle * 0.068);

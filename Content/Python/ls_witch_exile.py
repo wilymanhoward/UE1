@@ -21,8 +21,9 @@ LAVA_Z = -285.0
 
 def shot(name, index, duration, caption="", seed_match=None):
     art = shot_art(name, folder=ART, source_folder="WitchExile")
-    motion = shot_motion(name, art, index, folder=ART, material_name="M_LS_ExileJumpMotion",
-                         shader=Path(__file__).with_suffix(".hlsl"))
+    seed = shot_art("PlantingSeedSprite", folder=ART, source_folder="WitchExile")
+    motion = shot_motion(name, art, index, folder=ART, material_name="M_LS_ExilePlantingMotion",
+                         shader=Path(__file__).with_suffix(".hlsl"), textures={"SeedTex": seed})
     result = unreal.LSIntroShot()
     result.set_editor_properties({"image": art, "motion_material": motion, "duration": duration,
                                   "fade_in": 0.0, "caption": unreal.Text(caption)})
@@ -175,24 +176,24 @@ def dress_arrival(actors, arrival_shot, ambience):
 
 
 def exile_shots():
-    travel = [shot("ExileLeap", 0, 1.45),
-              shot("ExileHex", 1, 4.6, "You brought it back.\nThen let it burn again."),
-              shot("ExilePortal", 2, 4.5, "Burn!")]
+    travel = [shot("PlantingSoil", 0, 3.0),
+              shot("WitchNotYet", 1, 3.65, "Not yet."),
+              shot("WitchBanishment", 2, 4.5)]
     arrival = shot("ExileEmberwood", 3, 5.3, seed_match=(0.498, 0.706, 0.24))
     return travel, arrival
 
 
 def setup_goal(actors, goal, travel):
-    goal.set_editor_properties({"travel_shots": travel, "travel_audio": sound("SFX_LS_ExileJump"),
+    goal.set_editor_properties({"travel_shots": travel, "travel_audio": sound("SFX_LS_ExilePlanting"),
                                 "require_jump": True})
-    goal.get_editor_property("box").set_box_extent(unreal.Vector(430, 390, 155), True)
+    goal.get_editor_property("box").set_box_extent(unreal.Vector(590, 390, 235), True)
     position = goal.get_actor_transform().transform_location(unreal.Vector(-515, 0, -130))
     hint = next((a for a in actors.get_all_level_actors() if a.get_actor_label() == "Exile jump hint"), None)
     if hint is None:
         hint = spawn(unreal.TutorialTrigger, position.x, position.y, position.z, "Exile jump hint", "Flow",
                      goal.get_actor_rotation().yaw)
     hint.get_editor_property("box").set_box_extent(unreal.Vector(175, 340, 210), True)
-    hint.set_editor_property("message", unreal.Text("Climb to the top, then jump forward."))
+    hint.set_editor_property("message", unreal.Text("Take Seed form, then jump into the dirt to plant yourself."))
     hint.set_editor_property("display_duration", 7.0)
 
 

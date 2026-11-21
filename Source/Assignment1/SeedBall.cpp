@@ -214,6 +214,7 @@ void ASeedBall::UpdateGrounded(const FSeedFormData& Data)
 
 	// During the lockout the ball is still touching the ground, but it has already jumped.
 	bIsGrounded = JumpLockoutRemaining <= 0.f && CheckForGround();
+	bJustLandedFromJump = bIsGrounded && bJumpInProgress;
 
 	if (!bIsGrounded)
 	{
@@ -581,6 +582,7 @@ void ASeedBall::Respawn()
 	AirFallSpeed = 0.f;
 	RollVolume = 0.f;
 	bJumpInProgress = false;
+	bJustLandedFromJump = false;
 	bIsDead = false;
 
 	OnRespawned.Broadcast();
