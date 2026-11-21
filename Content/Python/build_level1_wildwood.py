@@ -1209,6 +1209,8 @@ def set_opening_weather(driver):
                                   "distant_thunder": thunder})
     from ls_sky_lightning import configure
     configure(driver)
+    import ls_storm
+    ls_storm.configure(driver)
 
 
 def world_setup():

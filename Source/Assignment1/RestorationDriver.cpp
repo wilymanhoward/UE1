@@ -6,6 +6,12 @@
 #include "Components/VolumetricCloudComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/AudioComponent.h"
+#include "Components/LightComponent.h"
+#include "Components/SkyLightComponent.h"
+#include "Engine/DirectionalLight.h"
+#include "Engine/SkyLight.h"
+#include "NiagaraComponent.h"
+#include "NiagaraFunctionLibrary.h"
 #include "Camera/PlayerCameraManager.h"
 #include "Engine/ExponentialHeightFog.h"
 #include "Engine/PostProcessVolume.h"
@@ -55,17 +61,62 @@ void ARestorationDriver::BeginPlay()
 	Restoration->OnNoteCollected.AddDynamic(this, &ARestorationDriver::HandleNoteCollected);
 	if (!LightningMeshes.IsEmpty() && LightningMeshes[0])
 	{
-		LightningBolt->SetStaticMesh(LightningMeshes[0]);
-		LightningInstance = LightningBolt->CreateAndSetMaterialInstanceDynamic(0);
+		Bolts.Add(LightningBolt);
+		for (int32 Index = 1; Index < MaxBoltsPerStrike; ++Index)
+		{
+			UStaticMeshComponent* Bolt = NewObject<UStaticMeshComponent>(this);
+			Bolt->SetupAttachment(RootComponent);
+			Bolt->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+			Bolt->SetCastShadow(false);
+			Bolt->SetVisibility(false);
+			Bolt->RegisterComponent();
+			Bolts.Add(Bolt);
+		}
+		for (UStaticMeshComponent* Bolt : Bolts)
+		{
+			Bolt->SetStaticMesh(LightningMeshes[0]);
+			BoltInstances.Add(Bolt->CreateAndSetMaterialInstanceDynamic(0));
+		}
+	}
+
+	if (bStormGrade)
+	{
+		if (Sun) ClearSunIntensity = Sun->GetLightComponent()->Intensity;
+		if (SkyLight) ClearSkyIntensity = SkyLight->GetLightComponent()->Intensity;
+		if (HeightFog) ClearFogColor = HeightFog->GetComponent()->FogInscatteringLuminance;
+		// Not auto-activated: UpdateWeather switches them on while the storm is strong.
+		// The pack's rain spawns over a 200 m square; a quarter of that across puts 16 times the drops around the player.
+		if (RainEffect)
+			Rain = UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, RainEffect, GetActorLocation(), FRotator::ZeroRotator,
+				FVector(0.25f, 0.25f, 1.f), false, false);
+		if (StormWindEffect)
+			Wind = UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, StormWindEffect, GetActorLocation(), FRotator::ZeroRotator,
+				FVector::OneVector, false, false);
 	}
 
 	if (PostProcessVolume)
 	{
 		// Settings are ignored unless their override flag is on.
 		FPostProcessSettings& Settings = PostProcessVolume->Settings;
+		// Read before the overrides go on: a value the volume never overrode is the engine's neutral 1.
+		if (Settings.bOverride_ColorSaturation) ClearSaturation = Settings.ColorSaturation;
+		if (Settings.bOverride_ColorContrast) ClearContrast = Settings.ColorContrast;
+		if (Settings.bOverride_ColorGain) ClearGain = Settings.ColorGain;
 		Settings.bOverride_ColorSaturation = true;
 		Settings.bOverride_ColorContrast = true;
 		Settings.bOverride_ColorGain = true;
+		if (bStormGrade)
+		{
+			// Read before the overrides go on, so the storm fades back to the level's own look (or the engine default).
+			ClearExposureBias = Settings.AutoExposureBias;
+			ClearVignette = Settings.VignetteIntensity;
+			ClearGrain = Settings.bOverride_FilmGrainIntensity ? Settings.FilmGrainIntensity : 0.f;
+			ClearFringe = Settings.SceneFringeIntensity;
+			Settings.bOverride_AutoExposureBias = true;
+			Settings.bOverride_VignetteIntensity = true;
+			Settings.bOverride_FilmGrainIntensity = true;
+			Settings.bOverride_SceneFringeIntensity = true;
+		}
 
 		if (UMaterialInterface* WitherMaterial = WitherPostMaterial.LoadSynchronous())
 		{
@@ -118,68 +169,123 @@ void ARestorationDriver::Tick(float DeltaSeconds)
 
 void ARestorationDriver::UpdateWeather(float DeltaSeconds)
 {
-	if (!CloudInstance && !DistantThunder && !LightningInstance)
+	if (!CloudInstance && !DistantThunder && Bolts.IsEmpty() && !bStormGrade)
 	{
 		return;
 	}
 
-	const float Storm = 1.f - FMath::SmoothStep(0.f, 0.75f, DisplayedRestoration);
+	const float Storm = GetStorm();
 	LightningGlowTime = FMath::Max(0.f, LightningGlowTime - DeltaSeconds);
+	ThunderAudios.RemoveAll([](const UAudioComponent* Audio) { return !IsValid(Audio) || !Audio->IsPlaying(); });
 	if (Storm > 0.1f)
 	{
 		TimeToLightning -= DeltaSeconds;
 		if (TimeToLightning <= 0.f)
 		{
-			// At least 6.5 s apart so the 5.6 s thunder (played 0.55 s after the flash) ends before the next one.
-			TimeToLightning = FMath::FRandRange(6.5f, 10.f);
-			LightningGlowTime = 0.65f;
-			if (LightningInstance)
-			{
-				if (APlayerCameraManager* Camera = UGameplayStatics::GetPlayerCameraManager(this, 0))
-				{
-					const float Yaw = Camera->GetCameraRotation().Yaw + FMath::FRandRange(-30.f, 30.f);
-					const FVector Direction = FRotator(0.f, Yaw, 0.f).Vector();
-					LightningBolt->SetStaticMesh(LightningMeshes[FMath::RandRange(0, LightningMeshes.Num() - 1)]);
-					LightningBolt->SetWorldLocationAndRotation(Camera->GetCameraLocation() + Direction * 35000.f + FVector(0.f, 0.f, 7000.f),
-						FRotator(0.f, FMath::FRandRange(0.f, 360.f), 0.f));
-					LightningBolt->SetWorldScale3D(FVector(FMath::FRandRange(160.f, 220.f)));
-				}
-			}
-			if (DistantThunder)
-			{
-				GetWorldTimerManager().SetTimer(ThunderTimer, this, &ARestorationDriver::PlayDistantThunder, 0.55f);
-			}
+			Strike(Storm);
 		}
 	}
 	else
 	{
 		LightningGlowTime = 0.f;
-		GetWorldTimerManager().ClearTimer(ThunderTimer);
-		if (IsValid(ThunderAudio)) ThunderAudio->FadeOut(0.8f, 0.f);
-		ThunderAudio = nullptr;
+		for (UAudioComponent* Audio : ThunderAudios)
+		{
+			Audio->FadeOut(0.8f, 0.f);
+		}
+		ThunderAudios.Reset();
 	}
-	if (LightningInstance)
+
+	// A bright first flash, a short dark gap, then a flicker that fades: how lightning looks to the eye.
+	const float Elapsed = 0.65f - LightningGlowTime;
+	const float Pulse = Elapsed < 0.10f ? 1.f : (Elapsed < 0.18f ? 0.04f : FMath::Square(LightningGlowTime / 0.47f));
+	const float Flash = LightningGlowTime > 0.f ? Pulse * Storm : 0.f;
+	for (int32 Index = 0; Index < Bolts.Num(); ++Index)
 	{
-		const float Elapsed = 0.65f - LightningGlowTime;
-		const float Pulse = Elapsed < 0.10f ? 1.f : (Elapsed < 0.18f ? 0.04f : FMath::Square(LightningGlowTime / 0.47f));
-		LightningBolt->SetVisibility(LightningGlowTime > 0.f && Storm > 0.1f);
-		LightningInstance->SetScalarParameterValue(TEXT("Brightness"), 12.f * Pulse * Storm);
+		Bolts[Index]->SetVisibility(Index < ActiveBolts && LightningGlowTime > 0.f && Storm > 0.1f);
+		BoltInstances[Index]->SetScalarParameterValue(TEXT("Brightness"), 20.f * Flash);
+	}
+
+	if (bStormGrade)
+	{
+		if (Sun) Sun->GetLightComponent()->SetIntensity(ClearSunIntensity * FMath::Lerp(1.f, StormSunScale, Storm) + FlashSunIntensity * Flash);
+		if (SkyLight) SkyLight->GetLightComponent()->SetIntensity(ClearSkyIntensity * FMath::Lerp(1.f, StormSkyScale, Storm) + FlashSkyIntensity * Flash);
+
+		// Rain and leaves follow the camera. Deactivating lets the drops already falling land, so the rain eases off.
+		if (const APlayerCameraManager* Camera = UGameplayStatics::GetPlayerCameraManager(this, 0))
+		{
+			const FVector Eye = Camera->GetCameraLocation();
+			for (UNiagaraComponent* Effect : {Rain.Get(), Wind.Get()})
+			{
+				if (!Effect) continue;
+				// Leaves swirl round the ball, 6 m ahead of the camera, rather than across the lens.
+				Effect->SetWorldLocation(Effect == Rain ? Eye + FVector(0.f, 0.f, 1500.f) : Eye + Camera->GetCameraRotation().Vector() * 600.f);
+				const bool bWanted = Storm > 0.35f;
+				if (bWanted != Effect->IsActive())
+				{
+					bWanted ? Effect->Activate() : Effect->Deactivate();
+				}
+			}
+		}
 	}
 
 	if (CloudInstance)
 	{
-		const FLinearColor Overcast(0.20f, 0.23f, 0.27f, ClearCloudAlbedo.A);
-		const float Glow = FMath::Square(LightningGlowTime / 0.65f) * Storm;
-		const FLinearColor Albedo = FMath::Lerp(ClearCloudAlbedo, Overcast, Storm);
-		CloudInstance->SetVectorParameterValue(CloudAlbedoParameter, FMath::Lerp(Albedo, ClearCloudAlbedo, Glow * 0.8f));
-		CloudInstance->SetScalarParameterValue(CloudCoverageParameter, ClearCloudCoverage + 0.24f * Storm);
+		// Not flashed with the lightning: any sudden change makes the volumetric clouds re-render as blocky noise.
+		CloudInstance->SetVectorParameterValue(CloudAlbedoParameter, FMath::Lerp(ClearCloudAlbedo, StormCloudAlbedo, Storm));
+		CloudInstance->SetScalarParameterValue(CloudCoverageParameter, ClearCloudCoverage + StormCloudCoverage * Storm);
 	}
 }
 
-void ARestorationDriver::PlayDistantThunder()
+void ARestorationDriver::Strike(float Storm)
 {
-	const float Storm = 1.f - FMath::SmoothStep(0.f, 0.75f, DisplayedRestoration);
-	ThunderAudio = UGameplayStatics::SpawnSound2D(this, DistantThunder, 0.64f * Storm, 1.f, 0.f, nullptr, false, true);
+	TimeToLightning = FMath::FRandRange(LightningIntervalMin, FMath::Max(LightningIntervalMin, LightningIntervalMax));
+	LightningGlowTime = 0.65f;
+	ActiveBolts = 1;
+	while (ActiveBolts < Bolts.Num() && FMath::FRand() < 0.5f)
+	{
+		++ActiveBolts;
+	}
+
+	// Distances in cm. A close bolt is drawn smaller but stands nearer, so it looks bigger and reaches the ground.
+	constexpr float NearMin = 9000.f, NearMax = 14000.f, FarMin = 16000.f, FarMax = 32000.f;
+	float Nearest = FarMax;
+	const APlayerCameraManager* Camera = UGameplayStatics::GetPlayerCameraManager(this, 0);
+	for (int32 Index = 0; Index < ActiveBolts && Camera; ++Index)
+	{
+		const bool bClose = Index == 0 && FMath::FRand() < CloseStrikeChance;
+		const float Distance = bClose ? FMath::FRandRange(NearMin, NearMax) : FMath::FRandRange(FarMin, FarMax);
+		Nearest = FMath::Min(Nearest, Distance);
+		// Within the 84 degree view, so nearly every bolt is seen.
+		const float Yaw = Camera->GetCameraRotation().Yaw + FMath::FRandRange(-38.f, 38.f);
+		const float Size = Distance / 35000.f;
+		UStaticMeshComponent* Bolt = Bolts[Index];
+		Bolt->SetStaticMesh(LightningMeshes[FMath::RandRange(0, LightningMeshes.Num() - 1)]);
+		Bolt->SetWorldLocationAndRotation(Camera->GetCameraLocation() + FRotator(0.f, Yaw, 0.f).Vector() * Distance
+			+ FVector(0.f, 0.f, 7000.f * Size), FRotator(0.f, FMath::FRandRange(0.f, 360.f), 0.f));
+		Bolt->SetWorldScale3D(FVector(FMath::FRandRange(160.f, 220.f) * Size));
+	}
+
+	if (DistantThunder)
+	{
+		// Sound travels about 343 m/s, so far strikes rumble late and quiet, and close ones crack at once.
+		const float Closeness = FMath::GetRangePct(FarMax, NearMin, Nearest);
+		FTimerHandle Handle;
+		GetWorldTimerManager().SetTimer(Handle, FTimerDelegate::CreateUObject(this, &ARestorationDriver::PlayThunder,
+			FMath::Lerp(0.45f, 1.1f, Closeness), FMath::Lerp(0.9f, 1.15f, Closeness)), Nearest / 34300.f, false);
+	}
+}
+
+void ARestorationDriver::PlayThunder(float Volume, float Pitch)
+{
+	const float Storm = GetStorm();
+	if (Storm <= 0.1f)
+	{
+		return;
+	}
+	if (UAudioComponent* Audio = UGameplayStatics::SpawnSound2D(this, DistantThunder, Volume * Storm, Pitch, 0.f, nullptr, false, true))
+	{
+		ThunderAudios.Add(Audio);
+	}
 }
 
 void ARestorationDriver::ApplyVisuals()
@@ -195,23 +301,40 @@ void ARestorationDriver::ApplyVisuals()
 	if (PostProcessVolume)
 	{
 		FPostProcessSettings& Settings = PostProcessVolume->Settings;
+		// At restoration 1 the volume's own grading is back exactly, so the healed forest looks as the level was made.
 		const float Saturation = FMath::Lerp(WitheredSaturation, RestoredSaturation, Alpha);
-		const float Contrast = FMath::Lerp(WitheredContrast, RestoredContrast, Alpha);
 		if (WitherPostInstance)
 		{
 			WitherPostInstance->SetScalarParameterValue(SaturationParameter, Saturation);
-			Settings.ColorSaturation = FVector4(1.f, 1.f, 1.f, 1.f);
+			Settings.ColorSaturation = FMath::Lerp(FVector4(1.f, 1.f, 1.f, 1.f), ClearSaturation, Alpha);
 		}
 		else
 		{
-			Settings.ColorSaturation = FVector4(Saturation, Saturation, Saturation, 1.f);
+			Settings.ColorSaturation = ClearSaturation * FVector4(Saturation, Saturation, Saturation, 1.f);
 		}
-		Settings.ColorContrast = FVector4(Contrast, Contrast, Contrast, 1.f);
-		Settings.ColorGain = FVector4(FMath::Lerp(WitheredTint, RestoredTint, Alpha));
+		Settings.ColorContrast = FMath::Lerp(FVector4(WitheredContrast, WitheredContrast, WitheredContrast, 1.f), ClearContrast, Alpha);
+		Settings.ColorGain = FMath::Lerp(FVector4(WitheredTint), ClearGain, Alpha);
+		if (bStormGrade)
+		{
+			const float Storm = GetStorm();
+			Settings.AutoExposureBias = FMath::Lerp(ClearExposureBias, StormExposureBias, Storm);
+			Settings.VignetteIntensity = FMath::Lerp(ClearVignette, StormVignette, Storm);
+			Settings.FilmGrainIntensity = FMath::Lerp(ClearGrain, StormGrain, Storm);
+			Settings.SceneFringeIntensity = FMath::Lerp(ClearFringe, StormFringe, Storm);
+		}
 	}
 
 	if (HeightFog)
 	{
 		HeightFog->GetComponent()->SetFogDensity(FMath::Lerp(WitheredFogDensity, RestoredFogDensity, Alpha));
+		if (bStormGrade)
+		{
+			HeightFog->GetComponent()->SetFogInscatteringColor(FMath::Lerp(ClearFogColor, StormFogColor, GetStorm()));
+		}
 	}
+}
+
+float ARestorationDriver::GetStorm() const
+{
+	return 1.f - FMath::SmoothStep(0.f, 0.75f, DisplayedRestoration);
 }
