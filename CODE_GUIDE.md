@@ -66,6 +66,36 @@ Each is a C++ base class with `meta = (BindWidget)` properties, and the layout l
 ### `ULSIntroWidget`: the painted opening cutscene
 Plays a list of `FLSIntroShot`s: each a full-screen picture (fitted by a `UScaleBox`, so it fills any screen shape without stretching) that slowly zooms and pans, fading in over the one before, sometimes from a white flash, with an optional caption. `NativeTick` works out the current shot from the elapsed time. The music is a UI sound, so it plays while the game is paused behind the cutscene, and the last second fades the widget out to show the level. It builds its widgets in code in `NativeOnInitialized`, so it has no Widget Blueprint. `AStoryTrigger` plays it when `IntroShots` is set, through `ALSPlayerController::PlayIntro`, which shares `BeginStory` with the story cards and ends the same way. The shots (timings, camera moves, captions) are in `Content/Python/ls_intro_shots.py`, and the recorded soundtrack is `MUS_LS_Intro_Recordings.wav`. See `AUDIO_CREDITS.md` for sources. **Pattern:** observer (`OnFinished`).
 
+A shot can also carry a `MotionMaterial`, a UI material that animates the painting itself through its `ShotTime` parameter (the witch frames use this for drifting curse light), and a `SeedMatch`, the seed's place and size in the last frame. `ELSIntroTransition` says how the cutscene enters and leaves:
+| Transition | Used by | How it ends |
+|---|---|---|
+| `Opening` | The intro | The last frame's seed lines up with the real ball, then the camera is released |
+| `Gameplay` | The riverbank ambush | Fades back to the live camera |
+| `Travel` | The Witch Exile | Holds black, so the next level can load behind it |
+| `Arrival` | The Emberwood landing | Starts from black and lines the painted seed up with the ball, like `Opening` |
+
+### The witch cutscenes
+The intro shows the witch cursing the forest. She comes back twice more, using the same `ULSIntroWidget`.
+
+**1. The riverbank ambush (Trail 05).** `ls_witch_ambush.py` places an `AStoryTrigger` called `RiverbankWitchAmbush` on the far bank of the river. It has two painted shots, `WitchReveal` ("The Heart Tree's last seed… I'll crush you myself.") and `WitchScream`, and plays Kristen's recorded lines from `SFX_LS_RiverAmbush`.
+- `bWaitForLanding`: entering the box only starts a 0.05 s timer, `CheckLanding`, which waits until the ball is grounded and not still rising. The Dandelion glides in over the river, so without this the cutscene would cut in mid-air.
+- `RevealTargetOffset`: before the first painting, the camera turns for 1.5 s to look at the spot where the witch stands, behind black bars, so the player sees where the scene is.
+
+**2. The river curse.** When the ambush ends, its callback calls `StartRising` on `AfterCutsceneCurse`, an `AWitheringStorm` that `ls_river_curse.py` sets up as `RiverbankCurse`. It reuses the chase path (`ChasePoints`), with these settings:
+- `bShockwaveAttacks`: `TickShockwave` sends a thin curved wave from ahead of the ball down the path every 6 to 8 seconds, so the player has to jump it. `ShockwaveBend` curves the wave into a crescent, and each wave picks a different one of three heights from the last, so the jump timing changes.
+- Sweeping: the wave's box is stretched by the distance it moved that frame, so a fast wave can't pass through the ball between frames.
+- `ShockwaveMinLaunchDistance`: no wave is launched while the ball is too close to its start point.
+- `CurseTrees`: trees the wave passes are switched to their dead trunk (`ARestorableActor::SetCursed`), so the player sees the curse spread. On respawn every tree comes back, and the curse starts again from the trigger, because a ball that dies here never keeps a checkpoint inside the chase.
+- The script gets the path's heights by tracing down to the trail, so a low wave never goes under a slope. It also swaps the foliage trees beside the river for single `ARestorableActor`s, because instanced trees can't wither one at a time.
+
+**3. The Witch Exile (end of Wildwood).** `ls_witch_exile.py` turns Wildwood's `ALevelGoal` into the planting spot:
+- `bRequireJump`: the goal only completes when Seed lands from a jump inside it (`ASeedBall::JustLandedFromJump`). It ticks to check this, because landing creates no new overlap event. A `TutorialTrigger` just before it says "Take Seed form, then jump into the dirt to plant yourself."
+- `TravelShots`: `PlantingSoil`, `WitchNotYet` ("Not yet.") and `WitchBanishment` ("By ash and flame… I cast you out!"), with the voiced track `SFX_LS_ExilePlantingVoiced`. `ALSGameMode::CompleteLevel` saves the result first, then plays these with the `Travel` transition instead of opening the results screen, and `ContinueAfterResults` opens `NextLevel`.
+
+**4. The Emberwood arrival.** The same script builds the start of `L_Level2`: a lava plane with an `AKillVolume` just under its surface, basalt shelves to roll across (hidden cylinders for collision, the same idea as point 32), charred trees, orange lights, a darker fog and the fire ambience. An `AStoryTrigger` with `bPlayOnStart` and `bArrivalCutscene` plays one shot, `ExileEmberwood`, whose `SeedMatch` lines the painted seed up with the real ball as the player takes control.
+
+Every frame and sound is imported by the scripts from `Content/LastSeed/SourceIntro/RiverAmbush`, `SourceIntro/WitchExile` and `SourceSounds`, so a rerun rebuilds the same scene. **Patterns:** observer (the `OnFinished` callback starts the curse), data-driven (one widget and one trigger class tell all four scenes).
+
 ### `ILSInteractable`: the interaction contract
 `OnBallOverlap(Ball)` and `OnBallHit(Ball, ImpactVelocity)`, both defaulting to no action. `ASeedBall::HandleBeginOverlap` and `HandleHit` cast whatever they touched to this interface and call it. **Pattern:** interface / polymorphism. The ball never casts to a pickup or a volume, so new world objects don't change the ball.
 
@@ -151,7 +181,7 @@ Hidden at the start. It starts growing when restoration reaches its threshold or
 ### `AWitheringStorm` and `AStormTrigger`: the chase
 `AStormTrigger` calls `StartRising`, which subscribes to the ball's events. `Tick` raises the box, updates the rumble and camera shake, and kills a ball inside. `HandleNoteCollected` pushes it down, `HandleCheckpointSet` saves a safe height, and `HandleBallRespawned` restores it. **Pattern:** observer.
 
-When `ChasePoints` is set, the storm chases along that path instead of rising: `Progress` is how far along it the storm is, and `SetProgress` places and turns it there. It stays hidden until the trigger fires. Notes push it back along the path. A ball that dies before reaching a checkpoint in the chase respawns behind the trigger, so the chase is called off and starts again when the ball passes the trigger. In Level 1 it chases the ball from just after the blob arena to the Heart Tree.
+When `ChasePoints` is set, the storm chases along that path instead of rising: `Progress` is how far along it the storm is, and `SetProgress` places and turns it there. It stays hidden until the trigger fires. Notes push it back along the path. A ball that dies before reaching a checkpoint in the chase respawns behind the trigger, so the chase is called off and starts again when the ball passes the trigger. The old purple chase to the Heart Tree has been removed. In Wildwood the class now drives the witch's river curse, started by the riverbank ambush (see "The witch cutscenes").
 
 ### `ABounceMushroom`: a giant mushroom that bounces the ball
 `OnBallHit` launches a ball that lands on the cap (more than `BounceAboveHeight` above the base) upward at `LaunchSpeed` through `ASeedBall::Knockback`, keeping most of its sideways speed, and plays `BounceSound` at a slightly random pitch. `Tick` squashes the cap and lets it spring back for 0.8 s. Its meshes and textures come from `Content/Python/ls_generate_mushroom.py`. In Level 1, two notes float above mushrooms where only a bounce reaches them. **Pattern:** interface (`ILSInteractable`).
@@ -194,7 +224,7 @@ The level script decides what goes where, and `ls_world_common.py` knows how to 
 Every screen's logic is in C++ (`ULSMainMenuWidget`, `ULSPauseMenuWidget`, `ULSControlsWidget`, `ULSHUDWidget`, `ULSStoryCardWidget`, `ULSResultsWidget`). Its layout is a Widget Blueprint of the same name in `/Game/UI` (`WBP_MainMenu` and so on) whose widget names match the C++ `BindWidget` properties. They share one look: dark moss panels with a thin gold edge, cream text, gold for the main button of each screen. `ls_generate_ui.py` paints the icons (notes, petals, timer, stars, the three forms) and the leaf divider, and `build_ui.py` imports them, makes `L_MainMenu` (an empty level run by `BP_LSGameMode_Menu`, which shows the main menu and spawns no ball) and points the player controller at every screen. The packaged game starts on `L_MainMenu`.
 
 ### Dev cheats
-`bEnableDevCheats` on `ALSPlayerController` adds F1, F2 and F3 to the mapping context. F3 collects real notes through `OnBallOverlap`, so the count and stars stay correct.
+`bEnableDevCheats` on `ALSPlayerController` adds F1, F2 and F3 to the mapping context. F3 collects real notes through `OnBallOverlap`, so the count and stars stay correct. In editor builds only, F10 (`HandleDevGoToFinale`) puts the ball on the ground just before the planting goal, to test the Witch Exile without playing the whole level.
 
 ## How to explain this in my video
 Each rubric area, with what to show and where it is.
@@ -214,7 +244,7 @@ Each rubric area, with what to show and where it is.
 |---|---|
 | Stars and their conditions | `ALSGameMode::BuildResult`, then the results screen |
 | Hidden Golden Petals | `AGoldenPetal`, and a petal found in play |
-| The storm chase | `AWitheringStorm::Tick` and `HandleNoteCollected`, then the race to the Heart Tree |
+| The witch's river curse | `AWitheringStorm::TickShockwave`, then jumping the waves on the riverbank |
 | Bouncy mushrooms and raised notes | `ABounceMushroom::OnBallHit`, then bouncing up to a note |
 | Notes that play a rising tune | `ALifeNote::GetCollectPitch` |
 | No replay ball | Verify no `AGhostRacer` actors exist during the intro and gameplay, including when a legacy ghost save exists |
@@ -238,6 +268,8 @@ Each rubric area, with what to show and where it is.
 |---|---|
 | Story triggers | `AStoryTrigger`, then `ALSPlayerController::PlayStory` |
 | Endings and credits | `ALevelGoal`, then `ALSGameMode::CompleteLevel` and `ContinueAfterResults` |
+| The witch's ambush and curse | `AStoryTrigger::CheckLanding`, then `AfterCutsceneCurse` starting the shockwaves |
+| The Witch Exile into Emberwood | `ALevelGoal::bRequireJump` and `TravelShots`, then the `Arrival` shot in `L_Level2` |
 | The story told through the world | `ARestorationDriver` and `ARestorableActor`, colour returning as notes are collected |
 
 ## Points worth explaining
@@ -308,10 +340,11 @@ Each rubric area, with what to show and where it is.
 16. `ARestorationDriver::ApplyVisuals`, then the `MF_WitherBlend` material function: how a number becomes colour.
 17. `ARestorableActor`: another listener, and the bounce curve.
 18. `AWitherBlob::UpdateState`: the enum state machine, then `HandleBallContact` for the slam check.
-19. `AWitheringStorm`: three events from two classes driving one chase.
+19. `AWitheringStorm`: three events from two classes driving one chase, then `TickShockwave` for the witch's river curse.
 20. `UAdaptiveMusicComponent`: the same milestone event that grows plants brings in the music.
 21. `ASeedBall::UpdateRollAudio`: form data choosing the sound, and speed shaping it.
 22. `ALSGameMode::CompleteLevel`, then `BuildResult`: the level-complete flow and the star rules.
 23. `ALSPlayerController::OpenMenu` and `PlayStory`: input modes, pausing and story.
-24. `ULSHUDWidget`: `BindWidget`, and a display that only listens.
-25. `ULSGameInstance::RecordLevelResult`, then `ULSMainMenuWidget`: how saved data unlocks Level 2.
+24. The witch cutscenes: `AStoryTrigger` waiting for the landing, `ELSIntroTransition`, and `ALevelGoal::TravelShots` carrying the seed to Emberwood.
+25. `ULSHUDWidget`: `BindWidget`, and a display that only listens.
+26. `ULSGameInstance::RecordLevelResult`, then `ULSMainMenuWidget`: how saved data unlocks Level 2.
