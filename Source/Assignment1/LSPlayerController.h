@@ -192,6 +192,9 @@ private:
 	void HandleDevUnlockForms();
 	void HandleDevNextCheckpoint();
 	void HandleDevCollectNotes();
+#if WITH_EDITOR
+	void HandleDevGoToFinale(FKey Key, FInputActionValue Value);
+#endif
 
 	ASeedBall* GetBall() const;
 

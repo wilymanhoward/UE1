@@ -5,6 +5,8 @@
 #include "Blueprint/UserWidget.h"
 #include "Camera/PlayerCameraManager.h"
 #include "CheckpointShrine.h"
+#include "Components/BoxComponent.h"
+#include "Components/StaticMeshComponent.h"
 #include "Engine/Engine.h"
 #include "Engine/LocalPlayer.h"
 #include "EngineUtils.h"
@@ -224,6 +226,13 @@ void ALSPlayerController::BindInputActions()
 	Input->BindAction(CycleFormAction, ETriggerEvent::Started, this, &ALSPlayerController::HandleCycleForm);
 	Input->BindAction(PauseAction, ETriggerEvent::Started, this, &ALSPlayerController::HandleTogglePause);
 
+#if WITH_EDITOR
+	if (GetWorld()->WorldType == EWorldType::PIE)
+	{
+		Input->BindDebugKey(FInputChord(EKeys::F10), IE_Pressed, this, &ALSPlayerController::HandleDevGoToFinale, false);
+	}
+#endif
+
 	if (bEnableDevCheats)
 	{
 		Input->BindAction(DevUnlockFormsAction, ETriggerEvent::Started, this, &ALSPlayerController::HandleDevUnlockForms);
@@ -369,6 +378,53 @@ void ALSPlayerController::HandleDevNextCheckpoint()
 		ShowPrompt(FText::FromString(TEXT("Dev: no checkpoints left")), 2.f);
 	}
 }
+
+#if WITH_EDITOR
+void ALSPlayerController::HandleDevGoToFinale(FKey, FInputActionValue)
+{
+	ASeedBall* Ball = GetBall();
+	if (!Ball || Ball->IsDead() || ActiveMenu || bStoryPlaying)
+	{
+		return;
+	}
+
+	for (TActorIterator<ALevelGoal> It(GetWorld()); It; ++It)
+	{
+		const ALevelGoal* Goal = *It;
+		if (!Goal->bRequireJump || Goal->TravelShots.IsEmpty())
+		{
+			continue;
+		}
+
+		const UBoxComponent* Trigger = Goal->FindComponentByClass<UBoxComponent>();
+		const auto* Body = Cast<UStaticMeshComponent>(Ball->GetRootComponent());
+		if (!Trigger || !Body)
+		{
+			break;
+		}
+
+		// Leave a run-up on the approach side of the jump trigger.
+		const FVector RunUp = Goal->GetActorTransform().TransformPosition(
+			FVector(-Trigger->GetUnscaledBoxExtent().X - 110.f, 0.f, 0.f));
+		const FCollisionQueryParams Query(SCENE_QUERY_STAT(DevFinaleGround), false, Ball);
+		FHitResult Ground;
+		if (!GetWorld()->SweepSingleByChannel(Ground, RunUp + FVector(0.f, 0.f, 250.f),
+			RunUp - FVector(0.f, 0.f, 550.f), FQuat::Identity, ECC_WorldStatic,
+			FCollisionShape::MakeSphere(Body->Bounds.SphereRadius), Query) ||
+			Ground.bStartPenetrating || Ground.Normal.Z < 0.5f)
+		{
+			break;
+		}
+
+		Ball->TeleportBall(Ground.Location + FVector(0.f, 0.f, 2.f));
+		SetControlRotation(FRotator(InitialCameraPitch, Goal->GetActorRotation().Yaw, 0.f));
+		ShowPrompt(FText::FromString(TEXT("Dev: finale approach. Jump into the soil in Seed form.")), 4.f);
+		return;
+	}
+
+	ShowPrompt(FText::FromString(TEXT("Dev: no clear finale approach found.")), 3.f);
+}
+#endif
 
 void ALSPlayerController::HandleDevCollectNotes()
 {
