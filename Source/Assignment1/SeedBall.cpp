@@ -227,6 +227,7 @@ void ASeedBall::UpdateGrounded(const FSeedFormData& Data)
 
 	if (bIsGrounded)
 	{
+		bJumpInProgress = false;
 		// Standing on ground keeps the coyote window full. It only starts draining after leaving the ground.
 		CoyoteTimeRemaining = CoyoteTime;
 
@@ -270,6 +271,7 @@ void ASeedBall::TryConsumeJump(const FSeedFormData& Data)
 	CoyoteTimeRemaining = 0.f;
 	JumpLockoutRemaining = JumpLockoutTime;
 	bIsGrounded = false;
+	bJumpInProgress = true;
 
 	// Cancel any falling speed first so a coyote jump is as high as a normal jump.
 	const float FallingSpeed = FMath::Min(BallMesh->GetPhysicsLinearVelocity().Z, 0.f);
@@ -578,6 +580,7 @@ void ASeedBall::Respawn()
 	// Clear the fall that caused the death, or the first touch at the checkpoint would play a hard landing.
 	AirFallSpeed = 0.f;
 	RollVolume = 0.f;
+	bJumpInProgress = false;
 	bIsDead = false;
 
 	OnRespawned.Broadcast();

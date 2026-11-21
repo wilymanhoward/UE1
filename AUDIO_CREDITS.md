@@ -45,6 +45,7 @@ The 42-second opening mix uses excerpts of the music and field recordings below.
 ## The Witch’s Exile
 
 - The teleport cue uses the recordings already credited above for tree regrowth, witch scream, thunder and falling stone. The Emberwood bed uses “Fireplace” by myLoop under [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/). The recordist captured an outdoor campfire in Munich using a Zoom H1essential. The public HQ preview was filtered and crossfaded for the fire loop and the end of the teleport cue. [Freesound recording](https://freesound.org/people/myLoop/sounds/852107/)
+- The midair cut uses the same recorded scream, thunder, falling stone and fire loop, retimed to the witch opening the portal at 6.05 seconds.
 
 ## Narration
 

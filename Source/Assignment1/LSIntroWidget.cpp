@@ -186,6 +186,12 @@ void ULSIntroWidget::NativeConstruct()
 		}
 	}
 	if (Transition == ELSIntroTransition::Arrival) TransitionVeil->SetRenderOpacity(1.f);
+	if (Transition == ELSIntroTransition::Travel)
+	{
+		PictureLayer->SetRenderOpacity(0.f);
+		TopBar->SetRenderTranslation(FVector2D(0.f, -10000.f));
+		BottomBar->SetRenderTranslation(FVector2D(0.f, 10000.f));
+	}
 	if (!RevealTarget.IsNearlyZero())
 	{
 		PictureLayer->SetRenderOpacity(0.f);
@@ -518,6 +524,10 @@ void ULSIntroWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 	const float Entrance = RevealTime > 0.f ? FMath::SmoothStep(0.f, 0.65f, Elapsed) : 1.f;
 	if (bTravel)
 	{
+		const float Enter = FMath::SmoothStep(0.f, 0.38f, Elapsed);
+		PictureLayer->SetRenderOpacity(Enter);
+		TopBar->SetRenderTranslation(FVector2D(0.f, -BarHeight * (1.f - Enter)));
+		BottomBar->SetRenderTranslation(FVector2D(0.f, BarHeight * (1.f - Enter)));
 		TransitionVeil->SetRenderOpacity(Dissolve);
 		return;
 	}

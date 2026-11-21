@@ -21,11 +21,11 @@ LAVA_Z = -285.0
 
 def shot(name, index, duration, caption="", seed_match=None):
     art = shot_art(name, folder=ART, source_folder="WitchExile")
-    motion = shot_motion(name, art, index, folder=ART, material_name="M_LS_WitchExileMotion",
+    motion = shot_motion(name, art, index, folder=ART, material_name="M_LS_ExileJumpMotion",
                          shader=Path(__file__).with_suffix(".hlsl"))
     result = unreal.LSIntroShot()
     result.set_editor_properties({"image": art, "motion_material": motion, "duration": duration,
-                                  "fade_in": 0.45 if index == 0 else 0.0, "caption": unreal.Text(caption)})
+                                  "fade_in": 0.0, "caption": unreal.Text(caption)})
     if seed_match is not None:
         result.set_editor_property("seed_match", unreal.Vector(*seed_match))
     return result
@@ -174,6 +174,28 @@ def dress_arrival(actors, arrival_shot, ambience):
                                  "play_on_start": True, "arrival_cutscene": True})
 
 
+def exile_shots():
+    travel = [shot("ExileLeap", 0, 1.45),
+              shot("ExileHex", 1, 4.6, "You brought it back.\nThen let it burn again."),
+              shot("ExilePortal", 2, 4.5, "Burn!")]
+    arrival = shot("ExileEmberwood", 3, 5.3, seed_match=(0.498, 0.706, 0.24))
+    return travel, arrival
+
+
+def setup_goal(actors, goal, travel):
+    goal.set_editor_properties({"travel_shots": travel, "travel_audio": sound("SFX_LS_ExileJump"),
+                                "require_jump": True})
+    goal.get_editor_property("box").set_box_extent(unreal.Vector(430, 390, 155), True)
+    position = goal.get_actor_transform().transform_location(unreal.Vector(-515, 0, -130))
+    hint = next((a for a in actors.get_all_level_actors() if a.get_actor_label() == "Exile jump hint"), None)
+    if hint is None:
+        hint = spawn(unreal.TutorialTrigger, position.x, position.y, position.z, "Exile jump hint", "Flow",
+                     goal.get_actor_rotation().yaw)
+    hint.get_editor_property("box").set_box_extent(unreal.Vector(175, 340, 210), True)
+    hint.set_editor_property("message", unreal.Text("Climb to the top, then jump forward."))
+    hint.set_editor_property("display_duration", 7.0)
+
+
 def build():
     levels = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
     actors = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
@@ -182,11 +204,7 @@ def build():
     assert not unreal.EditorLoadingAndSavingUtils.get_dirty_map_packages()
     goals = [actor for actor in actors.get_all_level_actors() if isinstance(actor, unreal.LevelGoal)]
     assert len(goals) == 1 and goals[0].get_editor_property("next_level") == unreal.load_asset(DESTINATION)
-    travel = [shot("LeafBefore", 0, 3.7),
-              shot("WitchConfrontation", 1, 6.0, "I burned that forest to its roots.\nAnd you brought it back."),
-              shot("PortalFalls", 2, 5.5, "Burn!")]
-    arrival = shot("EmberwoodArrival", 3, 5.3, seed_match=(0.498, 0.759, 0.196))
-    travel_audio = sound("SFX_LS_WitchExile")
+    travel, arrival = exile_shots()
     ambience = sound("SFX_LS_EmberwoodFire", loop=True)
 
     assert levels.load_level(DESTINATION)
@@ -194,5 +212,5 @@ def build():
     assert levels.save_current_level()
     assert levels.load_level(WILDWOOD)
     goal = next(actor for actor in actors.get_all_level_actors() if isinstance(actor, unreal.LevelGoal))
-    goal.set_editor_properties({"travel_shots": travel, "travel_audio": travel_audio})
+    setup_goal(actors, goal, travel)
     assert levels.save_current_level()

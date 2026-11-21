@@ -24,6 +24,7 @@ public:
 	ALevelGoal();
 
 	virtual void OnBallOverlap(ASeedBall* Ball) override;
+	virtual void Tick(float DeltaSeconds) override;
 
 	/** Plays before the results. Leave empty to use Ending Cards. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Level Goal")
@@ -40,6 +41,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Level Goal")
 	TObjectPtr<USoundBase> TravelAudio;
 
+	/** Complete only while the ball is rising from a jump inside this volume. */
+	UPROPERTY(EditAnywhere, Category = "Level Goal")
+	bool bRequireJump = false;
+
 	/** Opened by the results screen's Next button. Leave empty on the last level. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Level Goal")
 	TSoftObjectPtr<UWorld> NextLevel;
@@ -55,4 +60,7 @@ public:
 	/** Golden Petals needed for the third star. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tuning", meta = (ClampMin = "0"))
 	int32 RequiredPetals = 2;
+
+protected:
+	virtual void BeginPlay() override;
 };
