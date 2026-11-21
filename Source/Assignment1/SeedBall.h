@@ -191,6 +191,10 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio")
 	TObjectPtr<USoundBase> FormSwitchSound;
 
+	/** Particle burst on every form switch, tinted and sized by the new form's Switch values. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio")
+	TObjectPtr<UNiagaraSystem> FormSwitchBurst;
+
 	/** Plays when the ball dies. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio")
 	TObjectPtr<USoundBase> DeathSound;
@@ -303,6 +307,9 @@ private:
 	void OnEnterForm(ESeedForm NewForm);
 	void ApplyFormData(const FSeedFormData& Data);
 	void ApplyFormVisuals(const FSeedFormData& Data);
+	// The switch transition: the old form squashes out, then the new one pops in with a flash and a burst.
+	void UpdateFormSwitch(float DeltaSeconds);
+	void SpawnSwitchBurst(const FSeedFormData& Data);
 
 	void Respawn();
 
@@ -339,4 +346,11 @@ private:
 	float JumpBufferRemaining = 0.f;
 	float JumpLockoutRemaining = 0.f;
 	float FormCooldownRemaining = 0.f;
+
+	// Seconds into the switch transition, or -1 when none is playing.
+	float SwitchTime = -1.f;
+	bool bSwitchSwapped = false;
+	FVector RollingBaseScale = FVector::OneVector;
+	FVector UprightBaseScale = FVector::OneVector;
+	FVector CameraBaseLocation = FVector::ZeroVector;
 };

@@ -16,6 +16,7 @@
 #include "LSInteractable.h"
 #include "Materials/MaterialInterface.h"
 #include "NiagaraComponent.h"
+#include "NiagaraFunctionLibrary.h"
 #include "NiagaraSystem.h"
 #include "PhysicalMaterials/PhysicalMaterial.h"
 #include "Sound/SoundBase.h"
@@ -110,6 +111,9 @@ ASeedBall::ASeedBall()
 	Stone.bCanSlam = true;
 	Stone.GlowColor = FLinearColor(1.f, 0.6f, 0.2f);
 	Stone.GlowBrightness = 12.f;
+	Stone.SwitchColor = FLinearColor(0.55f, 0.5f, 0.45f);
+	Stone.SwitchBurstRadius = 95.f;
+	Stone.SwitchShake = 6.f;
 	FormData.Add(ESeedForm::Stone, Stone);
 
 	FSeedFormData Dandelion;
@@ -125,6 +129,8 @@ ASeedBall::ASeedBall()
 	Dandelion.bCanGlide = true;
 	Dandelion.GlowColor = FLinearColor(1.f, 0.9f, 0.65f);
 	Dandelion.GlowBrightness = 25.f;
+	Dandelion.SwitchColor = FLinearColor(1.f, 0.97f, 0.85f);
+	Dandelion.SwitchBurstRadius = 170.f;
 	FormData.Add(ESeedForm::Dandelion, Dandelion);
 }
 
@@ -136,6 +142,10 @@ void ASeedBall::BeginPlay()
 	CurrentForm = InitialForm;
 	// Apply data directly: this is the starting state, not a switch, so no effect or event should fire.
 	ApplyFormData(GetCurrentFormData());
+	ApplyFormVisuals(GetCurrentFormData());
+	RollingBaseScale = RollingVisual->GetRelativeScale3D();
+	UprightBaseScale = UprightVisual->GetRelativeScale3D();
+	CameraBaseLocation = Camera->GetRelativeLocation();
 
 	BallMesh->OnComponentBeginOverlap.AddDynamic(this, &ASeedBall::HandleBeginOverlap);
 	BallMesh->OnComponentHit.AddDynamic(this, &ASeedBall::HandleHit);
@@ -163,6 +173,8 @@ void ASeedBall::HandleHit(UPrimitiveComponent* HitComponent, AActor* OtherActor,
 void ASeedBall::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
+	// Before the death check, so a switch interrupted by dying still finishes and the meshes are full size on respawn.
+	UpdateFormSwitch(DeltaSeconds);
 
 	if (bIsDead)
 	{
@@ -457,7 +469,12 @@ bool ASeedBall::TrySwitchForm(ESeedForm NewForm)
 	OnEnterForm(NewForm);
 
 	FormCooldownRemaining = FormSwitchCooldown;
-	UGameplayStatics::PlaySoundAtLocation(this, FormSwitchSound, GetActorLocation());
+	// Physics changed above at once; the look follows over SwitchOutTime + SwitchInTime in UpdateFormSwitch.
+	SwitchTime = 0.f;
+	bSwitchSwapped = false;
+	const FSeedFormData& Data = GetCurrentFormData();
+	UGameplayStatics::PlaySoundAtLocation(this, Data.SwitchSound ? Data.SwitchSound.Get() : FormSwitchSound.Get(),
+		GetActorLocation());
 	PlayFormSwitchEffect(OldForm, NewForm);
 	OnFormChanged.Broadcast(OldForm, NewForm);
 	return true;
@@ -508,8 +525,6 @@ void ASeedBall::OnEnterForm(ESeedForm NewForm)
 
 void ASeedBall::ApplyFormData(const FSeedFormData& Data)
 {
-	ApplyFormVisuals(Data);
-
 	// SetSound restarts the loop if one is playing, so the new form's sound takes over straight away.
 	RollAudio->SetSound(Data.RollSound);
 	BallMesh->SetPhysMaterialOverride(Data.PhysicalMaterial);
@@ -537,6 +552,85 @@ void ASeedBall::ApplyFormVisuals(const FSeedFormData& Data)
 	{
 		GlowParticles->Activate(true);
 	}
+}
+
+void ASeedBall::UpdateFormSwitch(float DeltaSeconds)
+{
+	if (SwitchTime < 0.f)
+	{
+		return;
+	}
+	constexpr float SwitchOutTime = 0.12f;
+	constexpr float SwitchInTime = 0.23f;
+	constexpr float FlashBrightness = 160.f;
+	const FSeedFormData& Data = GetCurrentFormData();
+	SwitchTime += DeltaSeconds;
+
+	float Grow;
+	float Flash;
+	FVector Squash(1.f);
+	if (SwitchTime < SwitchOutTime)
+	{
+		// The old form squashes flat as it shrinks away, while the light swells.
+		const float Out = SwitchTime / SwitchOutTime;
+		Grow = 1.f - 0.9f * Out * Out;
+		Squash = FVector(1.f + 0.3f * Out, 1.f + 0.3f * Out, 1.f - 0.3f * Out);
+		Flash = Out;
+	}
+	else
+	{
+		if (!bSwitchSwapped)
+		{
+			bSwitchSwapped = true;
+			ApplyFormVisuals(Data);
+			SpawnSwitchBurst(Data);
+		}
+		// Ease-out-back: from 0.1 up past full size, then settling at 1, so the new form pops in.
+		const float In = FMath::Min((SwitchTime - SwitchOutTime) / SwitchInTime, 1.f);
+		const float B = In - 1.f;
+		constexpr float Overshoot = 1.7f;
+		Grow = FMath::Max(0.1f, 1.f + (Overshoot + 1.f) * B * B * B + Overshoot * B * B);
+		Flash = FMath::Square(1.f - In);
+		Camera->SetRelativeLocation(CameraBaseLocation + FMath::VRand() * Data.SwitchShake * Flash);
+	}
+
+	RollingVisual->SetRelativeScale3D(RollingBaseScale * Squash * Grow);
+	UprightVisual->SetRelativeScale3D(UprightBaseScale * Squash * Grow);
+	GlowLight->SetLightColor(FMath::Lerp(Data.GlowColor, Data.SwitchColor, Flash));
+	GlowLight->SetIntensity(Data.GlowBrightness + FlashBrightness * Flash);
+
+	if (SwitchTime >= SwitchOutTime + SwitchInTime)
+	{
+		SwitchTime = -1.f;
+		RollingVisual->SetRelativeScale3D(RollingBaseScale);
+		UprightVisual->SetRelativeScale3D(UprightBaseScale);
+		Camera->SetRelativeLocation(CameraBaseLocation);
+		GlowLight->SetLightColor(Data.GlowColor);
+		GlowLight->SetIntensity(Data.GlowBrightness);
+	}
+}
+
+void ASeedBall::SpawnSwitchBurst(const FSeedFormData& Data)
+{
+	UNiagaraComponent* Burst = FormSwitchBurst
+		? UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, FormSwitchBurst, GetActorLocation()) : nullptr;
+	if (!Burst)
+	{
+		return;
+	}
+	// The pack's sparkle effect reads these user parameters. Its colour is HDR, so it is scaled well above 1.
+	Burst->SetVariableVec3(TEXT("User.Color"), FVector(Data.SwitchColor.R, Data.SwitchColor.G, Data.SwitchColor.B) * 400.f);
+	Burst->SetVariableFloat(TEXT("User.Sphere Radius"), Data.SwitchBurstRadius);
+	Burst->SetVariableFloat(TEXT("User.SpawnRate"), 1000.f);
+	Burst->SetVariableFloat(TEXT("User.Lifetime Min"), 0.45f);
+	Burst->SetVariableFloat(TEXT("User.Lifetime Max"), 0.9f);
+	Burst->SetRenderCustomDepth(true);
+	Burst->SetCustomDepthStencilValue(1);
+	// shortcut: the pack effect only has a spawn rate, so a burst is that rate stopped after 0.12 s;
+	// make a one-shot Niagara system if the burst needs its own motion.
+	FTimerHandle StopTimer;
+	GetWorldTimerManager().SetTimer(StopTimer, FTimerDelegate::CreateWeakLambda(Burst, [Burst]() { Burst->Deactivate(); }),
+		0.12f, false);
 }
 
 void ASeedBall::FellOutOfWorld(const UDamageType& DamageType)

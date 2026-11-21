@@ -23,6 +23,14 @@ The 42-second opening mix uses excerpts of the music and field recordings below.
 - “boot scuffle small rocks 2” by oscaraudiogeek, [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/). A boot scraping dirt and small stones, recorded with a RØDE NTG3 and Zoom H5. The public HQ preview was pitched down, filtered, and crossfaded for the Stone roll loop. [Freesound recording](https://freesound.org/people/oscaraudiogeek/sounds/328933/)
 - Fission9's “Tumbling Rocks”, credited below, also supplies the Stone takeoff hit. A single impact from the public HQ preview was pitched down, filtered, and trimmed. These effects are mono 48 kHz PCM edits of recorded sounds.
 
+## Form switch effects
+
+Each is one excerpt of the public HQ preview, converted to mono 48 kHz PCM, with its DC offset removed, faded at both ends and peak-normalised. `Content/Python/ls_form_switch.py` makes the cuts. All three are recorded sounds, not synthesised or AI-generated audio.
+
+- “Pop sound” by deraj, [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/). A pop made with the lips. The 0.12–0.62 second excerpt, at −6 dBFS, is `SFX_LS_SwitchSeed.wav`. [Freesound recording](https://freesound.org/people/deraj/sounds/202230/)
+- “Stone Drop on Grass 3.wav” by dichardson, [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/). A stone dropped on grass. The whole 0.53 second recording, at −5 dBFS, is `SFX_LS_SwitchStone.wav`. [Freesound recording](https://freesound.org/people/dichardson/sounds/570976/)
+- “Various short blows/puffs of air from male mouth” by rykenn, [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/). Puffs of breath recorded for blowing dust off a camera lens. One puff, 8.33–9.05 seconds, at −8 dBFS, is `SFX_LS_SwitchDandelion.wav`. [Freesound recording](https://freesound.org/people/rykenn/sounds/432170/)
+
 ## Trail 2 gate
 
 - “Gate door drawbridge wooden creaky opens closes hinge.wav” by WavJunction.com, [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/). Recorded from an old two-hinge wooden farm gate in Cody, Wyoming. The public HQ preview was excerpted, slowed, and filtered to make the 3.6-second opening creak. [Freesound recording](https://freesound.org/people/WavJunction.com/sounds/456763/)

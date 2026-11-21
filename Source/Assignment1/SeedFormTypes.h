@@ -68,6 +68,22 @@ struct FSeedFormData
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Assets")
 	TObjectPtr<USoundBase> LandSound = nullptr;
 
+	/** Plays when the ball switches into this form. Leave empty to use the ball's Form Switch Sound. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Assets")
+	TObjectPtr<USoundBase> SwitchSound = nullptr;
+
+	/** Colour of the flash and particle burst when the ball switches into this form. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tuning|Switch")
+	FLinearColor SwitchColor = FLinearColor(0.45f, 1.f, 0.35f);
+
+	/** Radius in cm of the particle burst on switching into this form. Wide reads as light and scattered. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tuning|Switch", meta = (ClampMin = "0"))
+	float SwitchBurstRadius = 110.f;
+
+	/** How far in cm the camera shakes on switching into this form. 0 for none. Heavy forms shake. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tuning|Switch", meta = (ClampMin = "0"))
+	float SwitchShake = 0.f;
+
 	/** Colour of the light this form gives off. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tuning")
 	FLinearColor GlowColor = FLinearColor(1.f, 0.72f, 0.3f);
