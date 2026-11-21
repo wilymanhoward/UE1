@@ -25,9 +25,11 @@ The 42-second opening mix uses excerpts of the music and field recordings below.
 
 ## Form switch effects
 
-Each is one excerpt of the public HQ preview, converted to mono 48 kHz PCM, with its DC offset removed, faded at both ends and peak-normalised. `Content/Python/ls_form_switch.py` makes the cuts. All three are recorded sounds, not synthesised or AI-generated audio.
+Each comes from the public HQ preview, converted to mono 48 kHz PCM, with its DC offset removed, faded at both ends and peak-normalised. `Content/Python/ls_form_switch.py` makes the cuts. All three are recorded sounds, not synthesised or AI-generated audio.
 
-- “Pop sound” by deraj, [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/). A pop made with the lips. The 0.12–0.62 second excerpt, at −6 dBFS, is `SFX_LS_SwitchSeed.wav`. [Freesound recording](https://freesound.org/people/deraj/sounds/202230/)
+- `SFX_LS_SwitchSeed.wav` layers two recordings, mixed to −8 dBFS:
+  - “Rustling leaves” by Kinoton, [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/). A rolled-up reed mat squeezed to sound like brush, recorded with a Tascam DR-60D MkII and Sennheiser ME66. The 2.05–2.75 second excerpt, faded in over 60 ms. [Freesound recording](https://freesound.org/people/Kinoton/sounds/347557/)
+  - “wind chimes - single 04.wav” by Anthousai, [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/). One wind-chime tube struck once, recorded with a Tascam DR-40. Its first 1.2 seconds, starting 50 ms after the rustle. [Freesound recording](https://freesound.org/people/Anthousai/sounds/398496/)
 - “Stone Drop on Grass 3.wav” by dichardson, [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/). A stone dropped on grass. The whole 0.53 second recording, at −5 dBFS, is `SFX_LS_SwitchStone.wav`. [Freesound recording](https://freesound.org/people/dichardson/sounds/570976/)
 - “Various short blows/puffs of air from male mouth” by rykenn, [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/). Puffs of breath recorded for blowing dust off a camera lens. One puff, 8.33–9.05 seconds, at −8 dBFS, is `SFX_LS_SwitchDandelion.wav`. [Freesound recording](https://freesound.org/people/rykenn/sounds/432170/)
 

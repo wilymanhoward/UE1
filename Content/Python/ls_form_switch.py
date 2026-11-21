@@ -1,14 +1,14 @@
 # Last Seed - the form switch transition's sounds and settings.
 #
 # Purpose: two stages, like ls_wildwood_plan.py and build_level1_wildwood.py.
-#   python ls_form_switch.py <folder> (outside Unreal, needs numpy and imageio-ffmpeg) cuts three Freesound recordings,
-#     downloaded into <folder> as their public HQ preview MP3s, into short switch sounds in LastSeed/SourceSounds:
-#     SFX_LS_SwitchSeed       a lip pop, like a seed popping free (deraj, 202230)
+#   python ls_form_switch.py <folder> (outside Unreal, needs numpy and imageio-ffmpeg) cuts and layers Freesound
+#     recordings, downloaded into <folder> as their public HQ preview MP3s, into short switch sounds in LastSeed/SourceSounds:
+#     SFX_LS_SwitchSeed       a rustle of leaves under one soft wind-chime ring (Kinoton 347557, Anthousai 398496)
 #     SFX_LS_SwitchStone      a stone dropped on grass, for the heavy form (dichardson, 570976)
 #     SFX_LS_SwitchDandelion  one puff of breath, like blowing a dandelion clock (rykenn, 432170)
 #   import ls_form_switch; ls_form_switch.build() (in the editor) imports them and fills in BP_SeedBall's
 #     Form Switch Burst and each form's Switch Sound, colour, burst radius and shake.
-# All three are CC0 field recordings, credited in AUDIO_CREDITS.md. Output is 48 kHz, 16-bit mono.
+# All are CC0 field recordings, credited in AUDIO_CREDITS.md. Output is 48 kHz, 16-bit mono.
 
 import os
 import subprocess
@@ -18,11 +18,13 @@ import wave
 SOURCE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "LastSeed", "SourceSounds")
 RATE = 48000
 NAMES = ("SFX_LS_SwitchSeed", "SFX_LS_SwitchStone", "SFX_LS_SwitchDandelion")
-# name: (preview file, start s, end s, peak dBFS). Each excerpt is one clean event from the recording.
+# name: (peak dBFS, layers). Each layer is (preview file, start s, end s, fade-in s, starts at s, weight): one clean
+# excerpt, scaled so its own peak is 1, then by weight, and mixed in at its start time.
 CUTS = {
-    NAMES[0]: ("202230_3725006-hq.mp3", 0.12, 0.62, -6.0),
-    NAMES[1]: ("570976_7987826-hq.mp3", 0.0, 0.53, -5.0),
-    NAMES[2]: ("432170_2273357-hq.mp3", 8.33, 9.05, -8.0),
+    NAMES[0]: (-8.0, [("347557_2247456-hq.mp3", 2.05, 2.75, 0.06, 0.0, 0.8),
+                      ("398496_5923045-hq.mp3", 0.0, 1.2, 0.004, 0.05, 0.7)]),
+    NAMES[1]: (-5.0, [("570976_7987826-hq.mp3", 0.0, 0.53, 0.004, 0.0, 1.0)]),
+    NAMES[2]: (-8.0, [("432170_2273357-hq.mp3", 8.33, 9.05, 0.004, 0.0, 1.0)]),
 }
 
 
@@ -35,21 +37,32 @@ def decode(path):
     return np.frombuffer(raw, np.float32).astype(np.float64)
 
 
-def cut(samples, start, end, peak_db):
+def cut(samples, start, end, fade_in):
     import numpy as np
 
     clip = samples[int(start * RATE):int(end * RATE)].copy()
     clip -= clip.mean()  # Removes any DC offset, which would thump at the fades.
     t = np.arange(clip.size) / RATE
-    clip *= np.minimum(1.0, t / 0.004) * np.minimum(1.0, (t[-1] - t) / 0.08)  # No clicks at either end.
-    return clip / np.abs(clip).max() * 10.0 ** (peak_db / 20.0)
+    clip *= np.minimum(1.0, t / fade_in) * np.minimum(1.0, (t[-1] - t) / 0.08)  # No clicks at either end.
+    return clip / np.abs(clip).max()
+
+
+def mix(folder, layers, peak_db):
+    import numpy as np
+
+    clips = [(int(at * RATE), weight * cut(decode(os.path.join(folder, file)), start, end, fade_in))
+             for file, start, end, fade_in, at, weight in layers]
+    out = np.zeros(max(offset + clip.size for offset, clip in clips))
+    for offset, clip in clips:
+        out[offset:offset + clip.size] += clip
+    return out / np.abs(out).max() * 10.0 ** (peak_db / 20.0)
 
 
 def main(folder):
     import numpy as np
 
-    for name, (file, start, end, peak_db) in CUTS.items():
-        samples = cut(decode(os.path.join(folder, file)), start, end, peak_db)
+    for name, (peak_db, layers) in CUTS.items():
+        samples = mix(folder, layers, peak_db)
         assert np.isfinite(samples).all() and np.abs(samples).max() <= 10.0 ** (peak_db / 20.0) + 1e-6, name
         with wave.open(os.path.join(SOURCE, name + ".wav"), "wb") as handle:
             handle.setnchannels(1)
