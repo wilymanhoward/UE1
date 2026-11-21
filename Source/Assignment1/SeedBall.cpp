@@ -362,7 +362,8 @@ void ASeedBall::ApplyMovement(const FSeedFormData& Data)
 void ASeedBall::ApplyTrailEdgeResistance()
 {
 	static const FName SoftTrailEdge(TEXT("LS_SoftTrailEdge"));
-	constexpr float CushionWidth = 220.f;
+	// Narrow, so the push starts at the shoulder rather than well inside the dirt path.
+	constexpr float CushionWidth = 60.f;
 	const FVector Center = BallMesh->GetComponentLocation();
 	TArray<FOverlapResult> Nearby;
 	GetWorld()->OverlapMultiByObjectType(Nearby, Center, FQuat::Identity,

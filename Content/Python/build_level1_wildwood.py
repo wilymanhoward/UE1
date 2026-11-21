@@ -909,9 +909,9 @@ def place(entry, plates):
         fit_mesh(keep_coloured(actor), "/Game/Polytope_Studio/Nature_Free/Meshes/Flowers/SM_Poppy_02", 170.0, -40.0)
     elif kind == "shrine":
         actor = spawn(gameplay_class("BP_CheckpointShrine", "CheckpointShrine"), x, y, z, "Shrine", "Flow", yaw)
-        component = keep_coloured(actor)
-        fit_mesh(component, "/Game/LastSeed/Meshes/SM_LS_Shrine", 255.0, -50.0)
-        component.set_material(0, material("M_LS_Shrine"))
+        keep_coloured(actor)
+        import ls_lantern_post  # The post with its hanging lantern, at the trail's edge.
+        ls_lantern_post.configure(actor, load_plan()["walls"])
     elif kind == "flower":
         actor = spawn(gameplay_class("BP_FormFlower_Stone", "FormFlower"), x, y, z, "FormFlower", "Pickups")
         form = getattr(unreal.SeedForm, entry["form"])

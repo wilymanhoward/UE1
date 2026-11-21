@@ -6,6 +6,11 @@ import shutil
 import unreal
 
 HINT='Follow the music notes. Press Space to hop over fallen branches.'
+# Logs placed by hand in the editor after the layout below: location, (pitch, yaw, roll), scale. These win.
+HAND_TUNED={
+    'Trail01_DiagonalRight':((-19157.341,-1721.299,2807.74),(0.0,-9.0113,0.0),(0.80669,1.17491,1.20853)),
+    'Trail01_DiagonalLeft':((-18727.719,-3114.407,2996.915),(-7.7525,39.459,-6.336),(0.80669,1.17491,1.20853)),
+}
 SPRING_HINT='Jump onto the springcap to reach the high music note.'
 
 
@@ -103,6 +108,11 @@ def build():
         actor.set_actor_scale3d(unreal.Vector(length/(2*bounds.x),130/(2*bounds.y),130/(2*bounds.z)))
         center,extent,_=unreal.SystemLibrary.get_component_bounds(component)
         actor.set_actor_location(actor.get_actor_location()+unreal.Vector(x-center.x,y-center.y,z+rise-center.z-extent.z),False,False)
+        if label in HAND_TUNED:
+            (lx,ly,lz),(pitch,yaw,roll),scale=HAND_TUNED[label]
+            actor.set_actor_rotation(unreal.Rotator(pitch=pitch,yaw=yaw,roll=roll),False)
+            actor.set_actor_scale3d(unreal.Vector(*scale))
+            actor.set_actor_location(unreal.Vector(lx,ly,lz),False,False)
     def ensure(entry,label):
         existing=next((a for a in editor.get_all_level_actors() if a.get_actor_label()==label),None)
         if existing:return existing

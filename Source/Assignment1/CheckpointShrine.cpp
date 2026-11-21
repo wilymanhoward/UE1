@@ -42,8 +42,10 @@ void ACheckpointShrine::OnBallOverlap(ASeedBall* Ball)
 
 	GetWorld()->GetSubsystem<URestorationSubsystem>()->LockInRestoration();
 
+	// The light sits in the lantern, so the flame, sparkle and sound all start there.
 	Glow->SetVisibility(true);
-	UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, ActivateEffect, GetActorLocation());
-	UGameplayStatics::PlaySoundAtLocation(this, ActivateSound, GetActorLocation());
+	Mesh->SetScalarParameterValueOnMaterials(TEXT("Lit"), 1.f);
+	UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, ActivateEffect, Glow->GetComponentLocation());
+	UGameplayStatics::PlaySoundAtLocation(this, ActivateSound, Glow->GetComponentLocation());
 	PlayActivateEffect();
 }
