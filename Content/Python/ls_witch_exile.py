@@ -178,13 +178,13 @@ def dress_arrival(actors, arrival_shot, ambience):
 def exile_shots():
     travel = [shot("PlantingSoil", 0, 3.0),
               shot("WitchNotYet", 1, 3.65, "Not yet."),
-              shot("WitchBanishment", 2, 4.5)]
+              shot("WitchBanishment", 2, 4.5, "By ash and flame… I cast you out!")]
     arrival = shot("ExileEmberwood", 3, 5.3, seed_match=(0.498, 0.706, 0.24))
     return travel, arrival
 
 
 def setup_goal(actors, goal, travel):
-    goal.set_editor_properties({"travel_shots": travel, "travel_audio": sound("SFX_LS_ExilePlanting"),
+    goal.set_editor_properties({"travel_shots": travel, "travel_audio": sound("SFX_LS_ExilePlantingVoiced"),
                                 "require_jump": True})
     goal.get_editor_property("box").set_box_extent(unreal.Vector(590, 390, 235), True)
     position = goal.get_actor_transform().transform_location(unreal.Vector(-515, 0, -130))
