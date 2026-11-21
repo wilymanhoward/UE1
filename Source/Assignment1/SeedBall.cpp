@@ -78,6 +78,11 @@ ASeedBall::ASeedBall()
 	GlowParticles->SetupAttachment(BallMesh);
 	GlowParticles->SetUsingAbsoluteRotation(true);
 
+	TrailParticles = CreateDefaultSubobject<UNiagaraComponent>(TEXT("TrailParticles"));
+	TrailParticles->SetupAttachment(BallMesh);
+	TrailParticles->SetUsingAbsoluteRotation(true);
+	TrailParticles->SetAutoActivate(false);
+
 	SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
 	SpringArm->SetupAttachment(BallMesh);
 	// The ball spins constantly. The arm follows its position but takes rotation only from the controller.
@@ -147,6 +152,18 @@ void ASeedBall::BeginPlay()
 	UprightBaseScale = UprightVisual->GetRelativeScale3D();
 	CameraBaseLocation = Camera->GetRelativeLocation();
 
+	if (TrailEffect)
+	{
+		// Sparkles just outside the 50 cm ball that live under a second, so the trail fades out just behind it.
+		TrailParticles->SetAsset(TrailEffect);
+		TrailParticles->SetVariableFloat(TEXT("User.Sphere Radius"), 65.f);
+		TrailParticles->SetVariableFloat(TEXT("User.Size_Sparkling"), 0.45f);
+		TrailParticles->SetVariableFloat(TEXT("User.Lifetime Min"), 0.6f);
+		TrailParticles->SetVariableFloat(TEXT("User.Lifetime Max"), 1.f);
+		TrailParticles->SetVariableFloat(TEXT("User.SpawnRate"), 0.f);
+		TrailParticles->Activate(true);
+	}
+
 	BallMesh->OnComponentBeginOverlap.AddDynamic(this, &ASeedBall::HandleBeginOverlap);
 	BallMesh->OnComponentHit.AddDynamic(this, &ASeedBall::HandleHit);
 }
@@ -192,6 +209,21 @@ void ASeedBall::Tick(float DeltaSeconds)
 	ApplyGravityScale(Data);
 	ApplyGlide(Data);
 	UpdateRollAudio(Data, DeltaSeconds);
+	UpdateTrail(Data);
+}
+
+void ASeedBall::UpdateTrail(const FSeedFormData& Data)
+{
+	if (!TrailParticles->IsActive())
+	{
+		return;
+	}
+	const float Speed = BallMesh->GetPhysicsLinearVelocity().Size();
+	const float SpeedFraction = FMath::Clamp(Speed / FMath::Max(GetMaxRollSpeed(Data), 1.f), 0.f, 1.f);
+	// Always on, on the ground or in the air: a fifth of the rate when still, rising to TrailRate at top speed.
+	TrailParticles->SetVariableFloat(TEXT("User.SpawnRate"), TrailRate * FMath::Lerp(0.2f, 1.f, SpeedFraction));
+	// The pack's colour is HDR, so the glow colour is scaled well above 1.
+	TrailParticles->SetVariableVec3(TEXT("User.Color"), FVector(Data.GlowColor.R, Data.GlowColor.G, Data.GlowColor.B) * 80.f);
 }
 
 void ASeedBall::UpdateRollAudio(const FSeedFormData& Data, float DeltaSeconds)

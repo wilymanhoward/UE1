@@ -165,6 +165,10 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	TObjectPtr<UNiagaraComponent> GlowParticles;
 
+	/** Plays Trail Effect: sparkles left behind the ball, on the ground or in the air, in the form's glow colour. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	TObjectPtr<UNiagaraComponent> TrailParticles;
+
 	/** Keeps the camera behind the ball, with lag and wall collision. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	TObjectPtr<USpringArmComponent> SpringArm;
@@ -194,6 +198,14 @@ protected:
 	/** Particle burst on every form switch, tinted and sized by the new form's Switch values. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio")
 	TObjectPtr<UNiagaraSystem> FormSwitchBurst;
+
+	/** Sparkle effect left behind while rolling. It needs the User.SpawnRate and User.Color parameters of the pack's NS_Sparkling. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio")
+	TObjectPtr<UNiagaraSystem> TrailEffect;
+
+	/** Trail sparkles per second at the form's top speed. A still ball leaves a fifth of this. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio", meta = (ClampMin = "0"))
+	float TrailRate = 120.f;
 
 	/** Plays when the ball dies. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio")
@@ -297,6 +309,7 @@ private:
 	void ApplyGravityScale(const FSeedFormData& Data);
 	void ApplyGlide(const FSeedFormData& Data);
 	void UpdateRollAudio(const FSeedFormData& Data, float DeltaSeconds);
+	void UpdateTrail(const FSeedFormData& Data);
 
 	bool CheckForGround() const;
 	float GetMaxRollSpeed(const FSeedFormData& Data) const;
