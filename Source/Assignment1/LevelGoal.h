@@ -13,6 +13,11 @@
 #include "LevelGoal.generated.h"
 
 class ULevelSequence;
+class UMaterialInterface;
+class UNiagaraComponent;
+class UStaticMesh;
+class UStaticMeshComponent;
+class UNiagaraSystem;
 class UWorld;
 
 UCLASS()
@@ -61,6 +66,73 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tuning", meta = (ClampMin = "0"))
 	int32 RequiredPetals = 2;
 
+	/**
+	 * Emberwood's ending. The goal opens only once every energy (the level's Life Notes) is collected. After the Travel
+	 * Shots, Seed shakes harder and harder, bursts, and Next Level opens fully restored.
+	 */
+	UPROPERTY(EditAnywhere, Category = "Energy Finale")
+	bool bEnergyFinale = false;
+
+	/** Shown when Seed reaches the goal too early. {0} is the energy collected, {1} the total. */
+	UPROPERTY(EditAnywhere, Category = "Energy Finale")
+	FText MissingEnergyMessage = NSLOCTEXT("LastSeed", "MissingEnergy", "The energy is not full yet ({0}/{1}). Find the rest.");
+
+	/** Seconds Seed shakes before it bursts. */
+	UPROPERTY(EditAnywhere, Category = "Energy Finale", meta = (ClampMin = "0.1"))
+	float ChargeTime = 3.f;
+
+	/** How far Seed shakes, in cm, just before it bursts. It builds up from nothing. */
+	UPROPERTY(EditAnywhere, Category = "Energy Finale", meta = (ClampMin = "0"))
+	float ChargeShake = 18.f;
+
+	/** Gathers round Seed while it charges, and grows. */
+	UPROPERTY(EditAnywhere, Category = "Energy Finale")
+	TObjectPtr<UNiagaraSystem> ChargeEffect;
+
+	/** The burst, at Seed, scaled by Burst Scale. */
+	UPROPERTY(EditAnywhere, Category = "Energy Finale")
+	TObjectPtr<UNiagaraSystem> BurstEffect;
+
+	UPROPERTY(EditAnywhere, Category = "Energy Finale", meta = (ClampMin = "0"))
+	float BurstScale = 6.f;
+
+	/** A glowing shell that swells round Seed while it charges, so the gathered energy is plain to see. */
+	UPROPERTY(EditAnywhere, Category = "Energy Finale")
+	TObjectPtr<UStaticMesh> ChargeShellMesh;
+
+	UPROPERTY(EditAnywhere, Category = "Energy Finale")
+	TObjectPtr<UMaterialInterface> ChargeShellMaterial;
+
+	/** The shell's diameter in cm just before the burst. It grows from a tenth of this. */
+	UPROPERTY(EditAnywhere, Category = "Energy Finale", meta = (ClampMin = "0"))
+	float ChargeShellSize = 450.f;
+
+	UPROPERTY(EditAnywhere, Category = "Energy Finale")
+	TObjectPtr<USoundBase> ChargeSound;
+
+	UPROPERTY(EditAnywhere, Category = "Energy Finale")
+	TObjectPtr<USoundBase> BurstSound;
+
+	/** Holds Seed still and plays the charge and burst. OnFinished runs once the screen is white. */
+	void PlayEnergyBurst(ASeedBall* Ball, TFunction<void()> OnFinished);
+
 protected:
 	virtual void BeginPlay() override;
+
+private:
+	void UpdateEnergyBurst(float DeltaSeconds);
+
+	UPROPERTY(Transient)
+	TObjectPtr<UNiagaraComponent> ChargeComponent;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UStaticMeshComponent> ChargeShell;
+
+	TWeakObjectPtr<ASeedBall> BurstBall;
+	TFunction<void()> OnBurstFinished;
+	FVector BurstAnchor = FVector::ZeroVector;
+	// Seconds since the charge began, or below zero when no burst is playing.
+	float BurstTime = -1.f;
+	bool bBurst = false;
+	float LastWarningTime = -100.f;
 };

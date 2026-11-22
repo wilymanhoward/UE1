@@ -27,6 +27,10 @@ ACheckpointShrine::ACheckpointShrine()
 	Glow->SetupAttachment(Trigger);
 	Glow->SetMobility(EComponentMobility::Movable);
 	Glow->SetVisibility(false);
+
+	// Ticks only while the lantern is fading in.
+	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bStartWithTickEnabled = false;
 }
 
 void ACheckpointShrine::OnBallOverlap(ASeedBall* Ball)
@@ -42,10 +46,28 @@ void ACheckpointShrine::OnBallOverlap(ASeedBall* Ball)
 
 	GetWorld()->GetSubsystem<URestorationSubsystem>()->LockInRestoration();
 
-	// The light sits in the lantern, so the flame, sparkle and sound all start there.
+	// The light sits in the lantern, so the flame, sparkle and sound all start there. Tick brightens it from dark.
+	FullIntensity = Glow->Intensity;
+	LightAlpha = 0.f;
+	Glow->SetIntensity(0.f);
 	Glow->SetVisibility(true);
-	Mesh->SetScalarParameterValueOnMaterials(TEXT("Lit"), 1.f);
+	SetActorTickEnabled(true);
 	UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, ActivateEffect, Glow->GetComponentLocation());
 	UGameplayStatics::PlaySoundAtLocation(this, ActivateSound, Glow->GetComponentLocation());
 	PlayActivateEffect();
+}
+
+void ACheckpointShrine::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+
+	LightAlpha = LightFadeTime > 0.f ? FMath::Min(LightAlpha + DeltaSeconds / LightFadeTime, 1.f) : 1.f;
+	// Eased in and out, so the flame catches softly and settles rather than ramping in a straight line.
+	const float Brightness = FMath::SmoothStep(0.f, 1.f, LightAlpha);
+	Glow->SetIntensity(FullIntensity * Brightness);
+	Mesh->SetScalarParameterValueOnMaterials(TEXT("Lit"), Brightness);
+	if (LightAlpha >= 1.f)
+	{
+		SetActorTickEnabled(false);
+	}
 }

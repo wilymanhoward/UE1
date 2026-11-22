@@ -7,6 +7,8 @@
 #include "Components/TextBlock.h"
 #include "Engine/Texture2D.h"
 #include "Engine/World.h"
+#include "EngineUtils.h"
+#include "LevelGoal.h"
 #include "LSGameMode.h"
 #include "LSLevelTypes.h"
 #include "RestorationSubsystem.h"
@@ -36,6 +38,10 @@ void ULSHUDWidget::NativeConstruct()
 	Restoration->OnNoteCollected.AddUniqueDynamic(this, &ULSHUDWidget::HandleNoteCollected);
 	Restoration->OnRestorationChanged.AddUniqueDynamic(this, &ULSHUDWidget::HandleRestorationChanged);
 
+	for (TActorIterator<ALevelGoal> It(GetWorld()); It; ++It)
+	{
+		bCountsEnergy |= It->bEnergyFinale;
+	}
 	RefreshNotes();
 	HandleRestorationChanged(Restoration->GetRestoration());
 	ShowForm(ESeedForm::Seed);
@@ -108,7 +114,11 @@ void ULSHUDWidget::HandleNoteCollected(FVector Location)
 	RefreshNotes();
 	if (NoticePanel && NoticeText)
 	{
-		NoticeText->SetText(NSLOCTEXT("LastSeed", "NoteObtained", "+1 LIFE NOTE   /   The forest stirs"));
+		const URestorationSubsystem* Restoration = GetWorld()->GetSubsystem<URestorationSubsystem>();
+		const bool bFull = Restoration->GetNotesCollected() >= Restoration->GetNotesTotal();
+		NoticeText->SetText(!bCountsEnergy ? NSLOCTEXT("LastSeed", "NoteObtained", "+1 LIFE NOTE   /   The forest stirs")
+			: bFull ? NSLOCTEXT("LastSeed", "EnergyFull", "ENERGY FULL   /   Reach the castle ruins")
+			: NSLOCTEXT("LastSeed", "EnergyObtained", "+1 ENERGY   /   Seed glows brighter"));
 		NoticeTimeRemaining = 4.f;
 		NoticePanel->SetRenderOpacity(1.f);
 	}
@@ -117,11 +127,13 @@ void ULSHUDWidget::HandleNoteCollected(FVector Location)
 void ULSHUDWidget::RefreshNotes()
 {
 	const URestorationSubsystem* Restoration = GetWorld()->GetSubsystem<URestorationSubsystem>();
-	NotesText->SetText(FText::FromString(FString::Printf(TEXT("Life Notes %d/%d"),
+	NotesText->SetText(FText::FromString(FString::Printf(TEXT("%s %d/%d"), bCountsEnergy ? TEXT("Energy") : TEXT("Life Notes"),
 		Restoration->GetNotesCollected(), Restoration->GetNotesTotal())));
 }
 
 void ULSHUDWidget::HandleRestorationChanged(float Restoration)
 {
 	RestorationBar->SetPercent(Restoration);
+	// Restoring a whole level at once (home from Emberwood) collects its notes without a collect event.
+	RefreshNotes();
 }

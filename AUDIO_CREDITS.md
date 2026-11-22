@@ -33,6 +33,10 @@ Each comes from the public HQ preview, converted to mono 48 kHz PCM, with its DC
 - “Stone Drop on Grass 3.wav” by dichardson, [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/). A stone dropped on grass. The whole 0.53 second recording, at −5 dBFS, is `SFX_LS_SwitchStone.wav`. [Freesound recording](https://freesound.org/people/dichardson/sounds/570976/)
 - “Various short blows/puffs of air from male mouth” by rykenn, [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/). Puffs of breath recorded for blowing dust off a camera lens. One puff, 8.33–9.05 seconds, at −8 dBFS, is `SFX_LS_SwitchDandelion.wav`. [Freesound recording](https://freesound.org/people/rykenn/sounds/432170/)
 
+## Checkpoint lanterns
+
+- “MatchStrike07.wav” by kingsrow, [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/). A match struck and burning strongly after it catches. The public HQ preview's 0.15–1.75 second excerpt has its strike turned down so the flare carries. A soft crackle from myLoop's recorded campfire, credited under The Witch’s Exile, fades in under it at 0.25 seconds. `Content/Python/ls_lantern_sound.py` mixes both into `SFX_LS_LanternLight.wav`: 2.85 seconds, mono 48 kHz PCM, peaking at −6 dBFS. Both are recorded sounds, not AI-generated. [Freesound recording](https://freesound.org/people/kingsrow/sounds/181580/)
+
 ## Trail 2 gate
 
 - “Gate door drawbridge wooden creaky opens closes hinge.wav” by WavJunction.com, [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/). Recorded from an old two-hinge wooden farm gate in Cody, Wyoming. The public HQ preview was excerpted, slowed, and filtered to make the 3.6-second opening creak. [Freesound recording](https://freesound.org/people/WavJunction.com/sounds/456763/)
@@ -57,6 +61,11 @@ Each comes from the public HQ preview, converted to mono 48 kHz PCM, with its DC
 - The teleport cue uses the recordings already credited above for tree regrowth, witch scream, thunder and falling stone. The Emberwood bed uses “Fireplace” by myLoop under [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/). The recordist captured an outdoor campfire in Munich using a Zoom H1essential. The public HQ preview was filtered and crossfaded for the fire loop and the end of the teleport cue. [Freesound recording](https://freesound.org/people/myLoop/sounds/852107/)
 - The midair cut uses the same recorded scream, thunder, falling stone and fire loop, retimed to the witch opening the portal at 6.05 seconds.
 - The planting cut combines the recorded Seed landing, tree-regrowth rustle, thunder, falling stone and Emberwood fire to follow Seed under the soil and back out into the spell.
+
+## Emberwood
+
+- The lava ambience (`lava_amb_Cue`) is the one that comes with the Lava Environments asset pack in `Content/Lava`, used as supplied.
+- The energy burst at the goal reuses the storm rumble (charging) and the trimmed thunder (burst) credited above.
 
 ## Narration
 

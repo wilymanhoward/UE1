@@ -28,7 +28,11 @@ class ASSIGNMENT1_API ALSGameMode : public AGameModeBase
 public:
 	ALSGameMode();
 
+	virtual void InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage) override;
 	virtual void Tick(float DeltaSeconds) override;
+
+	/** True when Emberwood's energy burst opened this level: it starts fully restored, at the level goal, with no intro. */
+	bool IsRestoredArrival() const { return bRestoredArrival; }
 
 	/** The engine calls this to spawn the player's pawn, which is the moment to start listening to it. */
 	virtual void RestartPlayer(AController* NewPlayer) override;
@@ -89,4 +93,5 @@ private:
 	int32 GoldenPetalsTotal = 0;
 	bool bTimerRunning = true;
 	bool bLevelComplete = false;
+	bool bRestoredArrival = false;
 };

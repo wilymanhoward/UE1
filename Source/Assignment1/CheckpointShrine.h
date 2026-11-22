@@ -27,6 +27,7 @@ public:
 	ACheckpointShrine();
 
 	virtual void OnBallOverlap(ASeedBall* Ball) override;
+	virtual void Tick(float DeltaSeconds) override;
 
 	/** True once the ball has reached this shrine. */
 	bool IsActivated() const { return bActivated; }
@@ -60,6 +61,16 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tuning", meta = (ClampMin = "0"))
 	float RespawnHeight = 100.f;
 
+	/** Seconds the lantern takes to brighten from dark to full once lit. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tuning", meta = (ClampMin = "0"))
+	float LightFadeTime = 1.2f;
+
 private:
 	bool bActivated = false;
+
+	/** The light's brightness as placed, which the fade-in rises to. */
+	float FullIntensity = 0.f;
+
+	/** How far the fade-in has got, 0 to 1. */
+	float LightAlpha = 0.f;
 };

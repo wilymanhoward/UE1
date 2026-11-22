@@ -97,4 +97,7 @@ private:
 
 	float PromptTimeRemaining = 0.f;
 	float NoticeTimeRemaining = 0.f;
+
+	// Emberwood counts its notes as energy (ALevelGoal::bEnergyFinale).
+	bool bCountsEnergy = false;
 };

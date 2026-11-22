@@ -14,7 +14,7 @@ from ls_world_common import (
 
 ART = "/Game/LastSeed/Intro/WitchExile"
 WILDWOOD = "/Game/LastSeed/Maps/L_Level1_Wildwood"
-DESTINATION = "/Game/L_Level2"
+DESTINATION = "/Game/LastSeed/Maps/L_Level2_Emberwood"  # Built by ls_emberwood.py in a copy of the lava pack map
 FOLDER = "Emberwood Arrival"
 LAVA_Z = -285.0
 
@@ -205,12 +205,12 @@ def build():
     assert not unreal.EditorLoadingAndSavingUtils.get_dirty_map_packages()
     goals = [actor for actor in actors.get_all_level_actors() if isinstance(actor, unreal.LevelGoal)]
     assert len(goals) == 1 and goals[0].get_editor_property("next_level") == unreal.load_asset(DESTINATION)
-    travel, arrival = exile_shots()
-    ambience = sound("SFX_LS_EmberwoodFire", loop=True)
+    travel, _ = exile_shots()
 
-    assert levels.load_level(DESTINATION)
-    dress_arrival(actors, arrival, ambience)
-    assert levels.save_current_level()
+    # Emberwood, arrival included, is built by ls_emberwood.py in its copy of the lava pack map. dress_arrival made
+    # the earlier, plainer L_Level2 and is kept only for that map.
+    import ls_emberwood
+    ls_emberwood.build()
     assert levels.load_level(WILDWOOD)
     goal = next(actor for actor in actors.get_all_level_actors() if isinstance(actor, unreal.LevelGoal))
     setup_goal(actors, goal, travel)

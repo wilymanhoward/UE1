@@ -1022,8 +1022,8 @@ def place(entry, plates):
         actor.set_actor_scale3d(unreal.Vector(*[h / 200.0 for h in entry["half"]]))
         actor.set_editor_properties({"ending_cards": [unreal.Text(card) for card in entry["cards"]], "credits_cards": [],
                                      "par_time_seconds": entry["par"], "required_petals": entry["petals"]})
-        if unreal.EditorAssetLibrary.does_asset_exist("/Game/L_Level2"):
-            actor.set_editor_property("next_level", unreal.load_asset("/Game/L_Level2"))
+        if unreal.EditorAssetLibrary.does_asset_exist("/Game/LastSeed/Maps/L_Level2_Emberwood"):
+            actor.set_editor_property("next_level", unreal.load_asset("/Game/LastSeed/Maps/L_Level2_Emberwood"))
         ground = z - entry["half"][2]
         ring = mesh_actor("/Game/LastSeed/Meshes/SM_LS_GateRing", x, y, ground + 720.0, "Flow", (2.1, 2.1, 2.1), yaw, material("M_LS_GoalGlow"), "GoalRing")
         ring.static_mesh_component.set_render_custom_depth(True)

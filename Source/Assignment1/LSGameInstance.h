@@ -57,6 +57,9 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Progress")
 	int32 GetTotalPetals() const;
 
+	/** Set by Emberwood's energy burst, so the next level opens fully restored. Read once by ALSGameMode::InitGame. Not saved. */
+	bool bRestoredArrival = false;
+
 	float GetMusicVolume() const { return MusicVolume; }
 	float GetSfxVolume() const { return SfxVolume; }
 	void SetMusicVolume(float Volume) { MusicVolume = Volume; }

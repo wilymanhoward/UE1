@@ -17,7 +17,7 @@ TEXTURES = "/Game/UI/Textures"
 MENU_MAP = "/Game/LastSeed/Maps/L_MainMenu"
 MENU_MODE = "/Game/Blueprint/BP_LSGameMode_Menu"
 LEVEL1 = "/Game/LastSeed/Maps/L_Level1_Wildwood"
-LEVEL2 = "/Game/L_Level2"
+LEVEL2 = "/Game/LastSeed/Maps/L_Level2_Emberwood"
 STAGES = ["textures", "menu_level", "wire"]
 
 assets = unreal.EditorAssetLibrary

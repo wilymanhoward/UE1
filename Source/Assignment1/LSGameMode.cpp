@@ -21,6 +21,18 @@ ALSGameMode::ALSGameMode()
 	PlayerControllerClass = ALSPlayerController::StaticClass();
 }
 
+void ALSGameMode::InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage)
+{
+	Super::InitGame(MapName, Options, ErrorMessage);
+
+	// Read before any actor's BeginPlay, and cleared, so only the level opened by the burst arrives restored.
+	if (ULSGameInstance* GameInstance = GetGameInstance<ULSGameInstance>())
+	{
+		bRestoredArrival = GameInstance->bRestoredArrival;
+		GameInstance->bRestoredArrival = false;
+	}
+}
+
 void ALSGameMode::BeginPlay()
 {
 	Super::BeginPlay();
@@ -28,6 +40,21 @@ void ALSGameMode::BeginPlay()
 	for (TActorIterator<AGoldenPetal> It(GetWorld()); It; ++It)
 	{
 		++GoldenPetalsTotal;
+	}
+
+	if (bRestoredArrival)
+	{
+		if (ALSPlayerController* PlayerController = GetLSPlayerController())
+		{
+			// Continues the burst's white flash, clearing onto the healed forest.
+			PlayerController->PlayerCameraManager->StartCameraFade(1.f, 0.f, 2.5f, FLinearColor::White, false, false);
+			FTimerHandle PromptTimer;
+			GetWorldTimerManager().SetTimer(PromptTimer, FTimerDelegate::CreateWeakLambda(PlayerController, [PlayerController]()
+			{
+				PlayerController->ShowPrompt(NSLOCTEXT("LastSeed", "RestoredArrival",
+					"The energy flows home. Wildwood is whole again."), 8.f);
+			}), 2.5f, false);
+		}
 	}
 }
 
@@ -49,6 +76,20 @@ void ALSGameMode::RestartPlayer(AController* NewPlayer)
 	if (ASeedBall* Ball = Cast<ASeedBall>(NewPlayer->GetPawn()))
 	{
 		Ball->OnDied.AddUniqueDynamic(this, &ALSGameMode::HandleBallDied);
+
+		// Home from Emberwood: Seed lands just before where it was planted (ALevelGoal), looking back over the healed trail.
+		// Not in the goal itself, which the regrown Heart Tree's leaves now crowd.
+		if (bRestoredArrival)
+		{
+			for (TActorIterator<ALevelGoal> It(GetWorld()); It; ++It)
+			{
+				const FVector Home = It->GetActorLocation() - It->GetActorForwardVector() * 700.f + FVector(0.f, 0.f, 60.f);
+				Ball->TeleportBall(Home);
+				Ball->SetCheckpoint(Home);
+				NewPlayer->SetControlRotation(FRotator(-10.f, It->GetActorRotation().Yaw + 180.f, 0.f));
+				break;
+			}
+		}
 	}
 }
 
@@ -119,8 +160,19 @@ void ALSGameMode::CompleteLevel(ALevelGoal* Goal)
 	{
 		if (!Goal->TravelShots.IsEmpty() && !Goal->NextLevel.IsNull())
 		{
+			// The energy finale comes back to the game after the shots, so the burst plays in the world.
+			const bool bEnergyFinale = Goal->bEnergyFinale;
 			PlayerController->PlayIntro(Goal->TravelShots, Goal->TravelAudio, nullptr,
-				ELSIntroTransition::Travel, FVector::ZeroVector, [this]() { ContinueAfterResults(); });
+				bEnergyFinale ? ELSIntroTransition::Gameplay : ELSIntroTransition::Travel, FVector::ZeroVector,
+				[this, Goal, PlayerController, bEnergyFinale]()
+				{
+					if (!bEnergyFinale)
+					{
+						ContinueAfterResults();
+						return;
+					}
+					Goal->PlayEnergyBurst(Cast<ASeedBall>(PlayerController->GetPawn()), [this]() { ContinueAfterResults(); });
+				});
 			return;
 		}
 		PlayerController->PlayStory(Goal->EndingSequence, Goal->EndingCards, [this, PlayerController]()
@@ -134,6 +186,10 @@ void ALSGameMode::ContinueAfterResults()
 {
 	if (!CompletedGoal->NextLevel.IsNull())
 	{
+		if (ULSGameInstance* GameInstance = GetGameInstance<ULSGameInstance>())
+		{
+			GameInstance->bRestoredArrival = CompletedGoal->bEnergyFinale;
+		}
 		UGameplayStatics::OpenLevelBySoftObjectPtr(this, CompletedGoal->NextLevel);
 		return;
 	}

@@ -41,21 +41,28 @@ The player is the last glowing seed of a dead Heart Tree. This guide explains ea
 - **Pattern:** command-style forwarding. The controller knows the keys, the ball knows the behaviour.
 
 ### `ULSGameInstance` and `ULSSaveGame`: persistent data
-The game instance stores `UnlockedForms`, a `FLSLevelRecord` of best scores per level, and the volumes. It survives level changes, so Level 2 keeps forms unlocked in Level 1. `RecordLevelResult` keeps the best of each value, `SaveProgress` copies everything into a `ULSSaveGame` and writes it to disk, and `Init` loads it at startup. **Pattern:** memento (the save object is a plain snapshot).
+The game instance stores `UnlockedForms`, a `FLSLevelRecord` of best scores per level, and the volumes. It survives level changes, so Level 2 keeps forms unlocked in Level 1. `bRestoredArrival` is the one unsaved flag: Emberwood's energy burst sets it, so the level it opens starts healed. `RecordLevelResult` keeps the best of each value, `SaveProgress` copies everything into a `ULSSaveGame` and writes it to disk, and `Init` loads it at startup. **Pattern:** memento (the save object is a plain snapshot).
 
 ### `ALSGameMode`: level rules
 | Function | What it does |
 |---|---|
 | `Tick` | Adds to the level timer. It doesn't tick while paused, so menus and text cards don't count |
-| `RestartPlayer` | Listens to the new ball's `OnDied` to count deaths |
+| `InitGame` | Reads and clears `ULSGameInstance::bRestoredArrival` before any actor's `BeginPlay`, so `IsRestoredArrival` is true only in the level the burst opened |
+| `RestartPlayer` | Listens to the new ball's `OnDied` to count deaths. On a restored arrival, puts Seed just before the level's goal, facing back down the trail |
 | `BuildResult` | Fills in `FLSLevelResult`, including each star condition and the star count |
-| `CompleteLevel` | Saves the result, fires `OnLevelCompleted`, plays the ending, then opens the results |
+| `CompleteLevel` | Saves the result, fires `OnLevelCompleted`, plays the ending, then opens the results. A goal with `bEnergyFinale` plays its shots with the `Gameplay` transition, then `ALevelGoal::PlayEnergyBurst` |
 | `ContinueAfterResults` | Opens the next level, or plays the credits and returns to the menu after the last level |
 
 **Pattern:** observer (`OnLevelCompleted`).
 
 ### `ALevelGoal` and `AStoryTrigger`: placed flow actors
-`ALevelGoal` ends the level, and holds the settings that differ per level, such as par time and next level, because all levels share one game mode Blueprint. `AStoryTrigger` calls `PlayStory` once, when entered or at the start of the level.
+`ALevelGoal` ends the level, and holds the settings that differ per level, such as par time and next level, because all levels share one game mode Blueprint. `AStoryTrigger` calls `PlayStory` once, when entered or at the start of the level, except on a restored arrival.
+
+Emberwood's goal sets `bEnergyFinale`:
+- It opens only once every energy (the level's Life Notes) is collected; earlier, it shows `MissingEnergyMessage` with the count.
+- After the `TravelShots` (the witch), `PlayEnergyBurst` holds Seed still and `Tick` runs the charge for `ChargeTime` (3 s): Seed shakes harder and harder (`ChargeShake`, squared), lifts a little, its glow light swells, and `ChargeShellMaterial` on a sphere grows round it to `ChargeShellSize`, pulsing faster.
+- Then the burst: `BurstEffect` at `BurstScale`, `BurstSound`, Seed hidden, and a white camera fade. `ContinueAfterResults` sets `ULSGameInstance::bRestoredArrival` and opens `NextLevel` (Wildwood).
+- In that Wildwood, `URestorationSubsystem::RestoreFully` removes the notes and sets restoration to 1 on the first tick, the opening is skipped, the white fade clears, and a prompt says Wildwood is whole again. The goal there no longer ends the level.
 
 ### UI widgets
 Each is a C++ base class with `meta = (BindWidget)` properties, and the layout lives in a Blueprint child. A missing or misnamed widget is a compile error in the Widget Blueprint, not a crash in play.
@@ -95,7 +102,9 @@ The intro shows the witch cursing the forest. She comes back twice more, using t
 - `bRequireJump`: the goal only completes when Seed lands from a jump inside it (`ASeedBall::JustLandedFromJump`). It ticks to check this, because landing creates no new overlap event. A `TutorialTrigger` just before it says "Take Seed form, then jump into the dirt to plant yourself."
 - `TravelShots`: `PlantingSoil`, `WitchNotYet` ("Not yet.") and `WitchBanishment` ("By ash and flame… I cast you out!"), with the voiced track `SFX_LS_ExilePlantingVoiced`. `ALSGameMode::CompleteLevel` saves the result first, then plays these with the `Travel` transition instead of opening the results screen, and `ContinueAfterResults` opens `NextLevel`.
 
-**4. The Emberwood arrival.** The same script builds the start of `L_Level2`: a lava plane with an `AKillVolume` just under its surface, basalt shelves to roll across (hidden cylinders for collision, the same idea as point 32), charred trees, orange lights, a darker fog and the fire ambience. An `AStoryTrigger` with `bPlayOnStart` and `bArrivalCutscene` plays one shot, `ExileEmberwood`, whose `SeedMatch` lines the painted seed up with the real ball as the player takes control.
+**4. The Emberwood arrival.** Level 2 is now built by `ls_emberwood.py` (below), whose `arrival` places the player start and the `ExileEmberwood` shot in the lava pack's basin. Before that, this script built the start of the plain `L_Level2`, still in the project but no longer opened: a lava plane with an `AKillVolume` just under its surface, basalt shelves to roll across (hidden cylinders for collision, the same idea as point 32), charred trees, orange lights, a darker fog and the fire ambience. An `AStoryTrigger` with `bPlayOnStart` and `bArrivalCutscene` plays one shot, `ExileEmberwood`, whose `SeedMatch` lines the painted seed up with the real ball as the player takes control.
+
+**5. The Emberwood confrontation.** `ls_emberwood.py` puts the witch's `TravelShots` on Emberwood's goal: three frames from `SourceIntro/EmberwoodWitch`, reimported on every run. They are placeholders copied from the earlier scenes, so new paintings dropped in under the same names replace them. Then the energy burst (see `ALevelGoal`) takes Seed home.
 
 Every frame and sound is imported by the scripts from `Content/LastSeed/SourceIntro/RiverAmbush`, `SourceIntro/WitchExile` and `SourceSounds`, so a rerun rebuilds the same scene. **Patterns:** observer (the `OnFinished` callback starts the curse), data-driven (one widget and one trigger class tell all four scenes).
 
@@ -111,7 +120,7 @@ Every frame and sound is imported by the scripts from `Content/LastSeed/SourceIn
 **Pattern:** template method. The base class fixes the order of the steps, and children fill in one step.
 
 ### `ACheckpointShrine`: respawn points
-On first touch it sets the ball's checkpoint, locks in the current restoration, lights the lantern (the glow light, plus `Lit` = 1 on the glass material) and plays the effect and sound at the lantern. It then ignores further touches. The actor sits on the trail's centre line, where the ball respawns. Only its mesh, a wooden post with a hanging lantern (`maya_lantern_post.py`), stands at the trail's edge. `ls_lantern_post.py` places the post and widens the trigger sphere across the trail, so rolling past anywhere lights it. Checkpoints last for the current run only, because collected notes aren't saved.
+On first touch it sets the ball's checkpoint, locks in the current restoration, and lights the lantern. Over `LightFadeTime` (1.2 s) `Tick` eases the glow light and the glass material's `Lit` from 0 up to full, then turns ticking off again. The effect and the match-and-fire sound (`ls_lantern_sound.py`) play at the lantern. It then ignores further touches. The actor sits on the trail's centre line, where the ball respawns. Only its mesh, a wooden post with a hanging lantern (`maya_lantern_post.py`), stands at the trail's edge. `ls_lantern_post.py` places the post and widens the trigger sphere across the trail, so rolling past anywhere lights it. Checkpoints last for the current run only, because collected notes aren't saved.
 
 ### `ALSVolumeBase`, `AKillVolume`, `ATutorialTrigger`: volumes
 `ALSVolumeBase` creates the invisible overlap box. `AKillVolume` calls `Die`. `ATutorialTrigger` shows its message once.
@@ -222,6 +231,16 @@ An editor script that imports the OBJ files, builds the materials node by node, 
 ### `Content/Python/build_world_level1.py` and `ls_world_common.py`: the forest
 The level script decides what goes where, and `ls_world_common.py` knows how to place it, so Level 2 can share it. The tables at the top of the script hold the whole layout: `BENDS`, `INSERTS`, `HILLS` and the rest. `ls_curved_route.py` turns a greybox position into (s, d), the distance along the winding road and the distance to its right. Because distance along the road never changes, a jump measures the same after bending. `road_height` and `terrain_height` give one height for any point, and the road mesh, terrain and trees all use them, which is why everything sits on the hills. `shaped_land` averages the hillsides over the nearby road, as using only the nearest point would make a cliff wherever a different stretch of road becomes nearest. `check_layout` stops the build if a table edit makes a slope too steep, puts a bend on a puzzle, or runs the road into itself. Each greybox actor keeps its original place in an `LS_Origin` tag, so a rerun bends from the straight line again. `ls_generate_world_meshes.py` builds what the Fab packs lack: the giant tree, music note, gate ring and floating island. `Scatter` groups transforms by mesh into one instanced component each, with a cull distance per ring. `jittered_grid` with a fixed seed gives a forest that looks random but rebuilds identically. `ls_material_helpers.py` holds the small node-building functions the material scripts share.
 
+### `Content/Python/ls_emberwood.py`: Level 2, Emberwood
+Level 2 is `/Game/LastSeed/Maps/L_Level2_Emberwood`, a copy of the lava pack's `references` map (the pack's own map is never changed). Wildwood's goal, the main menu's Level 2 button and `ls_witch_exile.DESTINATION` all point at it. Seed lands in the pack's lava basin, where all ground is safe, with the painted arrival shot. The route then leaves the basin's east shore (world y 7500), where shore rocks hide the drop to lower open lava that kills. A second kill volume lies under the whole map, below the pack's deep lava pit. The route's numbers are in its own frame, and `to_world` turns them onto the map, running along world +Y.
+
+It builds three sections from the pack in `Content/Lava` (all under `World/Emberwood/`, which a rerun clears):
+1. **Ember Steps.** Basalt stones over the lava, like the arrival's (shelf mesh for looks, a hidden flat cylinder to land on), then four `ACrumblingPlatform`s dressed as the pack's dark slab. Lantern checkpoint on the big stone.
+2. **Updraft Chasm.** Three `AWindVolume` updrafts from lava vents, marked by the pack's sparks and an orange light, with two rest stones. Too far to jump, so Dandelion rides them; an energy hangs in each column.
+3. **Ruined Keep.** The pack's floor tiles, walls, arches and columns, standing on a basalt foundation. Seed rolls on a hidden flat slab, because the tiles' rocky tops trap a ball. Stone Shell pushes Wildwood's crate onto an `ALever` (it ignores the ball itself), which raises a portcullis (`AGate` sliding up). The goal with `bEnergyFinale` is beyond it.
+
+Sixteen energy orbs are `BP_LifeNote`s with a sphere and `M_LS_EnergyOrb`; the HUD calls them Energy when the level's goal has `bEnergyFinale`. Scenery: lava cliffs, lava falls with splashes, glowing lava floes, burning trees, ember bushes and the pack's lava ambience.
+
 ### `Content/Python/ls_wildwood_plan.py` and `build_level1_wildwood.py`: Level 1 in the Wildwood forest
 `L_Level1_Wildwood` is a copy of the Wildwood pack's demo map. The plan script runs outside Unreal (it needs numpy) and works out a 900 m trail through the pack's own landscape: a smooth curve through the control points in `ROUTE`, picked to keep to the gentler slopes. The trail is a dirt ribbon that hugs the ground, never more than `FILL_CAP` (2 m) above it, with level stretches only where `FLATS` needs them. It is a mesh laid on the landscape, never cut into it, because this engine version's landscape import scrambles the Wildwood landscape. All parkour is props: rock stacks, logs, a moving rock and crumbling rocks over the three water crossings in `CROSSINGS`, a rock tower to glide from, and rock stairs (`find_climbs`, `rock_stairs`) wherever the ground climbs more steeply than 15 degrees. The build script's `fit_rock` keeps each rock close to its own proportions, since a stretched boulder reads as a spike. Every parkour rock and log collides as its own mesh (`collide`): the boulders as their exact triangles, the logs and stacked rocks as a hull wrapped round the mesh, so the ball meets the shape the player sees. `trail01_extras` adds easy rock and log hops along trail piece 01, marked `extra` so the `extras` stage can add them to a level that is already open without touching anything else. Rocks and logs placed by hand in the editor are kept in `ls_hand_placed.json` (the `protect` stage records them and turns on collision for copies made in the editor, which come with it off; the `hand` stage puts them back after a full rebuild). Run `protect` after editing them by hand, and don't rebuild the level without running it first. `Content/Python/ls_widen_trail.py` moves the hidden side walls up to 2 m further out on open stretches, easing to no change near anything that spans the trail wall to wall and near kill volumes, and moves each wall's ends so neighbouring walls stay joined; run it again after a full rebuild. `ASeedBall::ApplyTrailEdgeResistance` starts its soft push 60 cm before a wall. The plan also places every pickup, puzzle and hidden wall, and picks the trees near the trail that become regrowing trees. The build script applies the plan in the editor, one stage per call. The far forest has no actors to swap: its leaf material multiplies the leaves' opacity by `Restoration` from `MPC_Restoration` against each tree's random value, so a little more of the forest leafs out with every note. `fun_extras` in the plan adds the bouncy mushrooms, the two raised notes, and the Withering's chase, marked `extra: "fun"`. The `fun` stage adds them to the open level, together with the music and the note chime.
 
@@ -275,6 +294,7 @@ Each rubric area, with what to show and where it is.
 | Endings and credits | `ALevelGoal`, then `ALSGameMode::CompleteLevel` and `ContinueAfterResults` |
 | The witch's ambush and curse | `AStoryTrigger::CheckLanding`, then `AfterCutsceneCurse` starting the shockwaves |
 | The Witch Exile into Emberwood | `ALevelGoal::bRequireJump` and `TravelShots`, then the `Arrival` shot in `L_Level2` |
+| Facing the witch, and the energy burst home | `ALevelGoal::bEnergyFinale` and `PlayEnergyBurst`, then `ALSGameMode::IsRestoredArrival` and `URestorationSubsystem::RestoreFully` in Wildwood |
 | The story told through the world | `ARestorationDriver` and `ARestorableActor`, colour returning as notes are collected |
 
 ## Points worth explaining

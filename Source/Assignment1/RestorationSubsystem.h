@@ -65,6 +65,9 @@ public:
 	FOnNoteCollected OnNoteCollected;
 
 private:
+	/** Counts every note as collected and restores the world, for the level opened by Emberwood's energy burst. */
+	void RestoreFully();
+
 	float GetNoteFraction() const;
 	void SetRestoration(float NewRestoration);
 	void BroadcastNewMilestones();

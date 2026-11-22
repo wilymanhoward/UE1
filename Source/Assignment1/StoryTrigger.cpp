@@ -4,6 +4,7 @@
 
 #include "Engine/World.h"
 #include "LevelSequence.h"
+#include "LSGameMode.h"
 #include "LSPlayerController.h"
 #include "SeedBall.h"
 #include "WitheringStorm.h"
@@ -21,7 +22,9 @@ void AStoryTrigger::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if (bPlayOnStart)
+	// Home from Emberwood, Seed lands in the healed forest straight away, without the opening.
+	const ALSGameMode* GameMode = GetWorld()->GetAuthGameMode<ALSGameMode>();
+	if (bPlayOnStart && !(GameMode && GameMode->IsRestoredArrival()))
 	{
 		// Waits one frame, because the controller may not have created its widgets yet.
 		GetWorldTimerManager().SetTimerForNextTick(this, &AStoryTrigger::Play);

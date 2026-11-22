@@ -5,6 +5,8 @@
 #include "Engine/World.h"
 #include "EngineUtils.h"
 #include "LifeNote.h"
+#include "LSGameMode.h"
+#include "TimerManager.h"
 
 namespace
 {
@@ -27,6 +29,24 @@ void URestorationSubsystem::OnWorldBeginPlay(UWorld& InWorld)
 		++NotesTotal;
 	}
 	UE_LOG(LogTemp, Log, TEXT("Restoration: found %d Life Notes"), NotesTotal);
+
+	// Home from Emberwood: the forest is already healed. Next tick, once listeners have bound in BeginPlay.
+	const ALSGameMode* GameMode = InWorld.GetAuthGameMode<ALSGameMode>();
+	if (GameMode && GameMode->IsRestoredArrival())
+	{
+		InWorld.GetTimerManager().SetTimerForNextTick(FTimerDelegate::CreateUObject(this, &URestorationSubsystem::RestoreFully));
+	}
+}
+
+void URestorationSubsystem::RestoreFully()
+{
+	for (TActorIterator<ALifeNote> It(GetWorld()); It; ++It)
+	{
+		It->Destroy();
+	}
+	NotesCollected = NotesTotal;
+	SetRestoration(1.f);
+	LockInRestoration();
 }
 
 float URestorationSubsystem::GetNoteFraction() const
