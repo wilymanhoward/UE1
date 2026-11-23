@@ -100,4 +100,33 @@ private:
 
 	// Emberwood counts its notes as energy (ALevelGoal::bEnergyFinale).
 	bool bCountsEnergy = false;
+
+	// --- Emberwood's energy bar: a breathing glow, a flickering tip and drifting sparks, all brighter after a pickup ---
+
+	/** Adds the glow, tip and spark images beside the bar, in the bar's own canvas. */
+	void BuildEnergyEffects();
+	void TickEnergyEffects(float DeltaSeconds);
+	void SpawnEnergySpark(float FillWidth);
+
+	UPROPERTY(Transient)
+	TObjectPtr<UImage> EnergyGlow;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UImage> EnergyTip;
+
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<UImage>> EnergySparks;
+
+	TArray<FVector2D> SparkVelocities;
+	TArray<float> SparkAges;
+	TArray<float> SparkLifetimes;
+
+	/** The bar's left end and vertical centre, in its canvas slot's offset space. */
+	FVector2D BarOrigin = FVector2D::ZeroVector;
+	float BarWidth = 0.f;
+
+	/** 1 right after an energy pickup, easing back to 0. */
+	float EnergyPulse = 0.f;
+	float SparkCountdown = 0.f;
+	float EnergyTime = 0.f;
 };

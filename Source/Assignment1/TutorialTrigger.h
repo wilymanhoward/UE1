@@ -11,6 +11,8 @@
 #include "LSVolumeBase.h"
 #include "TutorialTrigger.generated.h"
 
+class USoundBase;
+
 UCLASS()
 class ASSIGNMENT1_API ATutorialTrigger : public ALSVolumeBase
 {
@@ -23,6 +25,14 @@ protected:
 	/** The text to show. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tutorial")
 	FText Message;
+
+	/** The heading above the text. Empty: FOREST GUIDE, as for every tutorial. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tutorial")
+	FText Title;
+
+	/** Spoken with the text, once (a voice line, such as the witch taunting Seed). Optional. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tutorial")
+	TObjectPtr<USoundBase> Voice;
 
 	/** How long the text stays on screen, in seconds. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tuning", meta = (ClampMin = "0"))

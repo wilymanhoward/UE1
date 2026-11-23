@@ -21,6 +21,12 @@ ACrumblingPlatform::ACrumblingPlatform()
 	Mesh->SetRelativeScale3D(FVector(3.f, 3.f, 0.3f));
 }
 
+void ACrumblingPlatform::BeginPlay()
+{
+	Super::BeginPlay();
+	MeshRestLocation = Mesh->GetRelativeLocation();
+}
+
 void ACrumblingPlatform::OnBallHit(ASeedBall* Ball, FVector ImpactVelocity)
 {
 	if (State == ECrumbleState::Solid)
@@ -111,5 +117,5 @@ void ACrumblingPlatform::Tick(float DeltaSeconds)
 		break;
 	}
 
-	Mesh->SetRelativeLocation(FVector(ShakeOffset.X, ShakeOffset.Y, -CurrentDrop));
+	Mesh->SetRelativeLocation(MeshRestLocation + FVector(ShakeOffset.X, ShakeOffset.Y, -CurrentDrop));
 }

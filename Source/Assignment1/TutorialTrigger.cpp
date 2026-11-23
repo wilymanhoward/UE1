@@ -2,6 +2,7 @@
 
 #include "TutorialTrigger.h"
 
+#include "Kismet/GameplayStatics.h"
 #include "LSPlayerController.h"
 #include "SeedBall.h"
 
@@ -21,6 +22,14 @@ void ATutorialTrigger::OnBallOverlap(ASeedBall* Ball)
 
 	if (ALSPlayerController* PlayerController = Ball->GetController<ALSPlayerController>())
 	{
-		PlayerController->ShowPrompt(Message, DisplayDuration);
+		if (Title.IsEmpty())
+		{
+			PlayerController->ShowPrompt(Message, DisplayDuration);
+		}
+		else
+		{
+			PlayerController->ShowTitledPrompt(Title, Message, DisplayDuration);
+		}
 	}
+	UGameplayStatics::PlaySound2D(this, Voice);
 }

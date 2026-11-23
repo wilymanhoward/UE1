@@ -5,7 +5,33 @@
 #include "Components/SplineComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/CollisionProfile.h"
+#include "Engine/World.h"
+#include "Kismet/GameplayStatics.h"
 #include "LSDefaultMeshes.h"
+#include "SeedBall.h"
+
+namespace
+{
+	// Friction alone can't carry a ball: it rolls in place while the platform slides out from under it.
+	// So a ball resting on the platform moves with it, keeping its own velocity on top.
+	void CarryRider(AActor* Platform, UPrimitiveComponent* Surface, const FVector& Delta)
+	{
+		ASeedBall* Ball = Cast<ASeedBall>(UGameplayStatics::GetPlayerPawn(Platform, 0));
+		if (Delta.IsNearlyZero() || !Ball || Ball->IsDead())
+		{
+			return;
+		}
+		const FVector From = Ball->GetActorLocation();
+		FHitResult Hit;
+		FCollisionQueryParams Params(SCENE_QUERY_STAT(MovingPlatformRider), true, Ball);
+		// Down past the ball's 50 cm radius to whatever it rests on.
+		if (Platform->GetWorld()->LineTraceSingleByChannel(Hit, From, From - FVector(0.f, 0.f, 80.f), ECC_Visibility, Params)
+			&& Hit.GetComponent() == Surface)
+		{
+			Ball->AddActorWorldOffset(Delta, false, nullptr, ETeleportType::TeleportPhysics);
+		}
+	}
+}
 
 AMovingPlatform::AMovingPlatform()
 {
@@ -59,7 +85,10 @@ void AMovingPlatform::Tick(float DeltaSeconds)
 		WaitRemaining = WaitTime;
 	}
 
-	// A move with no teleport flag sets a kinematic target. Physics gets a velocity from it,
-	// and that velocity is what lets friction carry the ball along.
-	Mesh->SetWorldLocation(Path->GetLocationAtDistanceAlongSpline(DistanceAlongPath, ESplineCoordinateSpace::World));
+	// Teleported, so physics gives the platform no velocity: friction would spin the ball up, and it rolled off the
+	// end as the platform paused. CarryRider moves the ball with the platform instead.
+	const FVector Before = Mesh->GetComponentLocation();
+	Mesh->SetWorldLocation(Path->GetLocationAtDistanceAlongSpline(DistanceAlongPath, ESplineCoordinateSpace::World), false, nullptr,
+		ETeleportType::TeleportPhysics);
+	CarryRider(this, Mesh, Mesh->GetComponentLocation() - Before);
 }

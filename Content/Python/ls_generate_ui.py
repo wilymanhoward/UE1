@@ -6,6 +6,7 @@
 #   T_UI_FormSeed, T_UI_FormStone, T_UI_FormDandelion   the HUD's form icons
 #   T_UI_Divider                        a thin gold line with a leaf in the middle, between a title and its text
 #   T_UI_Shade                          dark on the left fading to clear, behind the main menu's buttons
+#   T_UI_Glow                           a soft white dot, tinted for the energy bar's glow and sparks
 # Each is drawn four times larger and shrunk, for smooth edges. The same input always gives the same images.
 # Run: python ls_generate_ui.py (from Content/Python). Needs Pillow and numpy.
 
@@ -159,9 +160,18 @@ def shade(width=512, height=16):
     Image.fromarray(arr, "RGBA").save(os.path.join(OUT, "T_UI_Shade.png"))
 
 
+def glow(size=64):
+    """A white dot that fades softly to clear, for tinted glows and sparks (Emberwood's energy bar)."""
+    r = np.hypot(*np.meshgrid(np.linspace(-1, 1, size), np.linspace(-1, 1, size)))
+    arr = np.zeros((size, size, 4), np.uint8)
+    arr[..., :3] = 255
+    arr[..., 3] = (np.exp(-(r / 0.45) ** 2) * np.clip(1.0 - r, 0.0, 1.0) * 255).astype(np.uint8)
+    Image.fromarray(arr, "RGBA").save(os.path.join(OUT, "T_UI_Glow.png"))
+
+
 def main():
     os.makedirs(OUT, exist_ok=True)
-    for draw in (note, petal, clock, star, form_seed, form_stone, form_dandelion, divider, shade):
+    for draw in (note, petal, clock, star, form_seed, form_stone, form_dandelion, divider, shade, glow):
         draw()
     print("Last Seed UI: wrote icons to", os.path.normpath(OUT))
 

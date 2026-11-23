@@ -579,24 +579,35 @@ void ALSPlayerController::AdvanceOpeningTutorial()
 	++OpeningTutorialStep;
 	TutorialInputTime = 0.f;
 	if (!HUD) { OpeningTutorialStep = 0; return; }
+	// Emberwood (the level whose goal is the energy finale) gets lines about its lava instead of the forest.
+	bool bEmberwood = false;
+	for (TActorIterator<ALevelGoal> It(GetWorld()); It; ++It)
+	{
+		bEmberwood |= It->bEnergyFinale;
+	}
 	switch (OpeningTutorialStep)
 	{
 	case 1:
 		HUD->ShowHint(FText::FromString(TEXT("FIRST STEPS   /   1 OF 3")), FText::FromString(TEXT("W A S D  /  LEFT STICK")),
-			NSLOCTEXT("LastSeed", "LearnRoll", "Roll along the forest path."), 0.f);
+			bEmberwood ? NSLOCTEXT("LastSeed", "LearnRollEmber", "Roll across the scorched ground.")
+				: NSLOCTEXT("LastSeed", "LearnRoll", "Roll along the forest path."), 0.f);
 		break;
 	case 2:
 		HUD->ShowHint(FText::FromString(TEXT("LOOK AROUND   /   2 OF 3")), FText::FromString(TEXT("MOUSE  /  RIGHT STICK")),
-			NSLOCTEXT("LastSeed", "LearnLook", "Move the camera to explore your surroundings."), 0.f);
+			bEmberwood ? NSLOCTEXT("LastSeed", "LearnLookEmber", "Move the camera to find safe stones above the lava.")
+				: NSLOCTEXT("LastSeed", "LearnLook", "Move the camera to explore your surroundings."), 0.f);
 		break;
 	case 3:
 		HUD->ShowHint(FText::FromString(TEXT("A LITTLE LEAP   /   3 OF 3")), FText::FromString(TEXT("SPACE  /  A")),
-			NSLOCTEXT("LastSeed", "LearnJump", "Jump to clear roots and small obstacles."), 0.f);
+			bEmberwood ? NSLOCTEXT("LastSeed", "LearnJumpEmber", "Jump from stone to stone. The lava burns.")
+				: NSLOCTEXT("LastSeed", "LearnJump", "Jump to clear roots and small obstacles."), 0.f);
 		break;
 	default:
 		OpeningTutorialStep = 0;
-		HUD->ShowHint(NSLOCTEXT("LastSeed", "BeginJourney", "YOUR JOURNEY BEGINS"), FText::FromString(TEXT("ESC  /  START   ·   PAUSE")),
-			NSLOCTEXT("LastSeed", "SeekNotes", "Follow the path. Collect Life Notes to bring the forest back to life."), 7.f);
+		HUD->ShowHint(bEmberwood ? NSLOCTEXT("LastSeed", "BeginEmberwood", "INTO THE EMBERWOOD")
+				: NSLOCTEXT("LastSeed", "BeginJourney", "YOUR JOURNEY BEGINS"), FText::FromString(TEXT("ESC  /  START   ·   PAUSE")),
+			bEmberwood ? NSLOCTEXT("LastSeed", "SeekEnergy", "Gather the energy orbs and reach the witch's castle.")
+				: NSLOCTEXT("LastSeed", "SeekNotes", "Follow the path. Collect Life Notes to bring the forest back to life."), 7.f);
 		break;
 	}
 }
@@ -693,6 +704,19 @@ void ALSPlayerController::ApplyVolumeSettings()
 	if (SfxClass)
 	{
 		UGameplayStatics::SetSoundMixClassOverride(this, VolumeMix, SfxClass, GameInstance->GetSfxVolume(), 1.f, 0.f, true);
+	}
+}
+
+void ALSPlayerController::ShowTitledPrompt(const FText& Title, const FText& Message, float Duration)
+{
+	if (OpeningTutorialStep != 0) return;
+	if (HUD)
+	{
+		HUD->ShowHint(Title, FText::GetEmpty(), Message, Duration);
+	}
+	else
+	{
+		ShowPrompt(Message, Duration);
 	}
 }
 

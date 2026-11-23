@@ -102,6 +102,10 @@ def build():
                         ("fill_image", unreal.LinearColor(1, 1, 1, 1))):
         brush = style.get_editor_property(field)
         brush.set_editor_property("draw_as", unreal.SlateBrushDrawType.IMAGE)
+        # Without a texture and with the default style's margins, the fill faded out over its last tenth, so a full
+        # bar never looked full. A plain white square with no margin draws a hard, full-length bar.
+        brush.set_editor_property("resource_object", unreal.load_asset("/Engine/EngineResources/WhiteSquareTexture"))
+        brush.set_editor_property("margin", unreal.Margin(0, 0, 0, 0))
         brush.set_editor_property("tint_color", unreal.SlateColor(tint))
         style.set_editor_property(field, brush)
     bar.set_editor_property("widget_style", style)

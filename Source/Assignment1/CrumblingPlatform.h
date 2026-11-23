@@ -32,6 +32,7 @@ class ASSIGNMENT1_API ACrumblingPlatform : public AActor, public ILSInteractable
 public:
 	ACrumblingPlatform();
 
+	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaSeconds) override;
 	virtual void OnBallHit(ASeedBall* Ball, FVector ImpactVelocity) override;
 
@@ -85,4 +86,7 @@ private:
 	float StateTimeRemaining = 0.f;
 	// How far below its start the mesh currently is.
 	float CurrentDrop = 0.f;
+	// Where the level placed the mesh inside the actor. Shaking and falling move it from here, so a mesh lowered
+	// to put its top at the actor's height doesn't snap back up and launch the ball.
+	FVector MeshRestLocation = FVector::ZeroVector;
 };

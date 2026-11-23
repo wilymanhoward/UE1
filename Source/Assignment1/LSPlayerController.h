@@ -45,6 +45,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "UI")
 	void ShowPrompt(const FText& Message, float Duration);
 
+	/** ShowPrompt under its own heading (such as THE WITCH) instead of FOREST GUIDE. */
+	void ShowTitledPrompt(const FText& Title, const FText& Message, float Duration);
+
 	UFUNCTION(BlueprintCallable, Category = "UI")
 	void ShowFormUnlock(ESeedForm Form, const FText& Message, float Duration);
 
