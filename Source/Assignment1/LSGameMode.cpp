@@ -4,7 +4,7 @@
 
 #include "Camera/CameraActor.h"
 #include "Camera/CameraComponent.h"
-#include "Components/StaticMeshComponent.h"
+#include "Components/PrimitiveComponent.h"
 #include "Engine/GameViewportClient.h"
 #include "Engine/LocalPlayer.h"
 #include "Engine/World.h"
@@ -17,7 +17,6 @@
 #include "LSGameInstance.h"
 #include "LSPlayerController.h"
 #include "Materials/MaterialInterface.h"
-#include "RestorableActor.h"
 #include "RestorationSubsystem.h"
 #include "SeedBall.h"
 #include "Sound/SoundBase.h"
@@ -272,35 +271,15 @@ void ALSGameMode::PlayRestoredArrival()
 			return;
 		}
 
-		// Frame the Heart Tree by the planting site and the valley in the direction of the trail.
-		const TActorIterator<ALevelGoal> GoalIterator(GetWorld());
-		const ALevelGoal* Goal = GoalIterator ? *GoalIterator : nullptr;
-		FVector Tree = Goal ? Goal->GetActorLocation() : FVector(14229.9, 10928.0, 2722.5);
-		if (Goal)
-		{
-			double Nearest = FMath::Square(2500.0);
-			for (TActorIterator<ARestorableActor> It(GetWorld()); It; ++It)
-			{
-				const UStaticMeshComponent* Mesh = It->FindComponentByClass<UStaticMeshComponent>();
-				const double Distance = FVector::DistSquared(Goal->GetActorLocation(), It->GetActorLocation());
-				if (Distance < Nearest && Mesh && GetNameSafe(Mesh->GetStaticMesh()) == TEXT("SM_Tree_09"))
-				{
-					Nearest = Distance;
-					Tree = It->GetActorLocation();
-				}
-			}
-		}
-
-		const FVector Valley = Goal ? -Goal->GetActorForwardVector() : FVector::ForwardVector;
-		const FVector Across = FVector::CrossProduct(FVector::UpVector, Valley);
-		const FVector Start = Tree + Valley * 3900.f + Across * 6300.f + FVector(0.f, 0.f, 10800.f);
-		const FVector End = Tree + Valley * 4900.f + Across * 9000.f + FVector(0.f, 0.f, 15900.f);
-		const FVector StartFocus = Tree + FVector(0.f, 0.f, 2300.f);
-		const FVector EndFocus = Tree + Valley * 1500.f + Across * 2400.f + FVector(0.f, 0.f, 1700.f);
-		ACameraActor* Camera = GetWorld()->SpawnActor<ACameraActor>(Start, (StartFocus - Start).Rotation());
+		// The authored Wildwood river shot keeps the stepping stones and the treetops in frame.
+		const FVector Start(18728.1, 2777.1, 2525.4);
+		const FVector End(18625.5, 3080.0, 2615.0);
+		const FRotator StartAngle(14.7, 87.7, 0.0);
+		const FRotator EndAngle(15.0, 89.0, 0.0);
+		ACameraActor* Camera = GetWorld()->SpawnActor<ACameraActor>(Start, StartAngle);
 		if (Camera)
 		{
-			Camera->GetCameraComponent()->SetFieldOfView(76.f);
+			Camera->GetCameraComponent()->SetFieldOfView(90.f);
 			PlayerController->SetViewTarget(Camera);
 		}
 		// Give the live camera a few frames to settle behind the same white frame used for travel.
@@ -320,17 +299,16 @@ void ALSGameMode::PlayRestoredArrival()
 		const float FadeTime = VoiceTime + FMath::Max(4.f, HeartTreeEndingVoice ? HeartTreeEndingVoice->GetDuration() : 0.f) + 2.2f;
 		GetWorldTimerManager().SetTimer(WildwoodEndingTimer, FTimerDelegate::CreateWeakLambda(this,
 			[this, PlayerController = TWeakObjectPtr<ALSPlayerController>(PlayerController),
-				Camera = TWeakObjectPtr<ACameraActor>(Camera), Ending, BeganAt, FadeTime, Start, End, StartFocus, EndFocus]()
+				Camera = TWeakObjectPtr<ACameraActor>(Camera), Ending, BeganAt, FadeTime, Start, End, StartAngle, EndAngle]()
 			{
 				const float Elapsed = GetWorld()->GetTimeSeconds() - BeganAt;
 				if (Elapsed < FadeTime + 1.8f)
 				{
-					const float Rise = FMath::SmoothStep(0.f, FadeTime, Elapsed);
-					const FVector Position = FMath::Lerp(Start, End, Rise);
-					const FVector Focus = FMath::Lerp(StartFocus, EndFocus, Rise);
 					if (Camera.IsValid())
 					{
-						Camera->SetActorLocationAndRotation(Position, (Focus - Position).Rotation());
+						const float Move = FMath::SmoothStep(0.f, FadeTime, Elapsed);
+						Camera->SetActorLocationAndRotation(FMath::Lerp(Start, End, Move),
+							FMath::Lerp(StartAngle, EndAngle, Move));
 					}
 					if (Elapsed >= VoiceTime && !Ending->bVoiceStarted)
 					{
