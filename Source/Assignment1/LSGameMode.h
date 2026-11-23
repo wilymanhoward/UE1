@@ -12,6 +12,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/GameModeBase.h"
+#include "LSIntroWidget.h"
 #include "LSLevelTypes.h"
 #include "LSGameMode.generated.h"
 
@@ -31,7 +32,7 @@ public:
 	virtual void InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage) override;
 	virtual void Tick(float DeltaSeconds) override;
 
-	/** True when Emberwood's energy burst opened this level: it starts fully restored, at the level goal, with no intro. */
+	/** True when Emberwood's energy burst opened fully restored Wildwood at the planting site. */
 	bool IsRestoredArrival() const { return bRestoredArrival; }
 
 	/** The engine calls this to spawn the player's pawn, which is the moment to start listening to it. */
@@ -81,6 +82,13 @@ private:
 
 	FLSLevelResult BuildResult(const ALevelGoal* Goal) const;
 	ALSPlayerController* GetLSPlayerController() const;
+	void PlayRestoredArrival();
+
+	UPROPERTY(EditDefaultsOnly, Category = "Energy Finale")
+	TArray<FLSIntroShot> EmberwoodFinaleShots;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Energy Finale")
+	TArray<FLSIntroShot> RestoredArrivalShots;
 
 	/** The goal that ended the level. Its settings are read again after the results. */
 	UPROPERTY(Transient)

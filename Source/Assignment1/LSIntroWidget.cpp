@@ -201,6 +201,11 @@ void ULSIntroWidget::NativeConstruct()
 		SkipSlot->SetVerticalAlignment(VAlign_Top);
 		SkipSlot->SetPadding(FMargin(0.f, 16.f, 24.f, 0.f));
 	}
+	if (Transition == ELSIntroTransition::RestoredArrival)
+	{
+		TransitionVeil->SetColorAndOpacity(FLinearColor::White);
+		TransitionVeil->SetRenderOpacity(1.f);
+	}
 	if (Transition == ELSIntroTransition::Travel)
 	{
 		PictureLayer->SetRenderOpacity(0.f);
@@ -415,6 +420,7 @@ void ULSIntroWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 	const bool bMatchSeed = MatchesSeed();
 	const bool bTravel = Transition == ELSIntroTransition::Travel;
 	const bool bArrival = Transition == ELSIntroTransition::Arrival;
+	const bool bRestoredArrival = Transition == ELSIntroTransition::RestoredArrival;
 	const float FadeStart = FMath::Max(0.f, TotalTime - (bTravel ? 0.95f : ((bMatchSeed || bArrival) ? EndFadeLead : 1.65f)));
 	const float ReleaseStart = bTravel ? TotalTime : FadeStart + (bMatchSeed ? EndFadeDuration : 0.9f);
 	const float ReleaseDuration = bTravel ? 0.15f : (bMatchSeed ? CameraReleaseDuration : (bArrival ? 1.6f : 0.75f));
@@ -426,7 +432,7 @@ void ULSIntroWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 	if (SkipStartTime >= 0.0)
 	{
 		const float Skip = FMath::SmoothStep(0.f, 0.8f, static_cast<float>(FPlatformTime::Seconds() - SkipStartTime));
-		if (bTravel)
+		if (bTravel || bRestoredArrival)
 		{
 			TransitionVeil->SetRenderOpacity(FMath::Lerp(SkipVeilOpacity, 1.f, Skip));
 			if (Skip >= 1.f) Finish();
@@ -466,8 +472,8 @@ void ULSIntroWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 	if (!bMatchSeed && Elapsed >= 0.65f && IsValid(HandoffCamera)) RestoreCamera();
 	if (!bTravel)
 	{
-		const bool bFadeFromBlack = RevealTime > 0.f || bArrival;
-		TransitionVeil->SetRenderOpacity(bFadeFromBlack ? 1.f - FMath::SmoothStep(0.f, 0.65f, Elapsed) : 0.f);
+		const bool bFadeFromVeil = RevealTime > 0.f || bArrival || bRestoredArrival;
+		TransitionVeil->SetRenderOpacity(bFadeFromVeil ? 1.f - FMath::SmoothStep(0.f, 0.65f, Elapsed) : 0.f);
 	}
 	if (Elapsed >= ReleaseStart + ReleaseDuration)
 	{
@@ -550,7 +556,12 @@ void ULSIntroWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 		TransitionVeil->SetRenderOpacity(Dissolve);
 		return;
 	}
-	PictureLayer->SetRenderOpacity(Entrance * (1.f - Dissolve));
+	if (bRestoredArrival)
+	{
+		// The restored world settles as gameplay resumes. Keep it covered by the departing shot.
+		TransitionVeil->SetRenderOpacity(FMath::Max(TransitionVeil->GetRenderOpacity(), Dissolve));
+	}
+	PictureLayer->SetRenderOpacity(Entrance * (bRestoredArrival ? 1.f : 1.f - Dissolve));
 	SkipButton->SetRenderOpacity(1.f - Dissolve);
 	TopBar->SetRenderTranslation(FVector2D(0.f, -BarHeight * Release));
 	BottomBar->SetRenderTranslation(FVector2D(0.f, BarHeight * Release));

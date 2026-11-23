@@ -3,6 +3,7 @@
 #include "LSGameMode.h"
 
 #include "Engine/World.h"
+#include "Engine/Texture2D.h"
 #include "EngineUtils.h"
 #include "GoldenPetal.h"
 #include "Kismet/GameplayStatics.h"
@@ -10,8 +11,10 @@
 #include "LevelSequence.h"
 #include "LSGameInstance.h"
 #include "LSPlayerController.h"
+#include "Materials/MaterialInterface.h"
 #include "RestorationSubsystem.h"
 #include "SeedBall.h"
+#include "UObject/ConstructorHelpers.h"
 
 ALSGameMode::ALSGameMode()
 {
@@ -19,6 +22,45 @@ ALSGameMode::ALSGameMode()
 
 	DefaultPawnClass = ASeedBall::StaticClass();
 	PlayerControllerClass = ALSPlayerController::StaticClass();
+
+	static ConstructorHelpers::FObjectFinder<UTexture2D> WitchArt(
+		TEXT("/Game/LastSeed/Intro/EmberwoodFinale/T_LS_CastleWitchShock.T_LS_CastleWitchShock"));
+	static ConstructorHelpers::FObjectFinder<UTexture2D> PlantingArt(
+		TEXT("/Game/LastSeed/Intro/WitchExile/T_LS_PlantingSoil.T_LS_PlantingSoil"));
+	static ConstructorHelpers::FObjectFinder<UTexture2D> ForestArt(
+		TEXT("/Game/LastSeed/Intro/EmberwoodFinale/T_LS_WildwoodRestored.T_LS_WildwoodRestored"));
+	static ConstructorHelpers::FObjectFinder<UMaterialInterface> WitchMotion(
+		TEXT("/Game/LastSeed/Intro/EmberwoodFinale/MI_LS_CastleWitchShock.MI_LS_CastleWitchShock"));
+	static ConstructorHelpers::FObjectFinder<UMaterialInterface> PlantingMotion(
+		TEXT("/Game/LastSeed/Intro/EmberwoodFinale/MI_LS_SeedTakesRoot.MI_LS_SeedTakesRoot"));
+	static ConstructorHelpers::FObjectFinder<UMaterialInterface> ForestMotion(
+		TEXT("/Game/LastSeed/Intro/EmberwoodFinale/MI_LS_WildwoodRestored.MI_LS_WildwoodRestored"));
+
+	if (WitchArt.Succeeded())
+	{
+		FLSIntroShot& Witch = EmberwoodFinaleShots.AddDefaulted_GetRef();
+		Witch.Image = WitchArt.Object;
+		Witch.MotionMaterial = WitchMotion.Object;
+		Witch.Duration = 4.6f;
+		Witch.FadeIn = 0.3f;
+		Witch.StartZoom = 1.f;
+		Witch.EndZoom = 1.055f;
+		Witch.Caption = NSLOCTEXT("LastSeed", "EmberwoodWitchShock", "You crossed my fire? How are you still alive?");
+	}
+	if (PlantingArt.Succeeded() && ForestArt.Succeeded() && PlantingMotion.Succeeded() && ForestMotion.Succeeded())
+	{
+		FLSIntroShot& Planting = RestoredArrivalShots.AddDefaulted_GetRef();
+		Planting.Image = PlantingArt.Object;
+		Planting.MotionMaterial = PlantingMotion.Object;
+		Planting.Duration = 3.2f;
+		Planting.FadeIn = 0.f;
+
+		FLSIntroShot& Forest = RestoredArrivalShots.AddDefaulted_GetRef();
+		Forest.Image = ForestArt.Object;
+		Forest.MotionMaterial = ForestMotion.Object;
+		Forest.Duration = 8.f;
+		Forest.FadeIn = 0.f;
+	}
 }
 
 void ALSGameMode::InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage)
@@ -44,9 +86,16 @@ void ALSGameMode::BeginPlay()
 
 	if (bRestoredArrival)
 	{
-		if (ALSPlayerController* PlayerController = GetLSPlayerController())
+		GetWorldTimerManager().SetTimerForNextTick(this, &ALSGameMode::PlayRestoredArrival);
+	}
+}
+
+void ALSGameMode::PlayRestoredArrival()
+{
+	if (ALSPlayerController* PlayerController = GetLSPlayerController())
+	{
+		const auto RevealRestored = [this, PlayerController]()
 		{
-			// Continues the burst's white flash, clearing onto the healed forest.
 			PlayerController->PlayerCameraManager->StartCameraFade(1.f, 0.f, 2.5f, FLinearColor::White, false, false);
 			FTimerHandle PromptTimer;
 			GetWorldTimerManager().SetTimer(PromptTimer, FTimerDelegate::CreateWeakLambda(PlayerController, [PlayerController]()
@@ -54,6 +103,15 @@ void ALSGameMode::BeginPlay()
 				PlayerController->ShowPrompt(NSLOCTEXT("LastSeed", "RestoredArrival",
 					"The energy flows home. Wildwood is whole again."), 8.f);
 			}), 2.5f, false);
+		};
+		if (!RestoredArrivalShots.IsEmpty())
+		{
+			PlayerController->PlayIntro(RestoredArrivalShots, nullptr, nullptr,
+				ELSIntroTransition::RestoredArrival, FVector::ZeroVector, RevealRestored);
+		}
+		else
+		{
+			RevealRestored();
 		}
 	}
 }
@@ -158,11 +216,13 @@ void ALSGameMode::CompleteLevel(ALevelGoal* Goal)
 
 	if (ALSPlayerController* PlayerController = GetLSPlayerController())
 	{
-		if (!Goal->TravelShots.IsEmpty() && !Goal->NextLevel.IsNull())
+		const bool bEnergyFinale = Goal->bEnergyFinale;
+		const TArray<FLSIntroShot>& Shots = bEnergyFinale && !EmberwoodFinaleShots.IsEmpty()
+			? EmberwoodFinaleShots : Goal->TravelShots;
+		if (!Shots.IsEmpty() && !Goal->NextLevel.IsNull())
 		{
 			// The energy finale comes back to the game after the shots, so the burst plays in the world.
-			const bool bEnergyFinale = Goal->bEnergyFinale;
-			PlayerController->PlayIntro(Goal->TravelShots, Goal->TravelAudio, nullptr,
+			PlayerController->PlayIntro(Shots, Goal->TravelAudio, nullptr,
 				bEnergyFinale ? ELSIntroTransition::Gameplay : ELSIntroTransition::Travel, FVector::ZeroVector,
 				[this, Goal, PlayerController, bEnergyFinale]()
 				{

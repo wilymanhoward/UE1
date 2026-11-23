@@ -30,7 +30,8 @@ enum class ELSIntroTransition : uint8
 	Gameplay,
 	Opening,
 	Travel,
-	Arrival
+	Arrival,
+	RestoredArrival
 };
 
 USTRUCT(BlueprintType)
