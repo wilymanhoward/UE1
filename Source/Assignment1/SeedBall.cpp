@@ -490,8 +490,17 @@ void ASeedBall::SlamPressed()
 
 bool ASeedBall::TrySwitchForm(ESeedForm NewForm)
 {
-	if (bIsDead || NewForm == CurrentForm || FormCooldownRemaining > 0.f
-		|| !FormData.Contains(NewForm) || !IsFormUnlocked(NewForm))
+	return FormCooldownRemaining <= 0.f && SwitchForm(NewForm);
+}
+
+void ASeedBall::ReturnToSeedForm()
+{
+	SwitchForm(ESeedForm::Seed);
+}
+
+bool ASeedBall::SwitchForm(ESeedForm NewForm)
+{
+	if (bIsDead || NewForm == CurrentForm || !FormData.Contains(NewForm) || !IsFormUnlocked(NewForm))
 	{
 		return false;
 	}

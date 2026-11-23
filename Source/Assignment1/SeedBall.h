@@ -61,6 +61,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Seed|Form")
 	bool TrySwitchForm(ESeedForm NewForm);
 
+	/** Returns to Seed for a story beat, even if the input cooldown is active. */
+	void ReturnToSeedForm();
+
 	UFUNCTION(BlueprintPure, Category = "Seed|Form")
 	ESeedForm GetCurrentForm() const { return CurrentForm; }
 
@@ -316,6 +319,7 @@ private:
 	bool IsFormUnlocked(ESeedForm Form) const;
 
 	// The form state transition.
+	bool SwitchForm(ESeedForm NewForm);
 	void OnExitForm(ESeedForm OldForm);
 	void OnEnterForm(ESeedForm NewForm);
 	void ApplyFormData(const FSeedFormData& Data);

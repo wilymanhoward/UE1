@@ -7,13 +7,18 @@
 #include "Components/TimelineComponent.h"
 #include "Curves/CurveFloat.h"
 #include "Engine/CollisionProfile.h"
+#include "Engine/StaticMesh.h"
 #include "Kismet/GameplayStatics.h"
 #include "LSDefaultMeshes.h"
 #include "Lever.h"
 #include "PressurePlate.h"
+#include "SeedBall.h"
 
 AGate::AGate()
 {
+	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bStartWithTickEnabled = false;
+
 	Root = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
 	SetRootComponent(Root);
 
@@ -38,6 +43,11 @@ void AGate::BeginPlay()
 	ClosedDoor = Door->GetRelativeTransform();
 	ClosedRightDoor = RightDoor->GetRelativeTransform();
 
+	// The castle portcullis is the entrance to Emberwood's Seed finale.
+	static const FName CastlePortcullis(TEXT("SM_LS_CastlePortcullis"));
+	const UStaticMesh* DoorMesh = Door->GetStaticMesh();
+	SetActorTickEnabled(DoorMesh && DoorMesh->GetFName() == CastlePortcullis);
+
 	FOnTimelineFloat OnProgress;
 	OnProgress.BindDynamic(this, &AGate::HandleOpenProgress);
 	OpenTimeline->AddInterpFloat(OpenCurve ? OpenCurve.Get() : CreateDefaultCurve(), OnProgress);
@@ -58,6 +68,35 @@ void AGate::BeginPlay()
 		{
 			Lever->OnLeverOn.AddDynamic(this, &AGate::RefreshGate);
 			Lever->OnLeverOff.AddDynamic(this, &AGate::RefreshGate);
+		}
+	}
+}
+
+void AGate::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+	ASeedBall* Ball = Cast<ASeedBall>(UGameplayStatics::GetPlayerPawn(this, 0));
+	if (!Ball || Ball->IsDead())
+	{
+		LastPawnPosition.Reset();
+		return;
+	}
+
+	const FVector Local = GetActorTransform().InverseTransformPosition(Ball->GetActorLocation());
+	const FVector Previous = LastPawnPosition.Get(Local);
+	LastPawnPosition = Local;
+
+	// The bars span local X. The player must move out past the far side in local +Y.
+	const FVector Closed = ClosedDoor.GetLocation();
+	const double Exit = Closed.Y + 50.0;
+	if (Previous.Y < Exit && Local.Y >= Exit && Door->GetStaticMesh())
+	{
+		const FVector Crossing = FMath::Lerp(Previous, Local, (Exit - Previous.Y) / (Local.Y - Previous.Y));
+		const double HalfWidth = Door->GetStaticMesh()->GetBounds().BoxExtent.X * FMath::Abs(ClosedDoor.GetScale3D().X);
+		if (FMath::Abs(Crossing.X - Closed.X) <= HalfWidth &&
+			Crossing.Z >= Closed.Z && Crossing.Z < Door->GetRelativeLocation().Z)
+		{
+			Ball->ReturnToSeedForm();
 		}
 	}
 }

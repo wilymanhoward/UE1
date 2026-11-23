@@ -29,6 +29,7 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+	virtual void Tick(float DeltaSeconds) override;
 
 	/** Stays still while the door moves. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
@@ -87,5 +88,6 @@ private:
 
 	FTransform ClosedDoor;
 	FTransform ClosedRightDoor;
+	TOptional<FVector> LastPawnPosition;
 	TWeakObjectPtr<UAudioComponent> OpeningAudio;
 };
