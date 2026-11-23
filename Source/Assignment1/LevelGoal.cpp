@@ -7,6 +7,7 @@
 #include "Components/PrimitiveComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
+#include "Engine/StaticMeshActor.h"
 #include "Engine/World.h"
 #include "Kismet/GameplayStatics.h"
 #include "LevelSequence.h"
@@ -21,9 +22,10 @@
 
 namespace
 {
-	// The white flash after the burst, and how long it holds before the next level opens.
+	// Leave the arcs visible before the white flash covers the castle.
+	constexpr float BurstFlashLead = 0.24f;
 	constexpr float BurstFadeSeconds = 0.6f;
-	constexpr float BurstHoldSeconds = 0.9f;
+	constexpr float BurstHoldSeconds = 1.14f;
 }
 
 ALevelGoal::ALevelGoal()
@@ -33,6 +35,12 @@ ALevelGoal::ALevelGoal()
 	static ConstructorHelpers::FObjectFinder<USoundBase> WitchOutcry(
 		TEXT("/Game/LastSeed/Audio/VO_LS_EmberwoodWitchOutcry.VO_LS_EmberwoodWitchOutcry"));
 	BurstVoice = WitchOutcry.Object;
+	static ConstructorHelpers::FObjectFinder<USoundBase> ElectricBlast(
+		TEXT("/Game/LastSeed/Audio/SFX_LS_EmberwoodElectricBlast.SFX_LS_EmberwoodElectricBlast"));
+	ElectricBlastSound = ElectricBlast.Object;
+	static ConstructorHelpers::FObjectFinder<UStaticMesh> Lightning(
+		TEXT("/Game/LastSeed/Weather/SM_LS_SkyLightning_01.SM_LS_SkyLightning_01"));
+	BurstLightningMesh = Lightning.Object;
 #if WITH_EDITORONLY_DATA
 	// World Partition must keep this loaded, because the test command looks for it from anywhere in the level.
 	bIsSpatiallyLoaded = false;
@@ -134,6 +142,37 @@ void ALevelGoal::PlayEnergyBurst(ASeedBall* Ball, TFunction<void()> OnFinished)
 	SetActorTickEnabled(true);
 }
 
+void ALevelGoal::SpawnBurstLightning(const FVector& Centre)
+{
+	if (!BurstLightningMesh)
+	{
+		return;
+	}
+
+	const FBoxSphereBounds Bounds = BurstLightningMesh->GetBounds();
+	const FVector Root(Bounds.Origin.X, Bounds.Origin.Y, Bounds.Origin.Z - Bounds.BoxExtent.Z);
+	FActorSpawnParameters Params;
+	Params.ObjectFlags |= RF_Transient;
+	for (int32 Index = 0; Index < 7; ++Index)
+	{
+		const float Angle = FMath::DegreesToRadians(19.f + Index * 51.4f);
+		const FVector Direction(FMath::Cos(Angle), FMath::Sin(Angle), 0.22f + 0.26f * (Index % 3));
+		const FQuat Rotation = FRotationMatrix::MakeFromZ(Direction).ToQuat();
+		const FVector Scale(1.15f, 1.15f, 3.6f + 0.9f * (Index % 3));
+		const FTransform Transform(Rotation, Centre - Rotation.RotateVector(Root * Scale), Scale);
+		if (AStaticMeshActor* Bolt = GetWorld()->SpawnActor<AStaticMeshActor>(
+			AStaticMeshActor::StaticClass(), Transform, Params))
+		{
+			Bolt->SetActorEnableCollision(false);
+			UStaticMeshComponent* Mesh = Bolt->GetStaticMeshComponent();
+			Mesh->SetMobility(EComponentMobility::Movable);
+			Mesh->SetCastShadow(false);
+			Mesh->SetStaticMesh(BurstLightningMesh);
+			Bolt->SetLifeSpan(0.32f);
+		}
+	}
+}
+
 void ALevelGoal::UpdateEnergyBurst(float DeltaSeconds)
 {
 	BurstTime += DeltaSeconds;
@@ -170,7 +209,15 @@ void ALevelGoal::UpdateEnergyBurst(float DeltaSeconds)
 		bBurst = true;
 		const FVector Centre = BurstAnchor + FVector(0.f, 0.f, 60.f);
 		UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, BurstEffect, Centre, FRotator::ZeroRotator, FVector(BurstScale));
-		UGameplayStatics::PlaySoundAtLocation(this, BurstSound, Centre);
+		SpawnBurstLightning(Centre);
+		if (ElectricBlastSound)
+		{
+			UGameplayStatics::SpawnSound2D(this, ElectricBlastSound, 1.f, 1.f, 0.f, nullptr, true);
+		}
+		else
+		{
+			UGameplayStatics::PlaySoundAtLocation(this, BurstSound, Centre);
+		}
 		if (BurstVoice)
 		{
 			UGameplayStatics::SpawnSound2D(this, BurstVoice, 1.f, 1.f, 0.f, nullptr, true);
@@ -188,11 +235,13 @@ void ALevelGoal::UpdateEnergyBurst(float DeltaSeconds)
 		{
 			Ball->SetActorHiddenInGame(true);
 		}
-		if (APlayerController* PlayerController = GetWorld()->GetFirstPlayerController())
-		{
-			PlayerController->PlayerCameraManager->StartCameraFade(0.f, 1.f, BurstFadeSeconds, FLinearColor::White, false, true);
-		}
-		return;
+	}
+
+	if (APlayerController* PlayerController = GetWorld()->GetFirstPlayerController())
+	{
+		const float FlashTime = BurstTime - ChargeTime - BurstFlashLead;
+		const float Fade = FMath::SmoothStep(0.f, BurstFadeSeconds, FlashTime);
+		PlayerController->PlayerCameraManager->SetManualCameraFade(Fade, FLinearColor::White, false);
 	}
 
 	if (BurstTime >= ChargeTime + BurstHoldSeconds)

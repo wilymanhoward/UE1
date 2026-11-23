@@ -125,6 +125,13 @@ protected:
 
 private:
 	void UpdateEnergyBurst(float DeltaSeconds);
+	void SpawnBurstLightning(const FVector& Centre);
+
+	UPROPERTY()
+	TObjectPtr<UStaticMesh> BurstLightningMesh;
+
+	UPROPERTY()
+	TObjectPtr<USoundBase> ElectricBlastSound;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UNiagaraComponent> ChargeComponent;

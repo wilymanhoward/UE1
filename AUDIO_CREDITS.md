@@ -65,7 +65,7 @@ Each comes from the public HQ preview, converted to mono 48 kHz PCM, with its DC
 ## Emberwood
 
 - The lava ambience (`lava_amb_Cue`) is the one that comes with the Lava Environments asset pack in `Content/Lava`, used as supplied.
-- The energy burst at the goal reuses the storm rumble (charging) and the trimmed thunder (burst) credited above.
+- The energy charge reuses the recorded storm rumble credited above. The burst cue layers “high-voltage-discharge-1.wav,” a Tesla coil recorded by follytowers, with “Huge big explosion,” an indoor firecracker recording layered by SamsterBirdies. Both are CC0. The public high-quality previews were trimmed, filtered, and mixed into `SFX_LS_EmberwoodElectricBlast.wav`. [Tesla coil](https://freesound.org/people/follytowers/sounds/415960/) [Indoor explosion](https://freesound.org/people/SamsterBirdies/sounds/591999/) [CC0](https://creativecommons.org/publicdomain/zero/1.0/)
 
 ## Narration
 
