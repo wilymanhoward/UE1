@@ -47,8 +47,8 @@ def configure(wall):
         assert assets.save_loaded_asset(debris, False)
     assert unreal.get_editor_subsystem(unreal.StaticMeshEditorSubsystem).get_convex_collision_count(debris) > 0
     # Stone loses speed on the uphill approach to this gate.
-    wall.set_editor_properties({'break_speed': 175.0, 'rubble_actors': [], 'debris_mesh': debris, 'debris_count': 3,
-        'debris_scale': .62, 'debris_mass_kg': 45.0, 'debris_speed': 325.0, 'debris_lifetime': 3.2,
+    wall.set_editor_properties({'break_speed': 175.0, 'rubble_actors': [], 'debris_mesh': debris, 'debris_count': 10,
+        'debris_scale': .29, 'debris_mass_kg': 16.0, 'debris_speed': 405.0, 'debris_lifetime': 3.2,
         'break_sound': unreal.load_asset('/Game/LastSeed/Audio/SFX_LS_WildwoodBoulderBreak')})
     for old_rock in rocks:
         assert builder.actors.destroy_actor(old_rock)
