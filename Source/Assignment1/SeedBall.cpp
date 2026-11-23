@@ -23,6 +23,12 @@
 #include "TimerManager.h"
 #include "UObject/ConstructorHelpers.h"
 
+namespace
+{
+	constexpr int32 MaxEmberwoodArcs = 6;
+	constexpr float EmberwoodPickupPulseSeconds = 0.32f;
+}
+
 ASeedBall::ASeedBall()
 {
 	PrimaryActorTick.bCanEverTick = true;
@@ -210,6 +216,94 @@ void ASeedBall::Tick(float DeltaSeconds)
 	ApplyGlide(Data);
 	UpdateRollAudio(Data, DeltaSeconds);
 	UpdateTrail(Data);
+	if (EmberwoodEnergyLight)
+	{
+		UpdateEmberwoodEnergy(DeltaSeconds);
+	}
+}
+
+void ASeedBall::AbsorbEmberwoodEnergy(float Charge, const TArray<TObjectPtr<UStaticMesh>>& ArcMeshes, UMaterialInterface* ArcMaterial)
+{
+	EmberwoodCharge = FMath::Clamp(Charge, 0.f, 1.f);
+	EnergyPulseRemaining = EmberwoodPickupPulseSeconds;
+	EnergyRestrikeRemaining = 0.f;
+	if (!EmberwoodEnergyLight)
+	{
+		EmberwoodEnergyLight = NewObject<UPointLightComponent>(this, TEXT("EmberwoodEnergyLight"));
+		EmberwoodEnergyLight->SetupAttachment(BallMesh);
+		EmberwoodEnergyLight->SetIntensityUnits(ELightUnits::Candelas);
+		EmberwoodEnergyLight->SetLightColor(FLinearColor(0.38f, 1.f, 0.57f));
+		EmberwoodEnergyLight->SetCastShadows(false);
+		EmberwoodEnergyLight->SetVolumetricScatteringIntensity(0.f);
+		EmberwoodEnergyLight->RegisterComponent();
+
+		for (int32 Index = 0; Index < MaxEmberwoodArcs && !ArcMeshes.IsEmpty(); ++Index)
+		{
+			UStaticMeshComponent* Arc = NewObject<UStaticMeshComponent>(this);
+			Arc->SetupAttachment(BallMesh);
+			Arc->SetUsingAbsoluteScale(true);
+			Arc->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+			Arc->SetCastShadow(false);
+			Arc->SetStaticMesh(ArcMeshes[Index % ArcMeshes.Num()]);
+			Arc->SetMaterial(0, ArcMaterial);
+			Arc->SetVisibility(false);
+			Arc->RegisterComponent();
+			EmberwoodEnergyArcs.Add(Arc);
+		}
+	}
+	UpdateEmberwoodEnergy(0.f);
+}
+
+void ASeedBall::UpdateEmberwoodEnergy(float DeltaSeconds)
+{
+	// The gate's scripted charge takes over when Seed is held still for the explosion.
+	const bool bShowEnergy = BallMesh->IsSimulatingPhysics() && !IsHidden();
+	if (EmberwoodEnergyLight->IsVisible() != bShowEnergy)
+	{
+		EmberwoodEnergyLight->SetVisibility(bShowEnergy);
+		if (!bShowEnergy)
+		{
+			for (UStaticMeshComponent* Arc : EmberwoodEnergyArcs)
+			{
+				Arc->SetVisibility(false);
+			}
+		}
+	}
+	if (!bShowEnergy)
+	{
+		return;
+	}
+
+	EnergyPulseRemaining = FMath::Max(EnergyPulseRemaining - DeltaSeconds, 0.f);
+	const float Pulse = FMath::Square(EnergyPulseRemaining / EmberwoodPickupPulseSeconds);
+	EmberwoodEnergyLight->SetIntensity(FMath::Lerp(10.f, 85.f, EmberwoodCharge) + 34.f * Pulse);
+	EmberwoodEnergyLight->SetAttenuationRadius(FMath::Lerp(160.f, 330.f, EmberwoodCharge));
+
+	EnergyRestrikeRemaining -= DeltaSeconds;
+	if (EnergyRestrikeRemaining > 0.f)
+	{
+		return;
+	}
+	EnergyRestrikeRemaining = FMath::Lerp(0.16f, 0.075f, EmberwoodCharge) * FMath::FRandRange(0.7f, 1.3f);
+	const int32 ArcCount = 1 + FMath::FloorToInt((MaxEmberwoodArcs - 1) * EmberwoodCharge + 2.f * Pulse);
+	const float Radius = FMath::Clamp(static_cast<float>(BallMesh->Bounds.SphereRadius), 40.f, 130.f);
+	const FVector Centre = BallMesh->GetComponentLocation();
+	for (int32 Index = 0; Index < EmberwoodEnergyArcs.Num(); ++Index)
+	{
+		UStaticMeshComponent* Arc = EmberwoodEnergyArcs[Index];
+		const UStaticMesh* Mesh = Arc->GetStaticMesh();
+		const bool bVisible = Mesh && Index < ArcCount && (Index == 0 || FMath::FRand() < 0.8f);
+		Arc->SetVisibility(bVisible);
+		if (bVisible)
+		{
+			const FVector Direction = FMath::VRand();
+			const FQuat Rotation = FQuat::FindBetweenNormals(FVector::UpVector, Direction);
+			Arc->SetWorldLocationAndRotation(Centre + Direction * Radius * 0.62f, Rotation);
+			const float Height = FMath::Max(static_cast<float>(Mesh->GetBounds().BoxExtent.Z * 2.f), 1.f);
+			const float Reach = Radius * (FMath::Lerp(0.68f, 1.5f, EmberwoodCharge) + 0.45f * Pulse);
+			Arc->SetWorldScale3D(FVector(Reach * FMath::FRandRange(0.72f, 1.15f) / Height));
+		}
+	}
 }
 
 void ASeedBall::UpdateTrail(const FSeedFormData& Data)
@@ -688,6 +782,11 @@ void ASeedBall::Die()
 	}
 	bIsDead = true;
 	bIsSlamming = false;
+	if (EmberwoodEnergyLight)
+	{
+		EmberwoodEnergyLight->SetVisibility(false);
+		EnergyPulseRemaining = 0.f;
+	}
 
 	RollAudio->Stop();
 	UGameplayStatics::PlaySoundAtLocation(this, DeathSound, GetActorLocation());

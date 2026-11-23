@@ -337,7 +337,8 @@ def orb(x, y, z, folder, mesh, material):
     component.set_static_mesh(mesh)
     component.set_relative_scale3d(unreal.Vector(0.5, 0.5, 0.5))
     component.set_material(0, material)
-    actor.set_editor_property("collect_sound", builder.fun_assets()["chime"])
+    actor.tags = [*actor.tags, "LS_EmberwoodEnergy"]
+    actor.set_editor_property("collect_sound", unreal.load_asset("/Game/LastSeed/Audio/SFX_LS_EmberwoodEnergyPickup"))
     # Sparks crackling off it and a hard tremble: it looks barely able to hold its power. Both go when it is collected.
     actor.set_editor_properties({"idle_effect": unreal.load_asset(ORB_SPARKS), "idle_effect_scale": 1.6, "shake_amount": 8.0})
     # Lightning: Wildwood's storm bolts, shrunk to arcs that leap out of the orb in new directions many times a second.

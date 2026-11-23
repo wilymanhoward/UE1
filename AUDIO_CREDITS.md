@@ -69,6 +69,8 @@ Each comes from the public HQ preview, converted to mono 48 kHz PCM, with its DC
 - The lava ambience (`lava_amb_Cue`) is the one that comes with the Lava Environments asset pack in `Content/Lava`, used as supplied.
 - The energy charge reuses the recorded storm rumble credited above. The burst cue layers “high-voltage-discharge-1.wav,” a Tesla coil recorded by follytowers, with “Huge big explosion,” an indoor firecracker recording layered by SamsterBirdies. Both are CC0. The public high-quality previews were trimmed, filtered, and mixed into `SFX_LS_EmberwoodElectricBlast.wav`. [Tesla coil](https://freesound.org/people/follytowers/sounds/415960/) [Indoor explosion](https://freesound.org/people/SamsterBirdies/sounds/591999/) [CC0](https://creativecommons.org/publicdomain/zero/1.0/)
 
+- Emberwood’s energy pickup uses a short excerpt from follytowers’ recorded Tesla coil. The spark is filtered and layered with a higher-pitched copy for the charge tail. [Freesound recording](https://freesound.org/people/follytowers/sounds/415960/) · CC0 1.0.
+
 ## Narration
 
 - The riverbank witch dialogue uses the user-supplied ElevenLabs v4 Kristen “Cold Evil Queen Villain” take from 18 November 2026. The original MP3 is retained as `VO_LS_WitchKristen.mp3`. The recording plays at its original speed, starting 1.70 seconds into the ambush. It was filtered, level-adjusted and mixed with the river ambience and recorded scream into `SFX_LS_RiverAmbush.wav`. The scream starts at 6.95 seconds, after the dialogue. The final mix peaks at or below −3 dBFS.

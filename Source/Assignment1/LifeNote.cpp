@@ -4,6 +4,17 @@
 
 #include "Engine/World.h"
 #include "RestorationSubsystem.h"
+#include "SeedBall.h"
+
+namespace
+{
+	const FName EmberwoodEnergyTag(TEXT("LS_EmberwoodEnergy"));
+
+	float CollectedFraction(const URestorationSubsystem& Restoration)
+	{
+		return static_cast<float>(Restoration.GetNotesCollected()) / FMath::Max(1, Restoration.GetNotesTotal());
+	}
+}
 
 ALifeNote::ALifeNote()
 {
@@ -15,13 +26,23 @@ ALifeNote::ALifeNote()
 
 void ALifeNote::OnCollected(ASeedBall* Ball)
 {
-	GetWorld()->GetSubsystem<URestorationSubsystem>()->ReportNoteCollected(GetActorLocation());
+	URestorationSubsystem* Restoration = GetWorld()->GetSubsystem<URestorationSubsystem>();
+	Restoration->ReportNoteCollected(GetActorLocation());
+	if (Ball && ActorHasTag(EmberwoodEnergyTag))
+	{
+		Ball->AbsorbEmberwoodEnergy(CollectedFraction(*Restoration), ArcMeshes, ArcMaterial);
+	}
 }
 
 float ALifeNote::GetCollectPitch() const
 {
 	// Major pentatonic over two octaves. Never a wrong note, whatever order the notes are found in.
 	static constexpr float Scale[] = { 1.f, 1.125f, 1.25f, 1.5f, 1.6667f, 2.f, 2.25f, 2.5f, 3.f, 3.3333f };
-	const int32 Count = GetWorld()->GetSubsystem<URestorationSubsystem>()->GetNotesCollected();
+	const URestorationSubsystem& Restoration = *GetWorld()->GetSubsystem<URestorationSubsystem>();
+	if (ActorHasTag(EmberwoodEnergyTag))
+	{
+		return FMath::Lerp(0.94f, 1.17f, CollectedFraction(Restoration));
+	}
+	const int32 Count = Restoration.GetNotesCollected();
 	return Scale[FMath::Max(Count - 1, 0) % UE_ARRAY_COUNT(Scale)];
 }

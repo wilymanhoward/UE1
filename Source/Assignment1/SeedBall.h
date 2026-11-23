@@ -23,9 +23,11 @@ class UAudioComponent;
 class UCameraComponent;
 class UNiagaraComponent;
 class UPointLightComponent;
+class UMaterialInterface;
 class USoundBase;
 class USpringArmComponent;
 class UStaticMeshComponent;
+class UStaticMesh;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnSeedFormChanged, ESeedForm, OldForm, ESeedForm, NewForm);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnSeedDied);
@@ -98,6 +100,8 @@ public:
 
 	/** Moves the ball straight to Location and stops it. Used by the dev cheats. */
 	void TeleportBall(const FVector& Location);
+
+	void AbsorbEmberwoodEnergy(float Charge, const TArray<TObjectPtr<UStaticMesh>>& ArcMeshes, UMaterialInterface* ArcMaterial);
 
 	// --- Forces from the world, called by wind, water and hazards ---
 
@@ -313,6 +317,7 @@ private:
 	void ApplyGlide(const FSeedFormData& Data);
 	void UpdateRollAudio(const FSeedFormData& Data, float DeltaSeconds);
 	void UpdateTrail(const FSeedFormData& Data);
+	void UpdateEmberwoodEnergy(float DeltaSeconds);
 
 	bool CheckForGround() const;
 	float GetMaxRollSpeed(const FSeedFormData& Data) const;
@@ -370,4 +375,14 @@ private:
 	FVector RollingBaseScale = FVector::OneVector;
 	FVector UprightBaseScale = FVector::OneVector;
 	FVector CameraBaseLocation = FVector::ZeroVector;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UPointLightComponent> EmberwoodEnergyLight;
+
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<UStaticMeshComponent>> EmberwoodEnergyArcs;
+
+	float EmberwoodCharge = 0.f;
+	float EnergyPulseRemaining = 0.f;
+	float EnergyRestrikeRemaining = 0.f;
 };
