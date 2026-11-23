@@ -88,6 +88,9 @@ private:
 	TArray<FLSIntroShot> EmberwoodFinaleShots;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Energy Finale")
+	TObjectPtr<USoundBase> EmberwoodFinaleVoice;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Energy Finale")
 	TArray<FLSIntroShot> RestoredArrivalShots;
 
 	/** The goal that ended the level. Its settings are read again after the results. */

@@ -16,6 +16,8 @@
 #include "NiagaraFunctionLibrary.h"
 #include "RestorationSubsystem.h"
 #include "SeedBall.h"
+#include "Sound/SoundBase.h"
+#include "UObject/ConstructorHelpers.h"
 
 namespace
 {
@@ -28,6 +30,9 @@ ALevelGoal::ALevelGoal()
 {
 	PrimaryActorTick.bCanEverTick = true;
 	PrimaryActorTick.bStartWithTickEnabled = false;
+	static ConstructorHelpers::FObjectFinder<USoundBase> WitchOutcry(
+		TEXT("/Game/LastSeed/Audio/VO_LS_EmberwoodWitchOutcry.VO_LS_EmberwoodWitchOutcry"));
+	BurstVoice = WitchOutcry.Object;
 #if WITH_EDITORONLY_DATA
 	// World Partition must keep this loaded, because the test command looks for it from anywhere in the level.
 	bIsSpatiallyLoaded = false;
@@ -166,6 +171,10 @@ void ALevelGoal::UpdateEnergyBurst(float DeltaSeconds)
 		const FVector Centre = BurstAnchor + FVector(0.f, 0.f, 60.f);
 		UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, BurstEffect, Centre, FRotator::ZeroRotator, FVector(BurstScale));
 		UGameplayStatics::PlaySoundAtLocation(this, BurstSound, Centre);
+		if (BurstVoice)
+		{
+			UGameplayStatics::SpawnSound2D(this, BurstVoice, 1.f, 1.f, 0.f, nullptr, true);
+		}
 		if (ChargeComponent)
 		{
 			ChargeComponent->Deactivate();

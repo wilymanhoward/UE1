@@ -14,6 +14,7 @@
 #include "Materials/MaterialInterface.h"
 #include "RestorationSubsystem.h"
 #include "SeedBall.h"
+#include "Sound/SoundBase.h"
 #include "UObject/ConstructorHelpers.h"
 
 ALSGameMode::ALSGameMode()
@@ -25,6 +26,8 @@ ALSGameMode::ALSGameMode()
 
 	static ConstructorHelpers::FObjectFinder<UTexture2D> WitchArt(
 		TEXT("/Game/LastSeed/Intro/EmberwoodFinale/T_LS_CastleWitchShock.T_LS_CastleWitchShock"));
+	static ConstructorHelpers::FObjectFinder<USoundBase> WitchVoice(
+		TEXT("/Game/LastSeed/Audio/VO_LS_EmberwoodWitchShock.VO_LS_EmberwoodWitchShock"));
 	static ConstructorHelpers::FObjectFinder<UTexture2D> PlantingArt(
 		TEXT("/Game/LastSeed/Intro/WitchExile/T_LS_PlantingSoil.T_LS_PlantingSoil"));
 	static ConstructorHelpers::FObjectFinder<UTexture2D> ForestArt(
@@ -46,6 +49,7 @@ ALSGameMode::ALSGameMode()
 		Witch.StartZoom = 1.f;
 		Witch.EndZoom = 1.055f;
 		Witch.Caption = NSLOCTEXT("LastSeed", "EmberwoodWitchShock", "You crossed my fire? How are you still alive?");
+		EmberwoodFinaleVoice = WitchVoice.Object;
 	}
 	if (PlantingArt.Succeeded() && ForestArt.Succeeded() && PlantingMotion.Succeeded() && ForestMotion.Succeeded())
 	{
@@ -217,12 +221,18 @@ void ALSGameMode::CompleteLevel(ALevelGoal* Goal)
 	if (ALSPlayerController* PlayerController = GetLSPlayerController())
 	{
 		const bool bEnergyFinale = Goal->bEnergyFinale;
-		const TArray<FLSIntroShot>& Shots = bEnergyFinale && !EmberwoodFinaleShots.IsEmpty()
-			? EmberwoodFinaleShots : Goal->TravelShots;
+		const bool bWitchReaction = bEnergyFinale && !EmberwoodFinaleShots.IsEmpty();
+		TArray<FLSIntroShot> Shots = bWitchReaction ? EmberwoodFinaleShots : Goal->TravelShots;
+		USoundBase* Voice = bWitchReaction ? EmberwoodFinaleVoice.Get() : nullptr;
+		if (Voice)
+		{
+			// Keep the witch visible through the line, then leave time for the existing fade.
+			Shots.Last().Duration = FMath::Max(Shots.Last().Duration, Voice->GetDuration() + 1.75f);
+		}
 		if (!Shots.IsEmpty() && !Goal->NextLevel.IsNull())
 		{
 			// The energy finale comes back to the game after the shots, so the burst plays in the world.
-			PlayerController->PlayIntro(Shots, Goal->TravelAudio, nullptr,
+			PlayerController->PlayIntro(Shots, Goal->TravelAudio, Voice,
 				bEnergyFinale ? ELSIntroTransition::Gameplay : ELSIntroTransition::Travel, FVector::ZeroVector,
 				[this, Goal, PlayerController, bEnergyFinale]()
 				{

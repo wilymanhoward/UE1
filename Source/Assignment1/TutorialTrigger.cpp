@@ -13,6 +13,12 @@ void ATutorialTrigger::OnBallOverlap(ASeedBall* Ball)
 	}
 	bShown = true;
 
+	// Older Emberwood maps still place this taunt before the finale's reaction.
+	if (Message.ToString().Contains(TEXT("gathered your precious little sparks")))
+	{
+		return;
+	}
+
 	if (ALSPlayerController* PlayerController = Ball->GetController<ALSPlayerController>())
 	{
 		PlayerController->ShowPrompt(Message, DisplayDuration);

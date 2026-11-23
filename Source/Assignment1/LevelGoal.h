@@ -113,6 +113,10 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Energy Finale")
 	TObjectPtr<USoundBase> BurstSound;
 
+	/** The witch's reaction, heard over the burst and through the white flash. */
+	UPROPERTY(EditAnywhere, Category = "Energy Finale")
+	TObjectPtr<USoundBase> BurstVoice;
+
 	/** Holds Seed still and plays the charge and burst. OnFinished runs once the screen is white. */
 	void PlayEnergyBurst(ASeedBall* Ball, TFunction<void()> OnFinished);
 
