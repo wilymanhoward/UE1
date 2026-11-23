@@ -46,6 +46,17 @@ void UAdaptiveMusicComponent::HandleMilestoneReached(int32 MilestoneIndex)
 	FadeInStem(MilestoneIndex + 1);
 }
 
+void UAdaptiveMusicComponent::SetDialogueDucking(bool bDucked)
+{
+	UAudioComponent* Music = FinaleAudio ? FinaleAudio.Get() : (StemAudio.IsEmpty() ? nullptr : StemAudio[0].Get());
+	if (Music && Music->IsPlaying())
+	{
+		// Change the active sound's pause behavior in place so the score keeps its playback position.
+		Music->SetUISound(bDucked);
+		Music->AdjustVolume(bDucked ? 0.42f : 0.85f, StemVolume * (bDucked ? 0.50f : 1.f));
+	}
+}
+
 void UAdaptiveMusicComponent::FadeInStem(int32 StemIndex)
 {
 	// FinaleAudio check: a late milestone must not bring a stem back over the finale.

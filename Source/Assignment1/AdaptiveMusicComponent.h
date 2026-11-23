@@ -25,6 +25,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Music")
 	void PlayFinale();
 
+	void SetDialogueDucking(bool bDucked);
+
 protected:
 	virtual void BeginPlay() override;
 

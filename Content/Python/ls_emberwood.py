@@ -482,7 +482,6 @@ def goal(folder):
     actor.set_actor_scale3d(unreal.Vector(600.0 / 200.0, 1100.0 / 200.0, 235.0 / 200.0))
     actor.set_editor_properties({
         "energy_finale": True, "travel_shots": witch_shots(), "next_level": unreal.load_asset(WILDWOOD),
-        "travel_audio": unreal.load_asset("/Game/LastSeed/Audio/MUS_LS_EmberwoodWitchReaction"),
         "charge_effect": unreal.load_asset("/Game/FreeParticle_SoftTofu/Niagara/NS_Sparkling_Glow"),
         "burst_effect": unreal.load_asset("/Game/FreeParticle_SoftTofu/Niagara/NS_Sparkling"), "burst_scale": 8.0,
         "charge_shell_mesh": unreal.load_asset("/Engine/BasicShapes/Sphere"), "charge_shell_material": charge_shell_material(),

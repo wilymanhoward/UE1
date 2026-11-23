@@ -2,6 +2,7 @@
 
 #include "LSGameMode.h"
 
+#include "AdaptiveMusicComponent.h"
 #include "Camera/CameraActor.h"
 #include "Camera/CameraComponent.h"
 #include "Components/PrimitiveComponent.h"
@@ -17,6 +18,7 @@
 #include "LSGameInstance.h"
 #include "LSPlayerController.h"
 #include "Materials/MaterialInterface.h"
+#include "MusicManager.h"
 #include "RestorationSubsystem.h"
 #include "SeedBall.h"
 #include "Sound/SoundBase.h"
@@ -445,11 +447,28 @@ void ALSGameMode::CompleteLevel(ALevelGoal* Goal)
 		}
 		if (!Shots.IsEmpty() && !Goal->NextLevel.IsNull())
 		{
-			// The energy finale comes back to the game after the shots, so the burst plays in the world.
-			PlayerController->PlayIntro(Shots, Goal->TravelAudio, Voice,
-				bEnergyFinale ? ELSIntroTransition::Gameplay : ELSIntroTransition::Travel, FVector::ZeroVector,
-				[this, Goal, PlayerController, bEnergyFinale]()
+			TWeakObjectPtr<UAdaptiveMusicComponent> DialogueMusic;
+			if (bEnergyFinale)
+			{
+				const TActorIterator<AMusicManager> MusicManager(GetWorld());
+				if (MusicManager)
 				{
+					DialogueMusic = MusicManager->FindComponentByClass<UAdaptiveMusicComponent>();
+				}
+				if (DialogueMusic.IsValid())
+				{
+					DialogueMusic->SetDialogueDucking(true);
+				}
+			}
+			// The energy finale comes back to the game after the shots, so the burst plays in the world.
+			PlayerController->PlayIntro(Shots, bEnergyFinale ? nullptr : Goal->TravelAudio.Get(), Voice,
+				bEnergyFinale ? ELSIntroTransition::Gameplay : ELSIntroTransition::Travel, FVector::ZeroVector,
+				[this, Goal, PlayerController, bEnergyFinale, DialogueMusic]()
+				{
+					if (DialogueMusic.IsValid())
+					{
+						DialogueMusic->SetDialogueDucking(false);
+					}
 					if (!bEnergyFinale)
 					{
 						ContinueAfterResults();
