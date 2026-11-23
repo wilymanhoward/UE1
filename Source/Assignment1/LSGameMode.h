@@ -93,6 +93,9 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category = "Energy Finale")
 	TArray<FLSIntroShot> RestoredArrivalShots;
 
+	UPROPERTY(EditDefaultsOnly, Category = "Energy Finale")
+	TObjectPtr<USoundBase> RestoredArrivalMusic;
+
 	/** The goal that ended the level. Its settings are read again after the results. */
 	UPROPERTY(Transient)
 	TObjectPtr<ALevelGoal> CompletedGoal;

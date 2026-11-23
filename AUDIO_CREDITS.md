@@ -7,6 +7,7 @@ The 42-second opening mix uses excerpts of the music and field recordings below.
 - “Heartwarming” by Kevin MacLeod (incompetech.com), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). [Original track](https://www.incompetech.com/music/royalty-free/index.html?isrc=USUAN1100207)
 - “Dark Standoff” by Kevin MacLeod (incompetech.com), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). [Original track](https://remote.incompetech.com/music/royalty-free/index.html?Search=Search&isrc=USUAN1100268)
 - “A Dragon’s Lullaby” (2023 remaster) by Scott Buckley, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Edited and level-adjusted for Wildwood’s gameplay loop and finale. [Original track](https://www.scottbuckley.com.au/library/a-dragons-lullaby-2023/)
+- Wildwood’s return cutscene uses a timed excerpt of “A Dragon’s Lullaby” with the recorded branch rustle and robin call credited below. The cue fades in under the planting shot and tapers into gameplay.
 
 ## Sound effects
 

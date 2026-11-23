@@ -38,6 +38,9 @@ ALSGameMode::ALSGameMode()
 		TEXT("/Game/LastSeed/Intro/EmberwoodFinale/MI_LS_SeedTakesRoot.MI_LS_SeedTakesRoot"));
 	static ConstructorHelpers::FObjectFinder<UMaterialInterface> ForestMotion(
 		TEXT("/Game/LastSeed/Intro/EmberwoodFinale/MI_LS_WildwoodRestored.MI_LS_WildwoodRestored"));
+	static ConstructorHelpers::FObjectFinder<USoundBase> ReturnMusic(
+		TEXT("/Game/LastSeed/Audio/MUS_LS_WildwoodReturn.MUS_LS_WildwoodReturn"));
+	RestoredArrivalMusic = ReturnMusic.Object;
 
 	if (WitchArt.Succeeded())
 	{
@@ -110,7 +113,7 @@ void ALSGameMode::PlayRestoredArrival()
 		};
 		if (!RestoredArrivalShots.IsEmpty())
 		{
-			PlayerController->PlayIntro(RestoredArrivalShots, nullptr, nullptr,
+			PlayerController->PlayIntro(RestoredArrivalShots, RestoredArrivalMusic, nullptr,
 				ELSIntroTransition::RestoredArrival, FVector::ZeroVector, RevealRestored);
 		}
 		else
