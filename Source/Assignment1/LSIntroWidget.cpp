@@ -161,8 +161,9 @@ void ULSIntroWidget::SetIntro(const TArray<FLSIntroShot>& InShots, USoundBase* I
 void ULSIntroWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
-	// The opening pauses physics before a high PlayerStart can settle onto the path.
-	if (ASeedBall* Ball = MatchesSeed() && GetOwningPlayer() ? Cast<ASeedBall>(GetOwningPlayer()->GetPawn()) : nullptr)
+	// Ground the Seed before revealing the spawn camera, since the cutscene pauses physics.
+	const bool bSpawnCutscene = MatchesSeed() || Transition == ELSIntroTransition::Arrival;
+	if (ASeedBall* Ball = bSpawnCutscene && GetOwningPlayer() ? Cast<ASeedBall>(GetOwningPlayer()->GetPawn()) : nullptr)
 	{
 		if (UStaticMeshComponent* Body = Cast<UStaticMeshComponent>(Ball->GetRootComponent()))
 		{
@@ -185,7 +186,22 @@ void ULSIntroWidget::NativeConstruct()
 			}
 		}
 	}
-	if (Transition == ELSIntroTransition::Arrival) TransitionVeil->SetRenderOpacity(1.f);
+	if (Transition == ELSIntroTransition::Arrival)
+	{
+		TransitionVeil->SetRenderOpacity(1.f);
+		if (!Shots.IsEmpty() && Shots.Last().Image)
+		{
+			const UTexture2D* Art = Shots.Last().Image;
+			CastChecked<USizeBox>(GetWidgetFromName(TEXT("FrameSize")))->SetWidthOverride(
+				1080.f * Art->GetSizeX() / Art->GetSizeY());
+		}
+		CastChecked<UScaleBox>(GetWidgetFromName(TEXT("Frame")))->SetStretch(EStretch::ScaleToFill);
+		SkipButton->RemoveFromParent();
+		UOverlaySlot* SkipSlot = CastChecked<UOverlay>(WidgetTree->RootWidget)->AddChildToOverlay(SkipButton);
+		SkipSlot->SetHorizontalAlignment(HAlign_Right);
+		SkipSlot->SetVerticalAlignment(VAlign_Top);
+		SkipSlot->SetPadding(FMargin(0.f, 16.f, 24.f, 0.f));
+	}
 	if (Transition == ELSIntroTransition::Travel)
 	{
 		PictureLayer->SetRenderOpacity(0.f);
@@ -399,9 +415,12 @@ void ULSIntroWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 	const float Elapsed = static_cast<float>(FPlatformTime::Seconds() - PlaybackStartTime) - RevealTime;
 	const bool bMatchSeed = MatchesSeed();
 	const bool bTravel = Transition == ELSIntroTransition::Travel;
-	const float FadeStart = FMath::Max(0.f, TotalTime - (bTravel ? 0.95f : (bMatchSeed ? EndFadeLead : 1.65f)));
+	const bool bArrival = Transition == ELSIntroTransition::Arrival;
+	const float FadeStart = FMath::Max(0.f, TotalTime - (bTravel ? 0.95f : ((bMatchSeed || bArrival) ? EndFadeLead : 1.65f)));
 	const float ReleaseStart = bTravel ? TotalTime : FadeStart + (bMatchSeed ? EndFadeDuration : 0.9f);
-	const float ReleaseDuration = bTravel ? 0.15f : (bMatchSeed ? CameraReleaseDuration : 0.75f);
+	const float ReleaseDuration = bTravel ? 0.15f : (bMatchSeed ? CameraReleaseDuration : (bArrival ? 1.6f : 0.75f));
+	// The arrival art is framed to the live spawn camera, so the bars can open during the dissolve.
+	const float FadeEnd = bArrival ? ReleaseStart + ReleaseDuration - 0.3f : ReleaseStart;
 	const float BarHeight = MyGeometry.GetLocalSize().Y * BarHeightFraction;
 	TopBar->SetHeightOverride(BarHeight);
 	BottomBar->SetHeightOverride(BarHeight);
@@ -415,6 +434,7 @@ void ULSIntroWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 			return;
 		}
 		PictureLayer->SetRenderOpacity(SkipPictureOpacity * (1.f - Skip));
+		if (bArrival) SkipButton->SetRenderOpacity(SkipPictureOpacity * (1.f - Skip));
 		TransitionVeil->SetRenderOpacity(SkipVeilOpacity * (1.f - Skip));
 		const float BarOffset = FMath::Lerp(SkipBarTranslation, -BarHeight, Skip);
 		TopBar->SetRenderTranslation(FVector2D(0.f, BarOffset));
@@ -447,7 +467,7 @@ void ULSIntroWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 	if (!bMatchSeed && Elapsed >= 0.65f && IsValid(HandoffCamera)) RestoreCamera();
 	if (!bTravel)
 	{
-		const bool bFadeFromBlack = RevealTime > 0.f || Transition == ELSIntroTransition::Arrival;
+		const bool bFadeFromBlack = RevealTime > 0.f || bArrival;
 		TransitionVeil->SetRenderOpacity(bFadeFromBlack ? 1.f - FMath::SmoothStep(0.f, 0.65f, Elapsed) : 0.f);
 	}
 	if (Elapsed >= ReleaseStart + ReleaseDuration)
@@ -519,7 +539,7 @@ void ULSIntroWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 		GetOwningPlayer()->GetViewportSize(Width, Height);
 		MatchSeedCamera(FVector2D(Width, Height));
 	}
-	const float Dissolve = FMath::SmoothStep(FadeStart, ReleaseStart, Elapsed);
+	const float Dissolve = FMath::SmoothStep(FadeStart, FadeEnd, Elapsed);
 	const float Release = FMath::SmoothStep(ReleaseStart, ReleaseStart + ReleaseDuration, Elapsed);
 	const float Entrance = RevealTime > 0.f ? FMath::SmoothStep(0.f, 0.65f, Elapsed) : 1.f;
 	if (bTravel)

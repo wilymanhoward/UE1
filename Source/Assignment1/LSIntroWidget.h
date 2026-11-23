@@ -109,7 +109,7 @@ private:
 	void RequestSkip();
 	void MatchSeedCamera(const FVector2D& ViewportSize);
 	void RestoreCamera();
-	bool MatchesSeed() const { return Transition == ELSIntroTransition::Opening || Transition == ELSIntroTransition::Arrival; }
+	bool MatchesSeed() const { return Transition == ELSIntroTransition::Opening; }
 
 	/** Places a shot's picture for local time Seconds into the shot. */
 	void ApplyShot(UImage* Image, const FLSIntroShot& Shot, float Seconds) const;

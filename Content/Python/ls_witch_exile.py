@@ -179,7 +179,7 @@ def exile_shots():
     travel = [shot("PlantingSoil", 0, 3.0),
               shot("WitchNotYet", 1, 3.65, "Not yet."),
               shot("WitchBanishment", 2, 4.5, "By ash and flame… I cast you out!")]
-    arrival = shot("ExileEmberwood", 3, 5.3, seed_match=(0.498, 0.706, 0.24))
+    arrival = shot("ExileEmberwood", 3, 5.3)
     return travel, arrival
 
 

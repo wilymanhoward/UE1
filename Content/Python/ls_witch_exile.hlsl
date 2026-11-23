@@ -69,7 +69,8 @@ if (Surge < 1.5) {
     return saturate(paint * (0.90 + 0.10 * lift) + light);
 } else {
     float settle = 1.0 - smoothstep(0.0, 1.75, t);
-    uv.y = lerp(UV.y, 0.706, settle * 0.068);
+    // Settle back to the painted spawn framing before the dissolve.
+    uv = lerp(UV, float2(0.493, 0.51), settle * 0.025);
     float heat = smoothstep(0.37, 0.49, uv.y) * (1.0 - smoothstep(0.53, 0.68, uv.y));
     uv.x += heat * 0.003 * sin(68.0 * uv.y + 7.0 * t) * sin(31.0 * uv.x - 2.1 * t);
     float2 ashUV = (UV + float2(-0.019, 0.083) * t) * float2(22.0, 15.0);
