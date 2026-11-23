@@ -553,6 +553,11 @@ void ALSPlayerController::BeginStory(TFunction<void()> OnFinished)
 	}
 }
 
+void ALSPlayerController::BeginWildwoodEpilogue()
+{
+	BeginStory(nullptr);
+}
+
 void ALSPlayerController::PlayIntro(const TArray<FLSIntroShot>& Shots, USoundBase* Music, USoundBase* VoiceOver,
 	ELSIntroTransition Transition, const FVector& RevealTarget, TFunction<void()> OnFinished)
 {

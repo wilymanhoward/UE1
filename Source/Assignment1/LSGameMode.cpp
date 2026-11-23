@@ -2,6 +2,11 @@
 
 #include "LSGameMode.h"
 
+#include "Camera/CameraActor.h"
+#include "Camera/CameraComponent.h"
+#include "Components/StaticMeshComponent.h"
+#include "Engine/GameViewportClient.h"
+#include "Engine/LocalPlayer.h"
 #include "Engine/World.h"
 #include "Engine/Texture2D.h"
 #include "EngineUtils.h"
@@ -12,10 +17,143 @@
 #include "LSGameInstance.h"
 #include "LSPlayerController.h"
 #include "Materials/MaterialInterface.h"
+#include "RestorableActor.h"
 #include "RestorationSubsystem.h"
 #include "SeedBall.h"
 #include "Sound/SoundBase.h"
+#include "Styling/CoreStyle.h"
 #include "UObject/ConstructorHelpers.h"
+#include "Widgets/Layout/SBorder.h"
+#include "Widgets/Layout/SBox.h"
+#include "Widgets/SOverlay.h"
+#include "Widgets/SBoxPanel.h"
+#include "Widgets/Text/STextBlock.h"
+
+namespace
+{
+	struct FEndingCard
+	{
+		const TCHAR* Heading;
+		const TCHAR* Text;
+		float Seconds;
+	};
+
+	const FEndingCard EndingCards[] = {
+		{ TEXT("Game Over"), TEXT(""), 3.5f },
+		{ TEXT("Last Seed"), TEXT("Design and development\nHoward Wilyman"), 5.f },
+		{ TEXT("Music"), TEXT("Scott Buckley · A Dragon’s Lullaby, Juggernaut\nKevin MacLeod · Heartwarming, Dark Standoff\nCreative Commons Attribution 4.0"), 7.f },
+		{ TEXT("Recorded sound"), TEXT("Barracuda1983 · Fission9 · Bini_trns\nmvVoiceActing · o_ciz · InspectorJ\nOldome · oscaraudiogeek · Kinoton\nAnthousai · dichardson · rykenn"), 7.f },
+		{ TEXT("Recorded sound"), TEXT("kingsrow · WavJunction.com · HOGGanimation\nK-Forces · DanJFilms · michelcik\nmyLoop · follytowers · SamsterBirdies\nFull recording and license details in AUDIO_CREDITS.md"), 7.f },
+		{ TEXT("Environment and effects"), TEXT("Wildwood · Lava Environments · Rocks Pack Demo\nAdditional assets · Polytope Studio, StyleHex Studio, SoftTofu"), 7.f },
+		{ TEXT("Illustrations and voices"), TEXT("Cutscene illustrations · OpenAI\nHeart Tree · Adam    /    Witch · Kristen (ElevenLabs)\nMade with Unreal Engine"), 7.f },
+		{ TEXT("Thank you for playing"), TEXT(""), 3.f },
+	};
+
+	struct FWildwoodEnding
+	{
+		~FWildwoodEnding()
+		{
+			if (Viewport.IsValid() && Player.IsValid() && Overlay.IsValid())
+			{
+				Viewport->RemoveViewportWidgetForPlayer(Player.Get(), Overlay.ToSharedRef());
+			}
+		}
+
+		void AddOverlay(ULocalPlayer* LocalPlayer, UGameViewportClient* GameViewport)
+		{
+			Player = LocalPlayer;
+			Viewport = GameViewport;
+			const FSlateBrush* White = FCoreStyle::Get().GetBrush("WhiteBrush");
+			SAssignNew(Overlay, SOverlay).Visibility(EVisibility::HitTestInvisible)
+				+ SOverlay::Slot().VAlign(VAlign_Top)
+				[
+					SNew(SBox).HeightOverride(38.f)
+					[SNew(SBorder).BorderImage(White).BorderBackgroundColor(FLinearColor::Black)]
+				]
+				+ SOverlay::Slot().VAlign(VAlign_Bottom)
+				[
+					SNew(SBox).HeightOverride(44.f)
+					[SNew(SBorder).BorderImage(White).BorderBackgroundColor(FLinearColor::Black)]
+				]
+				+ SOverlay::Slot().VAlign(VAlign_Bottom).Padding(24.f, 0.f, 24.f, 9.f)
+				[
+					SAssignNew(Subtitle, STextBlock)
+					.Text(NSLOCTEXT("LastSeed", "HeartTreeEnding", "You did it, little Seed. Look how far your roots have reached."))
+					.Font(FCoreStyle::GetDefaultFontStyle("Bold", 20))
+					.ColorAndOpacity(FLinearColor::White)
+					.Justification(ETextJustify::Center)
+					.AutoWrapText(true)
+				]
+				+ SOverlay::Slot()
+				[SAssignNew(Black, SBorder).BorderImage(White).BorderBackgroundColor(FLinearColor::Black)]
+				+ SOverlay::Slot().VAlign(VAlign_Center).Padding(24.f)
+				[
+					SAssignNew(Credits, SVerticalBox)
+					+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center)
+					[
+						SAssignNew(Heading, STextBlock)
+						.Font(FCoreStyle::GetDefaultFontStyle("Bold", 40))
+						.ColorAndOpacity(FLinearColor(0.95f, 0.82f, 0.56f))
+						.Justification(ETextJustify::Center)
+					]
+					+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 14.f, 0.f, 0.f)
+					[
+						SAssignNew(Body, STextBlock)
+						.Font(FCoreStyle::GetDefaultFontStyle("Regular", 19))
+						.Justification(ETextJustify::Center)
+						.AutoWrapText(true)
+						.LineHeightPercentage(1.35f)
+					]
+				];
+			Subtitle->SetRenderOpacity(0.f);
+			Black->SetRenderOpacity(0.f);
+			Credits->SetRenderOpacity(0.f);
+			GameViewport->AddViewportWidgetForPlayer(LocalPlayer, Overlay.ToSharedRef(), 100);
+		}
+
+		void ShowForest(float Elapsed, float VoiceTime, float FadeTime) const
+		{
+			const float CaptionIn = FMath::SmoothStep(VoiceTime - 0.2f, VoiceTime + 0.2f, Elapsed);
+			const float CaptionOut = FMath::SmoothStep(FadeTime - 0.6f, FadeTime, Elapsed);
+			Subtitle->SetRenderOpacity(CaptionIn * (1.f - CaptionOut));
+			Black->SetRenderOpacity(FMath::SmoothStep(FadeTime, FadeTime + 1.8f, Elapsed));
+		}
+
+		bool ShowCredits(float Elapsed)
+		{
+			for (int32 Index = 0; Index < UE_ARRAY_COUNT(EndingCards); ++Index)
+			{
+				const FEndingCard& Card = EndingCards[Index];
+				if (Elapsed < Card.Seconds)
+				{
+					if (Index != ActiveCard)
+					{
+						Heading->SetText(FText::FromString(Card.Heading));
+						Body->SetText(FText::FromString(Card.Text));
+						Body->SetVisibility(*Card.Text ? EVisibility::HitTestInvisible : EVisibility::Collapsed);
+						ActiveCard = Index;
+					}
+					Credits->SetRenderOpacity(FMath::SmoothStep(0.f, 0.5f,
+						FMath::Min(Elapsed, Card.Seconds - Elapsed)));
+					return true;
+				}
+				Elapsed -= Card.Seconds;
+			}
+			return false;
+		}
+
+		TWeakObjectPtr<ULocalPlayer> Player;
+		TWeakObjectPtr<UGameViewportClient> Viewport;
+		TSharedPtr<SOverlay> Overlay;
+		TSharedPtr<SBorder> Black;
+		TSharedPtr<SVerticalBox> Credits;
+		TSharedPtr<STextBlock> Heading;
+		TSharedPtr<STextBlock> Body;
+		TSharedPtr<STextBlock> Subtitle;
+		int32 ActiveCard = INDEX_NONE;
+		bool bVoiceStarted = false;
+	};
+}
 
 ALSGameMode::ALSGameMode()
 {
@@ -41,6 +179,9 @@ ALSGameMode::ALSGameMode()
 	static ConstructorHelpers::FObjectFinder<USoundBase> ReturnMusic(
 		TEXT("/Game/LastSeed/Audio/MUS_LS_WildwoodReturn.MUS_LS_WildwoodReturn"));
 	RestoredArrivalMusic = ReturnMusic.Object;
+	static ConstructorHelpers::FObjectFinder<USoundBase> HeartTreeVoice(
+		TEXT("/Game/LastSeed/Audio/VO_LS_HeartTreeEnding.VO_LS_HeartTreeEnding"));
+	HeartTreeEndingVoice = HeartTreeVoice.Object;
 
 	if (WitchArt.Succeeded())
 	{
@@ -97,19 +238,111 @@ void ALSGameMode::BeginPlay()
 	}
 }
 
+void ALSGameMode::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	GetWorldTimerManager().ClearTimer(WildwoodEndingTimer);
+	Super::EndPlay(EndPlayReason);
+}
+
 void ALSGameMode::PlayRestoredArrival()
 {
 	if (ALSPlayerController* PlayerController = GetLSPlayerController())
 	{
+		if (APawn* Seed = PlayerController->GetPawn())
+		{
+			Seed->SetActorTickEnabled(false);
+			Seed->SetActorHiddenInGame(true);
+			Seed->SetActorEnableCollision(false);
+			if (UPrimitiveComponent* Root = Cast<UPrimitiveComponent>(Seed->GetRootComponent()))
+			{
+				Root->SetSimulatePhysics(false);
+			}
+		}
+
 		const auto RevealRestored = [this, PlayerController]()
 		{
-			PlayerController->PlayerCameraManager->StartCameraFade(1.f, 0.f, 2.5f, FLinearColor::White, false, false);
-			FTimerHandle PromptTimer;
-			GetWorldTimerManager().SetTimer(PromptTimer, FTimerDelegate::CreateWeakLambda(PlayerController, [PlayerController]()
+			PlayerController->BeginWildwoodEpilogue();
+			ULocalPlayer* LocalPlayer = PlayerController->GetLocalPlayer();
+			UGameViewportClient* Viewport = LocalPlayer ? LocalPlayer->ViewportClient : nullptr;
+			if (!Viewport)
 			{
-				PlayerController->ShowPrompt(NSLOCTEXT("LastSeed", "RestoredArrival",
-					"The energy flows home. Wildwood is whole again."), 8.f);
-			}), 2.5f, false);
+				PlayerController->ReturnToMainMenu();
+				return;
+			}
+
+			// Frame the Heart Tree by the planting site and the valley in the direction of the trail.
+			const TActorIterator<ALevelGoal> GoalIterator(GetWorld());
+			const ALevelGoal* Goal = GoalIterator ? *GoalIterator : nullptr;
+			FVector Tree = Goal ? Goal->GetActorLocation() : FVector(14229.9, 10928.0, 2722.5);
+			if (Goal)
+			{
+				double Nearest = FMath::Square(2500.0);
+				for (TActorIterator<ARestorableActor> It(GetWorld()); It; ++It)
+				{
+					const UStaticMeshComponent* Mesh = It->FindComponentByClass<UStaticMeshComponent>();
+					const double Distance = FVector::DistSquared(Goal->GetActorLocation(), It->GetActorLocation());
+					if (Distance < Nearest && Mesh && GetNameSafe(Mesh->GetStaticMesh()) == TEXT("SM_Tree_09"))
+					{
+						Nearest = Distance;
+						Tree = It->GetActorLocation();
+					}
+				}
+			}
+
+			const FVector Valley = Goal ? -Goal->GetActorForwardVector() : FVector::ForwardVector;
+			const FVector Across = FVector::CrossProduct(FVector::UpVector, Valley);
+			const FVector Start = Tree + Valley * 3900.f + Across * 6300.f + FVector(0.f, 0.f, 10800.f);
+			const FVector End = Tree + Valley * 4900.f + Across * 9000.f + FVector(0.f, 0.f, 15900.f);
+			const FVector StartFocus = Tree + FVector(0.f, 0.f, 2300.f);
+			const FVector EndFocus = Tree + Valley * 1500.f + Across * 2400.f + FVector(0.f, 0.f, 1700.f);
+			ACameraActor* Camera = GetWorld()->SpawnActor<ACameraActor>(Start, (StartFocus - Start).Rotation());
+			if (Camera)
+			{
+				Camera->GetCameraComponent()->SetFieldOfView(76.f);
+				PlayerController->SetViewTarget(Camera);
+			}
+			PlayerController->PlayerCameraManager->StartCameraFade(1.f, 0.f, 1.25f, FLinearColor::White, false, false);
+
+			const TSharedRef<FWildwoodEnding> Ending = MakeShared<FWildwoodEnding>();
+			Ending->AddOverlay(LocalPlayer, Viewport);
+			const double BeganAt = GetWorld()->GetTimeSeconds();
+			constexpr float VoiceTime = 7.5f;
+			const float FadeTime = VoiceTime + FMath::Max(4.f, HeartTreeEndingVoice ? HeartTreeEndingVoice->GetDuration() : 0.f) + 2.2f;
+			GetWorldTimerManager().SetTimer(WildwoodEndingTimer, FTimerDelegate::CreateWeakLambda(this,
+				[this, PlayerController = TWeakObjectPtr<ALSPlayerController>(PlayerController),
+					Camera = TWeakObjectPtr<ACameraActor>(Camera), Ending, BeganAt, FadeTime, Start, End, StartFocus, EndFocus]()
+				{
+					const float Elapsed = GetWorld()->GetTimeSeconds() - BeganAt;
+					if (Elapsed < FadeTime + 1.8f)
+					{
+						const float Rise = FMath::SmoothStep(0.f, FadeTime, Elapsed);
+						const FVector Position = FMath::Lerp(Start, End, Rise);
+						const FVector Focus = FMath::Lerp(StartFocus, EndFocus, Rise);
+						if (Camera.IsValid())
+						{
+							Camera->SetActorLocationAndRotation(Position, (Focus - Position).Rotation());
+						}
+						if (Elapsed >= VoiceTime && !Ending->bVoiceStarted)
+						{
+							Ending->bVoiceStarted = true;
+							UGameplayStatics::PlaySound2D(this, HeartTreeEndingVoice, 1.05f);
+						}
+						Ending->ShowForest(Elapsed, VoiceTime, FadeTime);
+						return;
+					}
+
+					// A slow frame can step straight past the tail of the fade.
+					Ending->Black->SetRenderOpacity(1.f);
+					Ending->Subtitle->SetRenderOpacity(0.f);
+					if (!Ending->ShowCredits(Elapsed - FadeTime - 1.8f))
+					{
+						GetWorldTimerManager().PauseTimer(WildwoodEndingTimer);
+						if (PlayerController.IsValid())
+						{
+							PlayerController->ReturnToMainMenu();
+						}
+					}
+				}), 1.f / 60.f, true);
 		};
 		if (!RestoredArrivalShots.IsEmpty())
 		{

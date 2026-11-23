@@ -73,6 +73,8 @@ public:
 	/** Opens the main menu level. */
 	void ReturnToMainMenu();
 
+	void BeginWildwoodEpilogue();
+
 	/** Sends the volumes stored in ULSGameInstance to the sound classes. */
 	void ApplyVolumeSettings();
 

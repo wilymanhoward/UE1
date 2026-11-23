@@ -71,6 +71,7 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 	/** Tick this on a child used only by the main menu level, and set its Default Pawn Class to None. */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Level")
@@ -96,11 +97,15 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category = "Energy Finale")
 	TObjectPtr<USoundBase> RestoredArrivalMusic;
 
+	UPROPERTY(EditDefaultsOnly, Category = "Energy Finale")
+	TObjectPtr<USoundBase> HeartTreeEndingVoice;
+
 	/** The goal that ended the level. Its settings are read again after the results. */
 	UPROPERTY(Transient)
 	TObjectPtr<ALevelGoal> CompletedGoal;
 
 	FLSLevelResult LastResult;
+	FTimerHandle WildwoodEndingTimer;
 	float LevelTime = 0.f;
 	int32 Deaths = 0;
 	int32 GoldenPetalsCollected = 0;
