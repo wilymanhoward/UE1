@@ -234,6 +234,10 @@ void ALSGameMode::BeginPlay()
 
 	if (bRestoredArrival)
 	{
+		if (const ALSPlayerController* PlayerController = GetLSPlayerController())
+		{
+			PlayerController->PlayerCameraManager->SetManualCameraFade(1.f, FLinearColor::White, false);
+		}
 		GetWorldTimerManager().SetTimerForNextTick(this, &ALSGameMode::PlayRestoredArrival);
 	}
 }
@@ -259,100 +263,96 @@ void ALSGameMode::PlayRestoredArrival()
 			}
 		}
 
-		const auto RevealRestored = [this, PlayerController]()
+		PlayerController->BeginWildwoodEpilogue();
+		ULocalPlayer* LocalPlayer = PlayerController->GetLocalPlayer();
+		UGameViewportClient* Viewport = LocalPlayer ? LocalPlayer->ViewportClient : nullptr;
+		if (!Viewport)
 		{
-			PlayerController->BeginWildwoodEpilogue();
-			ULocalPlayer* LocalPlayer = PlayerController->GetLocalPlayer();
-			UGameViewportClient* Viewport = LocalPlayer ? LocalPlayer->ViewportClient : nullptr;
-			if (!Viewport)
-			{
-				PlayerController->ReturnToMainMenu();
-				return;
-			}
+			PlayerController->ReturnToMainMenu();
+			return;
+		}
 
-			// Frame the Heart Tree by the planting site and the valley in the direction of the trail.
-			const TActorIterator<ALevelGoal> GoalIterator(GetWorld());
-			const ALevelGoal* Goal = GoalIterator ? *GoalIterator : nullptr;
-			FVector Tree = Goal ? Goal->GetActorLocation() : FVector(14229.9, 10928.0, 2722.5);
-			if (Goal)
+		// Frame the Heart Tree by the planting site and the valley in the direction of the trail.
+		const TActorIterator<ALevelGoal> GoalIterator(GetWorld());
+		const ALevelGoal* Goal = GoalIterator ? *GoalIterator : nullptr;
+		FVector Tree = Goal ? Goal->GetActorLocation() : FVector(14229.9, 10928.0, 2722.5);
+		if (Goal)
+		{
+			double Nearest = FMath::Square(2500.0);
+			for (TActorIterator<ARestorableActor> It(GetWorld()); It; ++It)
 			{
-				double Nearest = FMath::Square(2500.0);
-				for (TActorIterator<ARestorableActor> It(GetWorld()); It; ++It)
+				const UStaticMeshComponent* Mesh = It->FindComponentByClass<UStaticMeshComponent>();
+				const double Distance = FVector::DistSquared(Goal->GetActorLocation(), It->GetActorLocation());
+				if (Distance < Nearest && Mesh && GetNameSafe(Mesh->GetStaticMesh()) == TEXT("SM_Tree_09"))
 				{
-					const UStaticMeshComponent* Mesh = It->FindComponentByClass<UStaticMeshComponent>();
-					const double Distance = FVector::DistSquared(Goal->GetActorLocation(), It->GetActorLocation());
-					if (Distance < Nearest && Mesh && GetNameSafe(Mesh->GetStaticMesh()) == TEXT("SM_Tree_09"))
-					{
-						Nearest = Distance;
-						Tree = It->GetActorLocation();
-					}
+					Nearest = Distance;
+					Tree = It->GetActorLocation();
 				}
 			}
+		}
 
-			const FVector Valley = Goal ? -Goal->GetActorForwardVector() : FVector::ForwardVector;
-			const FVector Across = FVector::CrossProduct(FVector::UpVector, Valley);
-			const FVector Start = Tree + Valley * 3900.f + Across * 6300.f + FVector(0.f, 0.f, 10800.f);
-			const FVector End = Tree + Valley * 4900.f + Across * 9000.f + FVector(0.f, 0.f, 15900.f);
-			const FVector StartFocus = Tree + FVector(0.f, 0.f, 2300.f);
-			const FVector EndFocus = Tree + Valley * 1500.f + Across * 2400.f + FVector(0.f, 0.f, 1700.f);
-			ACameraActor* Camera = GetWorld()->SpawnActor<ACameraActor>(Start, (StartFocus - Start).Rotation());
-			if (Camera)
+		const FVector Valley = Goal ? -Goal->GetActorForwardVector() : FVector::ForwardVector;
+		const FVector Across = FVector::CrossProduct(FVector::UpVector, Valley);
+		const FVector Start = Tree + Valley * 3900.f + Across * 6300.f + FVector(0.f, 0.f, 10800.f);
+		const FVector End = Tree + Valley * 4900.f + Across * 9000.f + FVector(0.f, 0.f, 15900.f);
+		const FVector StartFocus = Tree + FVector(0.f, 0.f, 2300.f);
+		const FVector EndFocus = Tree + Valley * 1500.f + Across * 2400.f + FVector(0.f, 0.f, 1700.f);
+		ACameraActor* Camera = GetWorld()->SpawnActor<ACameraActor>(Start, (StartFocus - Start).Rotation());
+		if (Camera)
+		{
+			Camera->GetCameraComponent()->SetFieldOfView(76.f);
+			PlayerController->SetViewTarget(Camera);
+		}
+		// Give the live camera a few frames to settle behind the same white frame used for travel.
+		APlayerCameraManager* CameraManager = PlayerController->PlayerCameraManager;
+		CameraManager->SetManualCameraFade(1.f, FLinearColor::White, false);
+		CameraManager->UpdateCamera(0.f);
+		FTimerHandle RevealTimer;
+		GetWorldTimerManager().SetTimer(RevealTimer, FTimerDelegate::CreateWeakLambda(CameraManager, [CameraManager]()
+		{
+			CameraManager->StartCameraFade(1.f, 0.f, 1.25f, FLinearColor::White, false, false);
+		}), 0.25f, false);
+
+		const TSharedRef<FWildwoodEnding> Ending = MakeShared<FWildwoodEnding>();
+		Ending->AddOverlay(LocalPlayer, Viewport);
+		const double BeganAt = GetWorld()->GetTimeSeconds();
+		constexpr float VoiceTime = 7.5f;
+		const float FadeTime = VoiceTime + FMath::Max(4.f, HeartTreeEndingVoice ? HeartTreeEndingVoice->GetDuration() : 0.f) + 2.2f;
+		GetWorldTimerManager().SetTimer(WildwoodEndingTimer, FTimerDelegate::CreateWeakLambda(this,
+			[this, PlayerController = TWeakObjectPtr<ALSPlayerController>(PlayerController),
+				Camera = TWeakObjectPtr<ACameraActor>(Camera), Ending, BeganAt, FadeTime, Start, End, StartFocus, EndFocus]()
 			{
-				Camera->GetCameraComponent()->SetFieldOfView(76.f);
-				PlayerController->SetViewTarget(Camera);
-			}
-			PlayerController->PlayerCameraManager->StartCameraFade(1.f, 0.f, 1.25f, FLinearColor::White, false, false);
-
-			const TSharedRef<FWildwoodEnding> Ending = MakeShared<FWildwoodEnding>();
-			Ending->AddOverlay(LocalPlayer, Viewport);
-			const double BeganAt = GetWorld()->GetTimeSeconds();
-			constexpr float VoiceTime = 7.5f;
-			const float FadeTime = VoiceTime + FMath::Max(4.f, HeartTreeEndingVoice ? HeartTreeEndingVoice->GetDuration() : 0.f) + 2.2f;
-			GetWorldTimerManager().SetTimer(WildwoodEndingTimer, FTimerDelegate::CreateWeakLambda(this,
-				[this, PlayerController = TWeakObjectPtr<ALSPlayerController>(PlayerController),
-					Camera = TWeakObjectPtr<ACameraActor>(Camera), Ending, BeganAt, FadeTime, Start, End, StartFocus, EndFocus]()
+				const float Elapsed = GetWorld()->GetTimeSeconds() - BeganAt;
+				if (Elapsed < FadeTime + 1.8f)
 				{
-					const float Elapsed = GetWorld()->GetTimeSeconds() - BeganAt;
-					if (Elapsed < FadeTime + 1.8f)
+					const float Rise = FMath::SmoothStep(0.f, FadeTime, Elapsed);
+					const FVector Position = FMath::Lerp(Start, End, Rise);
+					const FVector Focus = FMath::Lerp(StartFocus, EndFocus, Rise);
+					if (Camera.IsValid())
 					{
-						const float Rise = FMath::SmoothStep(0.f, FadeTime, Elapsed);
-						const FVector Position = FMath::Lerp(Start, End, Rise);
-						const FVector Focus = FMath::Lerp(StartFocus, EndFocus, Rise);
-						if (Camera.IsValid())
-						{
-							Camera->SetActorLocationAndRotation(Position, (Focus - Position).Rotation());
-						}
-						if (Elapsed >= VoiceTime && !Ending->bVoiceStarted)
-						{
-							Ending->bVoiceStarted = true;
-							UGameplayStatics::PlaySound2D(this, HeartTreeEndingVoice, 1.05f);
-						}
-						Ending->ShowForest(Elapsed, VoiceTime, FadeTime);
-						return;
+						Camera->SetActorLocationAndRotation(Position, (Focus - Position).Rotation());
 					}
+					if (Elapsed >= VoiceTime && !Ending->bVoiceStarted)
+					{
+						Ending->bVoiceStarted = true;
+						UGameplayStatics::PlaySound2D(this, HeartTreeEndingVoice, 1.05f);
+					}
+					Ending->ShowForest(Elapsed, VoiceTime, FadeTime);
+					return;
+				}
 
-					// A slow frame can step straight past the tail of the fade.
-					Ending->Black->SetRenderOpacity(1.f);
-					Ending->Subtitle->SetRenderOpacity(0.f);
-					if (!Ending->ShowCredits(Elapsed - FadeTime - 1.8f))
+				// A slow frame can step straight past the tail of the fade.
+				Ending->Black->SetRenderOpacity(1.f);
+				Ending->Subtitle->SetRenderOpacity(0.f);
+				if (!Ending->ShowCredits(Elapsed - FadeTime - 1.8f))
+				{
+					GetWorldTimerManager().PauseTimer(WildwoodEndingTimer);
+					if (PlayerController.IsValid())
 					{
-						GetWorldTimerManager().PauseTimer(WildwoodEndingTimer);
-						if (PlayerController.IsValid())
-						{
-							PlayerController->ReturnToMainMenu();
-						}
+						PlayerController->ReturnToMainMenu();
 					}
-				}), 1.f / 60.f, true);
-		};
-		if (!RestoredArrivalShots.IsEmpty())
-		{
-			PlayerController->PlayIntro(RestoredArrivalShots, RestoredArrivalMusic, nullptr,
-				ELSIntroTransition::RestoredArrival, FVector::ZeroVector, RevealRestored);
-		}
-		else
-		{
-			RevealRestored();
-		}
+				}
+			}), 1.f / 60.f, true);
 	}
 }
 
@@ -477,7 +477,19 @@ void ALSGameMode::CompleteLevel(ALevelGoal* Goal)
 						ContinueAfterResults();
 						return;
 					}
-					Goal->PlayEnergyBurst(Cast<ASeedBall>(PlayerController->GetPawn()), [this]() { ContinueAfterResults(); });
+					Goal->PlayEnergyBurst(Cast<ASeedBall>(PlayerController->GetPawn()), [this, PlayerController]()
+					{
+						if (RestoredArrivalShots.IsEmpty())
+						{
+							ContinueAfterResults();
+							return;
+						}
+
+						// Play the illustrated return while Emberwood is still loaded. Travel on the closing white frame.
+						PlayerController->PlayerCameraManager->SetManualCameraFade(1.f, FLinearColor::White, false);
+						PlayerController->PlayIntro(RestoredArrivalShots, RestoredArrivalMusic, nullptr,
+							ELSIntroTransition::RestoredArrival, FVector::ZeroVector, [this]() { ContinueAfterResults(); });
+					});
 				});
 			return;
 		}
