@@ -92,13 +92,7 @@ if (Surge < 1.5) {
     float opacity = 0.48 * plume * corridor * air * smoothstep(0.22, 0.72, billows);
     float3 paint = Texture2DSample(FrameTex, FrameTexSampler, UV).rgb;
     float3 smoke = lerp(float3(0.22, 0.049, 0.031), float3(0.91, 0.36, 0.16), 1.0 - rise);
-    float2 ashUV = (UV + float2(-0.019, 0.083) * t) * float2(22.0, 15.0);
-    float2 cell = floor(ashUV);
-    float hash = frac(sin(dot(cell, float2(127.1, 311.7))) * 43758.5453);
-    float spark = step(0.63, hash) * (1.0 - smoothstep(0.015, 0.075,
-                  length((frac(ashUV) - float2(hash, 0.43)) * float2(0.82, 1.55))));
-    light = spark * float3(0.71, 0.265, 0.065) * (0.30 + 0.35 * sin(2.9 * t + hash * 8.0));
-    return saturate(lerp(paint, smoke, opacity) + light);
+    return lerp(paint, smoke, opacity);
 }
 
 return saturate(Texture2DSample(FrameTex, FrameTexSampler, saturate(uv)).rgb + light);
