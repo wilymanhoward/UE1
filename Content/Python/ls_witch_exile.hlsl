@@ -56,11 +56,7 @@ if (Surge < 1.5) {
     uv.x += mint * 0.0047 * sin(50.0 * uv.y - 7.0 * t);
     paint = Texture2DSample(FrameTex, FrameTexSampler, saturate(uv)).rgb;
 
-    // Reuse the soft green behind the painted seed while the sprite travels up from the mound.
-    float replacement = (1.0 - smoothstep(0.027, 0.040, abs(uv.x - 0.688)))
-                      * (1.0 - smoothstep(0.080, 0.097, abs(uv.y - 0.620)));
-    float3 behind = Texture2DSample(FrameTex, FrameTexSampler, saturate(uv + float2(0.047, 0.0))).rgb;
-    paint = lerp(paint, behind, replacement);
+    // FrameTex is a clean plate. The transparent sprite is the only seed in this shot.
     float2 center = float2(0.688 + 0.100 * travel, 0.863 - 0.229 * lift - 0.285 * travel);
     float2 size = float2(0.087, 0.150) * (1.0 - 0.57 * travel);
     float2 coord = (uv - center) / size + 0.5;
