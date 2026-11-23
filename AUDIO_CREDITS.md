@@ -66,6 +66,7 @@ Each comes from the public HQ preview, converted to mono 48 kHz PCM, with its DC
 ## Emberwood
 
 - “Juggernaut” by Scott Buckley, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Human-composed dark orchestral music for strings, brass and percussion, from the composer of Wildwood’s “A Dragon’s Lullaby”. The composer's MP3 is kept as `SourceSounds/Juggernaut_ScottBuckley.mp3`. `Content/Python/ls_ember_music.py` brings it down to about −22 dBFS so it sits under the witch's voice and crossfades its last 4 seconds into its start. The result is a 218-second stereo loop that plays through all of Emberwood. [Original track](https://www.scottbuckley.com.au/library/juggernaut/)
+- The witch’s gate reaction uses a 6.23-second excerpt of “Juggernaut” with a short fade at each end. The cinematic lowers the score under her dialogue.
 - The lava ambience (`lava_amb_Cue`) is the one that comes with the Lava Environments asset pack in `Content/Lava`, used as supplied.
 - The energy charge reuses the recorded storm rumble credited above. The burst cue layers “high-voltage-discharge-1.wav,” a Tesla coil recorded by follytowers, with “Huge big explosion,” an indoor firecracker recording layered by SamsterBirdies. Both are CC0. The public high-quality previews were trimmed, filtered, and mixed into `SFX_LS_EmberwoodElectricBlast.wav`. [Tesla coil](https://freesound.org/people/follytowers/sounds/415960/) [Indoor explosion](https://freesound.org/people/SamsterBirdies/sounds/591999/) [CC0](https://creativecommons.org/publicdomain/zero/1.0/)
 
