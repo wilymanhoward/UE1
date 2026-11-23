@@ -113,6 +113,7 @@ void ALevelGoal::PlayEnergyBurst(ASeedBall* Ball, TFunction<void()> OnFinished)
 	BurstBall = Ball;
 	BurstAnchor = Ball->GetActorLocation();
 	BurstTime = 0.f;
+	NextChargeArcTime = ChargeTime * 0.08f;
 	bBurst = false;
 
 	// Held still, so the shake is all that moves it.
@@ -142,7 +143,7 @@ void ALevelGoal::PlayEnergyBurst(ASeedBall* Ball, TFunction<void()> OnFinished)
 	SetActorTickEnabled(true);
 }
 
-void ALevelGoal::SpawnBurstLightning(const FVector& Centre)
+void ALevelGoal::SpawnEnergyLightning(const FVector& Centre, int32 ArcCount, float Size, float Heading)
 {
 	if (!BurstLightningMesh)
 	{
@@ -153,12 +154,12 @@ void ALevelGoal::SpawnBurstLightning(const FVector& Centre)
 	const FVector Root(Bounds.Origin.X, Bounds.Origin.Y, Bounds.Origin.Z - Bounds.BoxExtent.Z);
 	FActorSpawnParameters Params;
 	Params.ObjectFlags |= RF_Transient;
-	for (int32 Index = 0; Index < 7; ++Index)
+	for (int32 Index = 0; Index < ArcCount; ++Index)
 	{
-		const float Angle = FMath::DegreesToRadians(19.f + Index * 51.4f);
+		const float Angle = FMath::DegreesToRadians(Heading + Index * (360.f / ArcCount));
 		const FVector Direction(FMath::Cos(Angle), FMath::Sin(Angle), 0.22f + 0.26f * (Index % 3));
 		const FQuat Rotation = FRotationMatrix::MakeFromZ(Direction).ToQuat();
-		const FVector Scale(1.15f, 1.15f, 3.6f + 0.9f * (Index % 3));
+		const FVector Scale = FVector(1.15f, 1.15f, 3.6f + 0.9f * (Index % 3)) * Size;
 		const FTransform Transform(Rotation, Centre - Rotation.RotateVector(Root * Scale), Scale);
 		if (AStaticMeshActor* Bolt = GetWorld()->SpawnActor<AStaticMeshActor>(
 			AStaticMeshActor::StaticClass(), Transform, Params))
@@ -183,6 +184,14 @@ void ALevelGoal::UpdateEnergyBurst(float DeltaSeconds)
 		// Squared, so it trembles at first and is thrashing by the end, rising a little as the energy lifts it.
 		const float Alpha = BurstTime / ChargeTime;
 		Ball->SetActorLocation(BurstAnchor + FVector(0.f, 0.f, 60.f * Alpha) + FMath::VRand() * ChargeShake * Alpha * Alpha);
+		if (BurstTime >= NextChargeArcTime)
+		{
+			// Small, spaced flashes build into longer arcs that break out of the shell.
+			const int32 ArcCount = 2 + FMath::FloorToInt(3.f * Alpha);
+			const float ArcSize = FMath::Lerp(0.17f, 0.73f, Alpha * Alpha);
+			SpawnEnergyLightning(Ball->GetActorLocation(), ArcCount, ArcSize, 19.f + Alpha * 390.f);
+			NextChargeArcTime = BurstTime + FMath::Max(0.12f, ChargeTime * FMath::Lerp(0.23f, 0.055f, Alpha));
+		}
 		if (ChargeComponent)
 		{
 			ChargeComponent->SetWorldScale3D(FVector(3.f + 9.f * Alpha * Alpha));
@@ -209,7 +218,7 @@ void ALevelGoal::UpdateEnergyBurst(float DeltaSeconds)
 		bBurst = true;
 		const FVector Centre = BurstAnchor + FVector(0.f, 0.f, 60.f);
 		UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, BurstEffect, Centre, FRotator::ZeroRotator, FVector(BurstScale));
-		SpawnBurstLightning(Centre);
+		SpawnEnergyLightning(Centre, 7, 1.f, 19.f);
 		if (ElectricBlastSound)
 		{
 			UGameplayStatics::SpawnSound2D(this, ElectricBlastSound, 1.f, 1.f, 0.f, nullptr, true);

@@ -125,7 +125,7 @@ protected:
 
 private:
 	void UpdateEnergyBurst(float DeltaSeconds);
-	void SpawnBurstLightning(const FVector& Centre);
+	void SpawnEnergyLightning(const FVector& Centre, int32 ArcCount, float Size, float Heading);
 
 	UPROPERTY()
 	TObjectPtr<UStaticMesh> BurstLightningMesh;
@@ -144,6 +144,7 @@ private:
 	FVector BurstAnchor = FVector::ZeroVector;
 	// Seconds since the charge began, or below zero when no burst is playing.
 	float BurstTime = -1.f;
+	float NextChargeArcTime = 0.f;
 	bool bBurst = false;
 	float LastWarningTime = -100.f;
 };
