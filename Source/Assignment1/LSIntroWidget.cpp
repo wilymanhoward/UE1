@@ -195,7 +195,6 @@ void ULSIntroWidget::NativeConstruct()
 			CastChecked<USizeBox>(GetWidgetFromName(TEXT("FrameSize")))->SetWidthOverride(
 				1080.f * Art->GetSizeX() / Art->GetSizeY());
 		}
-		CastChecked<UScaleBox>(GetWidgetFromName(TEXT("Frame")))->SetStretch(EStretch::ScaleToFill);
 		SkipButton->RemoveFromParent();
 		UOverlaySlot* SkipSlot = CastChecked<UOverlay>(WidgetTree->RootWidget)->AddChildToOverlay(SkipButton);
 		SkipSlot->SetHorizontalAlignment(HAlign_Right);

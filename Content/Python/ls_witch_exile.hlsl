@@ -68,17 +68,37 @@ if (Surge < 1.5) {
     light = mint * float3(0.035, 0.19, 0.088) * (0.4 + 0.33 * sin(6.0 * t + uv.x * 27.0));
     return saturate(paint * (0.90 + 0.10 * lift) + light);
 } else {
-    float settle = 1.0 - smoothstep(0.0, 1.75, t);
-    // Settle back to the painted spawn framing before the dissolve.
-    uv = lerp(UV, float2(0.493, 0.51), settle * 0.025);
-    float heat = smoothstep(0.37, 0.49, uv.y) * (1.0 - smoothstep(0.53, 0.68, uv.y));
-    uv.x += heat * 0.003 * sin(68.0 * uv.y + 7.0 * t) * sin(31.0 * uv.x - 2.1 * t);
+    struct SmokeNoise {
+        float valueAt(float2 position) {
+            float2 cell = floor(position);
+            float2 blend = frac(position);
+            blend = blend * blend * (3.0 - 2.0 * blend);
+            float4 corners = frac(sin(dot(cell, float2(127.1, 311.7)) +
+                                      float4(0.0, 127.1, 311.7, 438.8)) * 43758.5453);
+            return lerp(lerp(corners.x, corners.y, blend.x), lerp(corners.z, corners.w, blend.x), blend.y);
+        }
+    };
+    SmokeNoise noise;
+    float rise = saturate((0.53 - UV.y) / 0.44);
+    float2 flow = float2(UV.x * 8.0 - 0.32 * t, UV.y * 11.0 + 0.92 * t);
+    float curl = noise.valueAt(flow * 0.55 + float2(0.0, 8.0));
+    float billows = 0.72 * noise.valueAt(flow + float2(1.5 * curl, 0.0)) +
+                    0.28 * noise.valueAt(flow * 2.1 + float2(3.1, 4.7));
+    float plumeCenter = 0.53 + 0.11 * rise + 0.024 * sin(t * 0.9 + rise * 5.0);
+    float plumeWidth = lerp(0.085, 0.29, rise);
+    float plume = 1.0 - smoothstep(0.0, plumeWidth, abs(UV.x - plumeCenter));
+    float corridor = smoothstep(0.23, 0.34, UV.x) * (1.0 - smoothstep(0.64, 0.72, UV.x));
+    float air = smoothstep(0.07, 0.21, UV.y) * (1.0 - smoothstep(0.40, 0.51, UV.y));
+    float opacity = 0.48 * plume * corridor * air * smoothstep(0.22, 0.72, billows);
+    float3 paint = Texture2DSample(FrameTex, FrameTexSampler, UV).rgb;
+    float3 smoke = lerp(float3(0.22, 0.049, 0.031), float3(0.91, 0.36, 0.16), 1.0 - rise);
     float2 ashUV = (UV + float2(-0.019, 0.083) * t) * float2(22.0, 15.0);
     float2 cell = floor(ashUV);
     float hash = frac(sin(dot(cell, float2(127.1, 311.7))) * 43758.5453);
     float spark = step(0.63, hash) * (1.0 - smoothstep(0.015, 0.075,
                   length((frac(ashUV) - float2(hash, 0.43)) * float2(0.82, 1.55))));
-    light += spark * float3(0.71, 0.265, 0.065) * (0.30 + 0.35 * sin(2.9 * t + hash * 8.0));
+    light = spark * float3(0.71, 0.265, 0.065) * (0.30 + 0.35 * sin(2.9 * t + hash * 8.0));
+    return saturate(lerp(paint, smoke, opacity) + light);
 }
 
 return saturate(Texture2DSample(FrameTex, FrameTexSampler, saturate(uv)).rgb + light);
