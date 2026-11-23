@@ -69,6 +69,7 @@ Each comes from the public HQ preview, converted to mono 48 kHz PCM, with its DC
 - The lava ambience (`lava_amb_Cue`) is the one that comes with the Lava Environments asset pack in `Content/Lava`, used as supplied.
 - The energy charge reuses the recorded storm rumble credited above. The burst cue layers “high-voltage-discharge-1.wav,” a Tesla coil recorded by follytowers, with “Huge big explosion,” an indoor firecracker recording layered by SamsterBirdies. Both are CC0. The public high-quality previews were trimmed, filtered, and mixed into `SFX_LS_EmberwoodElectricBlast.wav`. [Tesla coil](https://freesound.org/people/follytowers/sounds/415960/) [Indoor explosion](https://freesound.org/people/SamsterBirdies/sounds/591999/) [CC0](https://creativecommons.org/publicdomain/zero/1.0/)
 
+- The energy burst also uses the supplied `soundreality-explosion-fx-343683.mp3`. The low-frequency impact lands just after the electrical crack, and its tail recedes under the witch’s shout.
 - Emberwood’s energy pickup uses a short excerpt from follytowers’ recorded Tesla coil. The spark is filtered and layered with a higher-pitched copy for the charge tail. [Freesound recording](https://freesound.org/people/follytowers/sounds/415960/) · CC0 1.0.
 
 ## Narration
