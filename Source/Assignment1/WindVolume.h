@@ -94,6 +94,9 @@ private:
 	TObjectPtr<UStaticMesh> UpdraftPlane;
 
 	UPROPERTY()
+	TObjectPtr<UStaticMesh> UpdraftRibbon;
+
+	UPROPERTY()
 	TObjectPtr<UMaterialInterface> UpdraftMaterial;
 
 	UPROPERTY(Transient)
