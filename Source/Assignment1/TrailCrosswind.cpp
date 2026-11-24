@@ -13,10 +13,9 @@ namespace
 {
 	constexpr int32 CrosswindLeafCount = 18;
 	constexpr int32 CrosswindStreakCount = 7;
-	constexpr float CrosswindCalm = 3.3f;
-	constexpr float CrosswindWarning = 0.9f;
-	constexpr float CrosswindGust = 1.75f;
-	constexpr float CrosswindTail = 0.4f;
+	constexpr float CrosswindOff = 2.f;
+	constexpr float CrosswindWarning = 0.35f;
+	constexpr float CrosswindGust = 2.f;
 }
 
 ATrailCrosswind::ATrailCrosswind()
@@ -69,15 +68,15 @@ void ATrailCrosswind::BeginPlay()
 void ATrailCrosswind::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
-	const float Period = CrosswindCalm + CrosswindWarning + CrosswindGust + CrosswindTail;
-	const float Age = FMath::Fmod(GetWorld()->GetTimeSeconds(), Period) - CrosswindCalm;
+	const float Period = CrosswindOff + CrosswindGust;
+	const float Age = FMath::Fmod(GetWorld()->GetTimeSeconds(), Period) - (CrosswindOff - CrosswindWarning);
 	for (int32 Index = 0; Index < WindShapes.Num(); ++Index)
 	{
 		UStaticMeshComponent* Shape = WindShapes[Index];
 		const bool bLeaf = Index < CrosswindLeafCount;
 		const bool bWarningLeaf = Index < 5;
-		const float Delay = bWarningLeaf ? Index * 0.08f : CrosswindWarning - 0.23f + (Index % 5) * 0.10f;
-		const float Duration = bWarningLeaf ? 1.85f : 1.24f;
+		const float Delay = bWarningLeaf ? Index * 0.065f : CrosswindWarning + (Index % 5) * 0.12f;
+		const float Duration = bWarningLeaf ? 1.50f : 1.52f;
 		const float Travel = (Age - Delay) / Duration;
 		const bool bVisible = Travel > 0.f && Travel < 1.f;
 		Shape->SetVisibility(bVisible);
