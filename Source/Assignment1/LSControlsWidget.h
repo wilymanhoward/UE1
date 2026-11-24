@@ -30,6 +30,7 @@ public:
 
 protected:
 	virtual void NativeOnInitialized() override;
+	virtual FReply NativeOnKeyDown(const FGeometry& Geometry, const FKeyEvent& Event) override;
 
 	/** Shows the list of controls. Filled in by code. */
 	UPROPERTY(meta = (BindWidget))
