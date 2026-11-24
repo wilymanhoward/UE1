@@ -1066,11 +1066,14 @@ def place(entry, plates):
 
 
 def gameplay(plan):
+    from ls_river_landing_marker import place as place_river_landing_guide
+
     plates = {}
     # Gates and storm triggers last, so the plates, levers and storm they point at exist.
     order = sorted(plan["actors"], key=lambda entry: entry["kind"] in ("gate", "storm_trigger"))
     for entry in order:
         place(entry, plates)
+    place_river_landing_guide()
     for x0, y0, x1, y1, bottom, top in plan["walls"]:
         invisible_wall(x0, y0, x1, y1, bottom, top, "Walls")
     for kill in plan["kills"]:
