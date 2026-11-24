@@ -109,7 +109,11 @@ void ULSHUDWidget::ShowPrompt(const FText& Message, float Duration)
 void ULSHUDWidget::ShowHint(const FText& Title, const FText& Keys, const FText& Message, float Duration)
 {
 	if (PromptTitleText) PromptTitleText->SetText(Title);
-	if (PromptKeyText) PromptKeyText->SetText(Keys);
+	if (PromptKeyText)
+	{
+		PromptKeyText->SetText(Keys);
+		PromptKeyText->SetVisibility(Keys.IsEmpty() ? ESlateVisibility::Collapsed : ESlateVisibility::HitTestInvisible);
+	}
 	PromptText->SetText(Message);
 	PromptTimeRemaining = Duration > 0.f ? Duration + PromptFadeTime : -1.f;
 	PromptText->SetRenderOpacity(1.f);

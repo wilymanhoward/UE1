@@ -9,6 +9,46 @@ MUTED = unreal.LinearColor(0.67, 0.69, 0.63, 1.0)
 SHADOW = unreal.LinearColor(0.015, 0.02, 0.015, 0.95)
 
 
+def layout_prompt(widgets):
+    panel = widgets["PromptPanel"]
+    panel.slot.set_auto_size(True)
+    panel.clear_children()
+
+    width = widgets["HintWidth"]
+    frame = widgets["HintFrame"]
+    content = widgets["HintContent"]
+    width.clear_children()
+    frame.clear_children()
+    content.clear_children()
+    for widget in (width, frame, content):
+        widget.set_visibility(unreal.SlateVisibility.HIT_TEST_INVISIBLE)
+    width.set_width_override(560)
+    width.add_child(frame)
+    panel.add_child_to_canvas(width).set_auto_size(True)
+
+    backdrop = widgets["HintBackdrop"]
+    brush = backdrop.get_editor_property("brush")
+    brush.set_editor_property("draw_as", unreal.SlateBrushDrawType.BOX)
+    brush.set_editor_property("margin", unreal.Margin(0.11, 0.12, 0.12, 0.12))
+    backdrop.set_brush(brush)
+    background_slot = frame.add_child_to_overlay(backdrop)
+    background_slot.set_horizontal_alignment(unreal.HorizontalAlignment.H_ALIGN_FILL)
+    background_slot.set_vertical_alignment(unreal.VerticalAlignment.V_ALIGN_FILL)
+    content_slot = frame.add_child_to_overlay(content)
+    content_slot.set_padding(unreal.Margin(34, 18, 46, 18))
+    content_slot.set_horizontal_alignment(unreal.HorizontalAlignment.H_ALIGN_FILL)
+
+    for name, wrap_width, top in (("PromptTitleText", 450, 0), ("PromptKeyText", 480, 8), ("PromptText", 480, 12)):
+        widget = widgets[name]
+        widget.set_editor_property("auto_wrap_text", False)
+        widget.set_editor_property("wrap_text_at", wrap_width)
+        content.add_child_to_vertical_box(widget).set_padding(unreal.Margin(0, top, 0, 0))
+
+    diamond_slot = panel.add_child_to_canvas(widgets["HintDiamond"])
+    diamond_slot.set_position(unreal.Vector2D(505, -19))
+    diamond_slot.set_size(unreal.Vector2D(46, 46))
+
+
 def build():
     blueprint = unreal.load_asset(PATH)
     assert blueprint
@@ -19,7 +59,7 @@ def build():
     required = {'RootCanvas','HUDSafeArea','WildernessLayout','ObjectiveShade','ObjectiveAccent',
                 'QuestCategory','QuestHeading','ObjectiveNote','RestorationLabel','RestorationStart',
                 'RestorationEnd','RunClock','FormShade','FormAccent','ActiveFormLabel','FormUnderline',
-                'PetalMark','PetalCaption','PromptPanel','HintBackdrop','HintDiamond',
+                'PetalMark','PetalCaption','PromptPanel','HintBackdrop','HintDiamond','HintWidth','HintFrame','HintContent',
                 'PromptTitleText','PromptKeyText','NoticePanel','NoticeText','NoticeDiamond'}
     assert required.issubset(widgets), f'Missing registered HUD widgets: {required - widgets.keys()}'
     canvas = widgets["RootCanvas"]
@@ -135,23 +175,13 @@ def build():
     panel = make(unreal.CanvasPanel, 'PromptPanel')
     place(panel, (1, 1), (-40, -184), (560, 174), (1, 1))
     panel.set_render_opacity(0)
-    def hint_child(widget, pos, size):
-        widget.remove_from_parent()
-        slot = panel.add_child_to_canvas(widget)
-        slot.set_position(unreal.Vector2D(*pos))
-        slot.set_size(unreal.Vector2D(*size))
-    backdrop = icon('HintBackdrop', '/Game/UI/Textures/T_UI_HintPanel', (0,0), (0,0), (560,174), unreal.LinearColor(1,1,1,1))
-    hint_child(backdrop, (0,0), (560,174))
-    diamond = icon('HintDiamond','/Game/UI/Textures/T_UI_HintDiamond',(0,0),(0,0),(46,46),unreal.LinearColor(1,1,1,1))
-    hint_child(diamond, (505,-19), (46,46))
-    title = text('PromptTitleText','FIRST STEPS   /   1 OF 3',20,(0,0),(0,0),(480,38),GOLD,True,110)
-    hint_child(title,(34,18),(480,38))
-    keys = text('PromptKeyText','W A S D  /  LEFT STICK',16,(0,0),(0,0),(490,30),IVORY,True,60)
-    hint_child(keys,(34,63),(490,30))
+    icon('HintBackdrop', '/Game/UI/Textures/T_UI_HintPanel', (0,0), (0,0), (560,174), unreal.LinearColor(1,1,1,1))
+    icon('HintDiamond','/Game/UI/Textures/T_UI_HintDiamond',(0,0),(0,0),(46,46),unreal.LinearColor(1,1,1,1))
+    text('PromptTitleText','FIRST STEPS   /   1 OF 3',20,(0,0),(0,0),(480,38),GOLD,True,110)
+    text('PromptKeyText','W A S D  /  LEFT STICK',16,(0,0),(0,0),(490,30),IVORY,True,60)
     prompt = text("PromptText", "Roll along the forest path.", 19, (0,0), (0,0), (480,66))
-    hint_child(prompt,(34,100),(480,66))
-    prompt.set_editor_property("auto_wrap_text", True)
     prompt.set_render_opacity(0.0)
+    layout_prompt(widgets)
     notice = make(unreal.CanvasPanel,'NoticePanel')
     place(notice,(0,1),(46,-220),(540,50))
     notice.set_render_opacity(0)
