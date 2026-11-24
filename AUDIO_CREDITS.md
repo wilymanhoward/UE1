@@ -17,6 +17,7 @@ The 42-second opening mix uses excerpts of the music and field recordings below.
 - “Witch Laugh” by mvVoiceActing, [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/). [Freesound](https://freesound.org/people/mvVoiceActing/sounds/223851/)
 - “Tree branch_1(leaves, rustle).WAV” by o_ciz, [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/). Trimmed and mixed for tree regrowth. [Freesound](https://freesound.org/people/o_ciz/sounds/475425/)
 - “Bird Whistling, Robin, Single, 13.wav” by InspectorJ (www.jshaw.co.uk), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Trimmed and mixed for tree regrowth. [Freesound](https://freesound.org/people/InspectorJ/sounds/456440/)
+- “Leaves rustle in the wind” by Cinetony and “Forest Bird Sounds” by Snudio_Records, both [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/). Excerpts from the public HQ previews were filtered, faded, and mixed for the Life Note tree restoration cue in Wildwood. [Forest breeze](https://freesound.org/people/Cinetony/sounds/575380/) · [Forest birdsong](https://freesound.org/people/Snudio_Records/sounds/267491/)
 
 ## Player movement effects
 
