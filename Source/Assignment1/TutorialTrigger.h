@@ -19,6 +19,7 @@ class ASSIGNMENT1_API ATutorialTrigger : public ALSVolumeBase
 	GENERATED_BODY()
 
 public:
+	void ConfigurePrompt(const FText& InTitle, const FText& InMessage, const FVector& HalfExtent);
 	virtual void OnBallOverlap(ASeedBall* Ball) override;
 
 protected:

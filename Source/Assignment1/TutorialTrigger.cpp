@@ -2,9 +2,17 @@
 
 #include "TutorialTrigger.h"
 
+#include "Components/BoxComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "LSPlayerController.h"
 #include "SeedBall.h"
+
+void ATutorialTrigger::ConfigurePrompt(const FText& InTitle, const FText& InMessage, const FVector& HalfExtent)
+{
+	Title = InTitle;
+	Message = InMessage;
+	Box->SetBoxExtent(HalfExtent);
+}
 
 void ATutorialTrigger::OnBallOverlap(ASeedBall* Ball)
 {

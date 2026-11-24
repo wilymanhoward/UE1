@@ -26,6 +26,7 @@
 #include "SeedBall.h"
 #include "Sound/SoundBase.h"
 #include "TrailCrosswind.h"
+#include "TutorialTrigger.h"
 #include "Styling/CoreStyle.h"
 #include "UObject/ConstructorHelpers.h"
 #include "Widgets/Layout/SBorder.h"
@@ -309,6 +310,15 @@ void ALSGameMode::BeginPlay()
 		if (!TActorIterator<ATrailCrosswind>(GetWorld()))
 		{
 			GetWorld()->SpawnActor<ATrailCrosswind>(Trail2Crossing, FRotator(0.0, 70.0, 0.0));
+		}
+
+		const FTransform WindApproach(FRotator(0.0, 12.0, 0.0), FVector(-13110.0, -7040.0, 3180.0));
+		if (ATutorialTrigger* Warning = GetWorld()->SpawnActorDeferred<ATutorialTrigger>(ATutorialTrigger::StaticClass(), WindApproach))
+		{
+			Warning->ConfigurePrompt(NSLOCTEXT("LastSeed", "CrosswindWarningTitle", "WATCH OUT"),
+				NSLOCTEXT("LastSeed", "CrosswindWarningBody", "Gusts can push you into the river. Cross when the wind dies down."),
+				FVector(180.0, 520.0, 280.0));
+			Warning->FinishSpawning(WindApproach);
 		}
 	}
 }
