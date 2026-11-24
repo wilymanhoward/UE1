@@ -16,7 +16,10 @@
 class APressurePlate;
 class UArrowComponent;
 class UAudioComponent;
+class UMaterialInterface;
 class UNiagaraComponent;
+class UStaticMesh;
+class UStaticMeshComponent;
 
 UCLASS()
 class ASSIGNMENT1_API AWindVolume : public ALSVolumeBase
@@ -34,6 +37,8 @@ public:
 	bool IsWindActive() const;
 
 protected:
+	virtual void BeginPlay() override;
+
 	/** Fires when the wind turns on or off. Use it for effects beyond the Particles and Wind Audio components. */
 	UFUNCTION(BlueprintImplementableEvent, Category = "Wind|Effects")
 	void PlayWindActiveEffect(bool bActive);
@@ -83,5 +88,16 @@ protected:
 	float SoundFadeTime = 0.5f;
 
 private:
+	void UpdateUpdraftVisuals(bool bActive);
+
+	UPROPERTY()
+	TObjectPtr<UStaticMesh> UpdraftPlane;
+
+	UPROPERTY()
+	TObjectPtr<UMaterialInterface> UpdraftMaterial;
+
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<UStaticMeshComponent>> UpdraftShapes;
+
 	bool bWasActive = false;
 };
