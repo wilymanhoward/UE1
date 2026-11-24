@@ -236,6 +236,10 @@ void ALSGameMode::BeginPlay()
 
 	if (bRestoredArrival)
 	{
+		for (TActorIterator<ATrailCrosswind> It(GetWorld()); It; ++It)
+		{
+			It->SetActorTickEnabled(false);
+		}
 		if (const ALSPlayerController* PlayerController = GetLSPlayerController())
 		{
 			PlayerController->PlayerCameraManager->SetManualCameraFade(1.f, FLinearColor::White, false);
@@ -244,8 +248,28 @@ void ALSGameMode::BeginPlay()
 	}
 	else if (UGameplayStatics::GetCurrentLevelName(this) == TEXT("L_Level1_Wildwood"))
 	{
-		// This stretch of Trail 2 is before the Stone Shell pickup, with the river to the trail's right.
-		GetWorld()->SpawnActor<ATrailCrosswind>(FVector(-12450.0, -6860.0, 3170.0), FRotator(0.0, 70.0, 0.0));
+		const FVector Trail2Crossing(-12450.0, -6860.0, 3170.0);
+		const FRotator TrailHeading(0.0, 22.0, 0.0);
+		const FName SoftTrailEdge(TEXT("LS_SoftTrailEdge"));
+		// Keep the river opening anchored to Trail 2 when designers move or copy gusts.
+		for (TActorIterator<AActor> It(GetWorld()); It; ++It)
+		{
+			if (!It->ActorHasTag(SoftTrailEdge))
+			{
+				continue;
+			}
+			const FVector Local = TrailHeading.UnrotateVector(It->GetActorLocation() - Trail2Crossing);
+			if (FMath::Abs(Local.X) < 1420.f && Local.Y > 275.f && Local.Y < 1150.f)
+			{
+				It->SetActorEnableCollision(false);
+			}
+		}
+
+		// shortcut: maps saved before the crosswind was placed need a fallback; remove when those maps are updated.
+		if (!TActorIterator<ATrailCrosswind>(GetWorld()))
+		{
+			GetWorld()->SpawnActor<ATrailCrosswind>(Trail2Crossing, FRotator(0.0, 70.0, 0.0));
+		}
 	}
 }
 

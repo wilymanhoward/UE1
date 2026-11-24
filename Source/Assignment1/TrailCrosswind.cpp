@@ -1,10 +1,10 @@
 #include "TrailCrosswind.h"
 
+#include "Components/ArrowComponent.h"
 #include "Components/BoxComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
 #include "Engine/World.h"
-#include "EngineUtils.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "SeedBall.h"
 #include "UObject/ConstructorHelpers.h"
@@ -17,13 +17,21 @@ namespace
 	constexpr float CrosswindWarning = 0.9f;
 	constexpr float CrosswindGust = 1.75f;
 	constexpr float CrosswindTail = 0.4f;
-	const FName CrosswindSoftTrailEdge(TEXT("LS_SoftTrailEdge"));
 }
 
 ATrailCrosswind::ATrailCrosswind()
 {
 	PrimaryActorTick.bCanEverTick = true;
 	Box->SetBoxExtent(FVector(420.0, 1500.0, 1150.0));
+#if WITH_EDITORONLY_DATA
+	if (UArrowComponent* Direction = CreateEditorOnlyDefaultSubobject<UArrowComponent>(TEXT("GustDirection")))
+	{
+		Direction->SetupAttachment(Box);
+		Direction->SetRelativeRotation(FRotator(0.0, 90.0, 0.0));
+		Direction->ArrowSize = 4.f;
+		Direction->ArrowColor = FColor::Cyan;
+	}
+#endif
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> Plane(TEXT("/Engine/BasicShapes/Plane.Plane"));
 	static ConstructorHelpers::FObjectFinder<UMaterialInterface> WindMaterial(
 		TEXT("/Game/LastSeed/Materials/M_LS_TrailCrosswind.M_LS_TrailCrosswind"));
@@ -47,21 +55,6 @@ ATrailCrosswind::ATrailCrosswind()
 void ATrailCrosswind::BeginPlay()
 {
 	Super::BeginPlay();
-
-	// The gust angles downhill. Follow the trail heading when identifying its river-side barriers.
-	const FRotator TrailHeading(0.0, 22.0, 0.0);
-	for (TActorIterator<AActor> It(GetWorld()); It; ++It)
-	{
-		if (!It->ActorHasTag(CrosswindSoftTrailEdge) || !It->GetActorEnableCollision())
-		{
-			continue;
-		}
-		const FVector Local = TrailHeading.UnrotateVector(It->GetActorLocation() - GetActorLocation());
-		if (FMath::Abs(Local.X) < 1420.f && Local.Y > 275.f && Local.Y < 1150.f)
-		{
-			It->SetActorEnableCollision(false);
-		}
-	}
 
 	if (UMaterialInstanceDynamic* LeafMaterial = WindShapes[0]->CreateDynamicMaterialInstance(0))
 	{
