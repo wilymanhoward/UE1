@@ -1,15 +1,19 @@
 """Dress the landing-to-crossing stretch of Wildwood as a washed-out riverbank."""
 
+import math
+
 import unreal
 
 from ls_generate_player_meshes import Mesh
 from ls_generate_world_meshes import add_tube
+from ls_material_helpers import blend, colour, combine, finish, fresh_material, library, node, number, output, texture
 from ls_world_common import import_generated_mesh
 
 FOLDER = "Parkour/Trail 05 Riverbank"
 OLD_HINT = "Wither Blobs drain the colour from the world. Slam on them from above as Stone Shell."
 ROOT_HINT = "Roll over the shallow root, then jump over the larger one."
 STUMP = (17970.0, -856.0)
+ROOT_BARK = "/Game/LastSeed/Materials/M_LS_RiverbankRoot"
 
 
 def obsolete_obstacle(entry):
@@ -36,17 +40,60 @@ def root_mesh(surface, origin_z=None):
         ((17434, 422, -8, 32), (17378, 595, -10, 22), (17356, 735, -21, 2)),
     )
     base = surface(*STUMP) if origin_z is None else origin_z
+    seams = {}
     for root in roots:
         path = [(x - STUMP[0], y - STUMP[1], surface(x, y) + lift - base) for x, y, lift, _ in root]
-        rings = len(mesh.points)
+        first = len(mesh.points)
         sides = 12
         add_tube(mesh, path, [r for _, _, _, r in root], sides)
-        for index in range(rings, len(mesh.points)):
-            x, y, z = mesh.points[index]
-            centre = path[(index - rings) // sides][2]
-            mesh.points[index] = (x, y, centre + (z - centre) * 0.58)
+        length = 0.0
+        for row, point in enumerate(path):
+            if row:
+                length += math.dist(path[row - 1], point)
+            ring = first + row * sides
+            v = length / 430.0
+            seams[ring] = v
+            for side in range(sides):
+                index = ring + side
+                x, y, z = mesh.points[index]
+                mesh.points[index] = (x, y, point[2] + (z - point[2]) * 0.58)
+                mesh.uvs[index] = (side / sides, v)
     mesh.smooth_normals()
+    # Duplicate the UV seam after smoothing so both sides keep the same normal.
+    seam_vertices = {i: mesh.add_vertex(mesh.points[i], (1.0, v), mesh.normals[i])
+                     for i, v in seams.items()}
+    mesh.triangles = [
+        tuple(seam_vertices.get(i, i) for i in face)
+        if any(mesh.uvs[i][0] > 0.9 for i in face) else face
+        for face in mesh.triangles
+    ]
     return mesh
+
+
+def build_root_bark():
+    bark = fresh_material(ROOT_BARK.rsplit("/", 1)[-1])
+    uv = node(bark, unreal.MaterialExpressionTextureCoordinate)
+    trunk = "/Game/StyleHex_Studio/Free_Packs/FREE_Stylized_Forest_Sample/Textures/Trees/T_Tree_Trunk_Broadleaf_"
+    grain = texture(bark, trunk + "BC", uv)
+    # Wrap the noise around the root so the bark ridges meet across the UV seam.
+    ridge_uv = unreal.CustomInput()
+    ridge_uv.set_editor_property("input_name", "UV")
+    ridges = node(bark, unreal.MaterialExpressionCustom, output_type=unreal.CustomMaterialOutputType.CMOT_FLOAT3,
+                  inputs=[ridge_uv],
+                  code="float angle = UV.x * 6.2831853; return float3(cos(angle) * 3, sin(angle) * 3, UV.y * 1.35);")
+    assert library.connect_material_expressions(uv, "", ridges, "UV")
+    weathering = node(bark, unreal.MaterialExpressionNoise, scale=1.0, levels=2,
+                      noise_function=unreal.NoiseFunction.NOISEFUNCTION_SIMPLEX_TEX,
+                      output_min=0.0, output_max=1.0, turbulence=False)
+    assert library.connect_material_expressions(ridges, "", weathering, "")
+    tint = blend(bark, colour(bark, 0.12, 0.105, 0.087), colour(bark, 0.43, 0.36, 0.28), weathering)
+    output(bark, combine(bark, unreal.MaterialExpressionMultiply, grain, tint), unreal.MaterialProperty.MP_BASE_COLOR)
+    normal = node(bark, unreal.MaterialExpressionTextureSample, texture=unreal.load_asset(trunk + "N"),
+                  sampler_type=unreal.MaterialSamplerType.SAMPLERTYPE_NORMAL)
+    library.connect_material_expressions(uv, "", normal, "UVs")
+    output(bark, normal, unreal.MaterialProperty.MP_NORMAL)
+    output(bark, number(bark, 0.92), unreal.MaterialProperty.MP_ROUGHNESS)
+    return finish(bark)
 
 
 def build():
@@ -95,6 +142,7 @@ def build():
 
     asset = wildwood.import_trail_mesh(RIVERBANK, blend_source(RIVERBANK))
     root_asset = import_generated_mesh("SM_LS_Trail05Roots", root_mesh(surface), solid=True)
+    bark = unreal.load_asset(ROOT_BARK) or build_root_bark()
     with unreal.ScopedEditorTransaction("Rework Trail 05 riverbank"):
         if old:
             assert wildwood.actors.destroy_actors(old)
@@ -103,7 +151,7 @@ def build():
         hint.set_editor_property("message", unreal.Text(ROOT_HINT))
 
         wildwood.collide(wildwood.mesh_actor(root_asset, *STUMP, surface(*STUMP), FOLDER,
-                                            material=wildwood.material("M_LS_Bark"), label="Fallen Riverbank Tree and Roots"))
+                                            material=bark, label="Fallen Riverbank Tree and Roots"))
 
         # Keep the trees in the witch's restoration group while shifting the trunks out of the travel lane.
         for label, x, y in (("RiverCurseTree_4", 15920, -2100), ("RiverCurseTree_6", 18856, -575)):
