@@ -284,6 +284,8 @@ void ALSGameMode::BeginPlay()
 		EnableWildwoodRiverHazard(GetWorld());
 		const FVector Trail2Crossing(-12450.0, -6860.0, 3170.0);
 		const FRotator TrailHeading(0.0, 22.0, 0.0);
+		const FVector UpperCrossing(-10740.0, -5360.0, 3170.0);
+		const FRotator UpperTrailHeading(0.0, 49.0, 0.0);
 		const FName SoftTrailEdge(TEXT("LS_SoftTrailEdge"));
 		// Keep the river opening anchored to Trail 2 when designers move or copy gusts.
 		for (TActorIterator<AActor> It(GetWorld()); It; ++It)
@@ -292,8 +294,12 @@ void ALSGameMode::BeginPlay()
 			{
 				continue;
 			}
-			const FVector Local = TrailHeading.UnrotateVector(It->GetActorLocation() - Trail2Crossing);
-			if (FMath::Abs(Local.X) < 1420.f && Local.Y > 275.f && Local.Y < 1150.f)
+			const FVector Edge = It->GetActorLocation();
+			const FVector Local = TrailHeading.UnrotateVector(Edge - Trail2Crossing);
+			const FVector Upper = UpperTrailHeading.UnrotateVector(Edge - UpperCrossing);
+			const bool bLowerRiverEdge = FMath::Abs(Local.X) < 1420.f && Local.Y > 275.f && Local.Y < 1150.f;
+			const bool bUpperRiverEdge = Upper.X > -800.f && Upper.X < 2350.f && Upper.Y > 275.f && Upper.Y < 950.f;
+			if (bLowerRiverEdge || bUpperRiverEdge)
 			{
 				It->SetActorEnableCollision(false);
 			}
