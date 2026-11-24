@@ -33,9 +33,6 @@ namespace
 	const FName SaturationParameter(TEXT("Saturation"));
 	const FName CloudAlbedoParameter(TEXT("Cloud_AlbedoColor"));
 	const FName CloudCoverageParameter(TEXT("Cloud_GlobalCoverage"));
-	// Clear-day values from /Game/Wildwood/Map/Wildwood.
-	constexpr float OriginalWildwoodExposureBias = 2.f;
-	constexpr float OriginalWildwoodSkyIntensity = 2.f;
 }
 
 ARestorationDriver::ARestorationDriver()
@@ -115,7 +112,7 @@ void ARestorationDriver::BeginPlay()
 		if (bStormGrade)
 		{
 			// Read before the overrides go on, so the storm fades back to the level's own look (or the engine default).
-			ClearExposureBias = FullColourNoteCount > 0 ? OriginalWildwoodExposureBias : Settings.AutoExposureBias;
+			ClearExposureBias = Settings.AutoExposureBias;
 			ClearVignette = Settings.VignetteIntensity;
 			ClearGrain = Settings.bOverride_FilmGrainIntensity ? Settings.FilmGrainIntensity : 0.f;
 			ClearFringe = Settings.SceneFringeIntensity;
@@ -220,12 +217,7 @@ void ARestorationDriver::UpdateWeather(float DeltaSeconds)
 	if (bStormGrade)
 	{
 		if (Sun) Sun->GetLightComponent()->SetIntensity(ClearSunIntensity * FMath::Lerp(1.f, StormSunScale, Storm) + FlashSunIntensity * Flash);
-		if (SkyLight)
-		{
-			const float ClearIntensity = FullColourNoteCount > 0 ? OriginalWildwoodSkyIntensity : ClearSkyIntensity;
-			const float SkyIntensity = FMath::Lerp(ClearIntensity, ClearSkyIntensity * StormSkyScale, Storm);
-			SkyLight->GetLightComponent()->SetIntensity(SkyIntensity + FlashSkyIntensity * Flash);
-		}
+		if (SkyLight) SkyLight->GetLightComponent()->SetIntensity(ClearSkyIntensity * FMath::Lerp(1.f, StormSkyScale, Storm) + FlashSkyIntensity * Flash);
 
 		// Rain and leaves follow the camera. Deactivating lets the drops already falling land, so the rain eases off.
 		if (const APlayerCameraManager* Camera = UGameplayStatics::GetPlayerCameraManager(this, 0))
