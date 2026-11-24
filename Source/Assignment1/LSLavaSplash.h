@@ -13,6 +13,7 @@
 
 class UMaterialInterface;
 class UPointLightComponent;
+class USoundBase;
 class UStaticMesh;
 class UStaticMeshComponent;
 
@@ -39,6 +40,9 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<UMaterialInterface> WaterDropletMaterial;
+
+	UPROPERTY()
+	TObjectPtr<USoundBase> WaterImpactSound;
 
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<UStaticMeshComponent>> Droplets;

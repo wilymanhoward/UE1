@@ -18,6 +18,8 @@ The 42-second opening mix uses excerpts of the music and field recordings below.
 - “Tree branch_1(leaves, rustle).WAV” by o_ciz, [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/). Trimmed and mixed for tree regrowth. [Freesound](https://freesound.org/people/o_ciz/sounds/475425/)
 - “Bird Whistling, Robin, Single, 13.wav” by InspectorJ (www.jshaw.co.uk), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Trimmed and mixed for tree regrowth. [Freesound](https://freesound.org/people/InspectorJ/sounds/456440/)
 - “Leaves rustle in the wind” by Cinetony and “Forest Bird Sounds” by Snudio_Records, both [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/). Excerpts from the public HQ previews were filtered, faded, and mixed for the Life Note tree restoration cue in Wildwood. [Forest breeze](https://freesound.org/people/Cinetony/sounds/575380/) · [Forest birdsong](https://freesound.org/people/Snudio_Records/sounds/267491/)
+- “wind_forest_08_strong_l_01.wav” by teadrinker, [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/). A gust excerpt from the recorded trees was filtered and faded to follow the Trail 2 obstacle cycle. [Freesound recording](https://freesound.org/people/teadrinker/sounds/403051/)
+- “Water splash” by nilbul, [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/). The recorded rock splash was trimmed and level-adjusted for player contact with the Wildwood river. [Freesound recording](https://freesound.org/people/nilbul/sounds/404829/)
 
 ## Player movement effects
 

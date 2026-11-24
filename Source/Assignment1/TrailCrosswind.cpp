@@ -5,8 +5,10 @@
 #include "Components/StaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
 #include "Engine/World.h"
+#include "Kismet/GameplayStatics.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "SeedBall.h"
+#include "Sound/SoundBase.h"
 #include "UObject/ConstructorHelpers.h"
 
 namespace
@@ -34,6 +36,9 @@ ATrailCrosswind::ATrailCrosswind()
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> Plane(TEXT("/Engine/BasicShapes/Plane.Plane"));
 	static ConstructorHelpers::FObjectFinder<UMaterialInterface> WindMaterial(
 		TEXT("/Game/LastSeed/Materials/M_LS_TrailCrosswind.M_LS_TrailCrosswind"));
+	static ConstructorHelpers::FObjectFinder<USoundBase> WindAudio(
+		TEXT("/Game/LastSeed/Audio/SFX_LS_TrailCrosswind.SFX_LS_TrailCrosswind"));
+	GustSound = WindAudio.Object;
 
 	for (int32 Index = 0; Index < CrosswindLeafCount + CrosswindStreakCount; ++Index)
 	{
@@ -70,6 +75,12 @@ void ATrailCrosswind::Tick(float DeltaSeconds)
 	Super::Tick(DeltaSeconds);
 	const float Period = CrosswindOff + CrosswindGust;
 	const float Age = FMath::Fmod(GetWorld()->GetTimeSeconds(), Period) - (CrosswindOff - CrosswindWarning);
+	const bool bGustAudible = Age >= 0.f;
+	if (bGustAudible && !bGustAudioStarted && GustSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, GustSound, GetActorLocation(), 0.72f);
+	}
+	bGustAudioStarted = bGustAudible;
 	for (int32 Index = 0; Index < WindShapes.Num(); ++Index)
 	{
 		UStaticMeshComponent* Shape = WindShapes[Index];

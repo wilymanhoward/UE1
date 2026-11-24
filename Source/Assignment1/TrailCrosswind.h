@@ -5,6 +5,7 @@
 #include "TrailCrosswind.generated.h"
 
 class UStaticMeshComponent;
+class USoundBase;
 
 UCLASS()
 class ASSIGNMENT1_API ATrailCrosswind : public ALSVolumeBase
@@ -21,4 +22,9 @@ protected:
 private:
 	UPROPERTY()
 	TArray<TObjectPtr<UStaticMeshComponent>> WindShapes;
+
+	UPROPERTY()
+	TObjectPtr<USoundBase> GustSound;
+
+	bool bGustAudioStarted = false;
 };

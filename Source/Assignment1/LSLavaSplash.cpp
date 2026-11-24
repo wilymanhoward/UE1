@@ -4,8 +4,10 @@
 
 #include "Components/PointLightComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "Kismet/GameplayStatics.h"
 #include "LSDefaultMeshes.h"
 #include "Materials/MaterialInterface.h"
+#include "Sound/SoundBase.h"
 #include "UObject/ConstructorHelpers.h"
 
 namespace
@@ -29,6 +31,9 @@ ALSLavaSplash::ALSLavaSplash()
 	static ConstructorHelpers::FObjectFinder<UMaterialInterface> WaterMaterial(
 		TEXT("/Game/LastSeed/Materials/M_LS_WaterDroplet.M_LS_WaterDroplet"));
 	WaterDropletMaterial = WaterMaterial.Object;
+	static ConstructorHelpers::FObjectFinder<USoundBase> WaterAudio(
+		TEXT("/Game/LastSeed/Audio/SFX_LS_RiverSplash.SFX_LS_RiverSplash"));
+	WaterImpactSound = WaterAudio.Object;
 }
 
 void ALSLavaSplash::Burst(UMaterialInterface* DropletMaterial, float Size)
@@ -43,6 +48,10 @@ void ALSLavaSplash::Burst(UMaterialInterface* DropletMaterial, float Size, bool 
 	FlashIntensity = bWater ? 0.f : 60000.f * Size;
 	Flash->SetIntensity(FlashIntensity);
 	SetLifeSpan(Lifetime + 0.1f);
+	if (bWater && WaterImpactSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, WaterImpactSound, GetActorLocation());
+	}
 
 	for (int32 Index = 0; Index < DropletCount; ++Index)
 	{
