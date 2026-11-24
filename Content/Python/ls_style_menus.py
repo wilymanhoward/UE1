@@ -53,6 +53,51 @@ def menu_image(widget, name, width=None):
     widget.set_brush(brush)
 
 
+def style_level_select(w):
+    panel = w['LevelSelectPanel']
+    panel.slot.set_horizontal_alignment(unreal.HorizontalAlignment.H_ALIGN_LEFT)
+    panel.slot.set_vertical_alignment(unreal.VerticalAlignment.V_ALIGN_BOTTOM)
+    panel.slot.set_padding(unreal.Margin(90, 0, 24, 92))
+    panel.set_width_override(430)
+    panel.clear_height_override()
+    frame = w['LevelPanelFrame']
+    brush = frame.get_editor_property('background')
+    brush.set_editor_property('draw_as', unreal.SlateBrushDrawType.NO_DRAW_TYPE)
+    frame.set_editor_property('background', brush)
+    frame.set_padding(unreal.Margin(0))
+
+    title = w['LevelTitle']
+    title.set_text('LEVEL SELECT')
+    font(title, 17, True)
+    title.set_color_and_opacity(unreal.SlateColor(GOLD))
+    title.set_editor_property('justification', unreal.TextJustify.LEFT)
+    title.slot.set_horizontal_alignment(unreal.HorizontalAlignment.H_ALIGN_FILL)
+    title.slot.set_padding(unreal.Margin(12, 0, 0, 12))
+    w['LevelDivider'].set_visibility(unreal.SlateVisibility.COLLAPSED)
+
+    for name, label in (('Level1', 'I  ·  WILDWOOD'), ('Level2', 'II  ·  EMBERWOOD')):
+        row, heading, best = w[name + 'Button'], w[name + 'Name'], w[name + 'BestText']
+        button(row)
+        row.slot.set_horizontal_alignment(unreal.HorizontalAlignment.H_ALIGN_FILL)
+        row.slot.set_padding(unreal.Margin(0, 0, 0, 10))
+        row.get_content().slot.set_horizontal_alignment(unreal.HorizontalAlignment.H_ALIGN_FILL)
+        row.get_content().slot.set_padding(unreal.Margin(12, 0, 10, 10))
+        heading.set_text(label)
+        font(heading, 28, True)
+        font(best, 16)
+        for text in (heading, best):
+            text.set_editor_property('justification', unreal.TextJustify.LEFT)
+            text.slot.set_horizontal_alignment(unreal.HorizontalAlignment.H_ALIGN_FILL)
+        best.set_editor_property('auto_wrap_text', True)
+
+    back = w['LevelSelectBackButton']
+    button(back)
+    back.slot.set_horizontal_alignment(unreal.HorizontalAlignment.H_ALIGN_FILL)
+    back.slot.set_padding(unreal.Margin(0, 6, 0, 0))
+    w['LevelBackLabel'].set_editor_property('justification', unreal.TextJustify.LEFT)
+    w['LevelBackLabel'].slot.set_padding(unreal.Margin(12, 0, 0, 8))
+
+
 def style_title_menu():
     bp = unreal.load_asset('/Game/UI/WBP_MainMenu')
     w = widgets_for(bp)
@@ -115,8 +160,7 @@ def style_title_menu():
         label.slot.set_padding(unreal.Margin(12, 0, 0, 0))
         w[name + 'Button'].slot.set_padding(unreal.Margin(0, 0, 0, 5))
     w['PlayLabel'].set_text('PLAY')
-    w['Level1Name'].set_text('I  ·  WILDWOOD')
-    w['Level2Name'].set_text('II  ·  EMBERWOOD')
+    style_level_select(w)
     w['PetalTotal'].slot.set_padding(unreal.Margin(0, 17, 0, 0))
     font(w['TotalPetalsText'], 16)
     unreal.BlueprintEditorLibrary.compile_blueprint(bp)

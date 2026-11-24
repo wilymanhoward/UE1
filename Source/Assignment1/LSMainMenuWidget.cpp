@@ -3,7 +3,7 @@
 #include "LSMainMenuWidget.h"
 
 #include "Components/Button.h"
-#include "Components/SizeBox.h"
+#include "Components/PanelWidget.h"
 #include "Components/TextBlock.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
@@ -44,22 +44,35 @@ void ULSMainMenuWidget::NativeConstruct()
 void ULSMainMenuWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 {
 	Super::NativeTick(MyGeometry, InDeltaTime);
-	if (!MainPanel->IsVisible())
+	const auto Highlight = [this](UButton* Button)
 	{
-		return;
-	}
-
-	for (UButton* Button : { PlayButton.Get(), LevelSelectButton.Get(), ControlsButton.Get(), QuitButton.Get() })
-	{
-		const bool bActive = Button->IsHovered() || Button->HasKeyboardFocus() || Button->HasUserFocus(GetOwningPlayer());
-		if (USizeBox* Size = Cast<USizeBox>(Button->GetContent()))
+		const bool bActive = Button->GetIsEnabled()
+			&& (Button->IsHovered() || Button->HasKeyboardFocus() || Button->HasUserFocus(GetOwningPlayer()));
+		UWidget* LabelWidget = Button->GetContent();
+		if (UPanelWidget* Panel = Cast<UPanelWidget>(LabelWidget))
 		{
-			if (UTextBlock* Label = Cast<UTextBlock>(Size->GetContent()))
-			{
-				Label->SetColorAndOpacity(FSlateColor(bActive ? FLinearColor(1.f, .82f, .36f) : FLinearColor(.92f, .91f, .84f)));
-			}
+			LabelWidget = Panel->GetChildAt(0);
+		}
+		if (UTextBlock* Label = Cast<UTextBlock>(LabelWidget))
+		{
+			Label->SetColorAndOpacity(FSlateColor(bActive ? FLinearColor(1.f, .82f, .36f) : FLinearColor(.92f, .91f, .84f)));
 		}
 		Button->SetBackgroundColor(FLinearColor(1.f, 1.f, 1.f, bActive ? 1.f : 0.f));
+	};
+
+	if (MainPanel->IsVisible())
+	{
+		for (UButton* Button : { PlayButton.Get(), LevelSelectButton.Get(), ControlsButton.Get(), QuitButton.Get() })
+		{
+			Highlight(Button);
+		}
+	}
+	else if (LevelSelectPanel->IsVisible())
+	{
+		for (UButton* Button : { Level1Button.Get(), Level2Button.Get(), LevelSelectBackButton.Get() })
+		{
+			Highlight(Button);
+		}
 	}
 }
 
