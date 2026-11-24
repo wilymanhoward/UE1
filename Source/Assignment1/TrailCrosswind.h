@@ -17,8 +17,14 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type Reason) override;
 
 private:
+	void SetRiverEdgeOpen(bool bOpen);
+
 	UPROPERTY()
 	TArray<TObjectPtr<UStaticMeshComponent>> WindShapes;
+
+	TArray<TWeakObjectPtr<AActor>> RiverEdges;
+	bool bRiverEdgeOpen = false;
 };
