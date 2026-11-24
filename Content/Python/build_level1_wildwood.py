@@ -920,7 +920,8 @@ def place(entry, plates):
             from ls_stone_unlock import configure
             configure(actor)
         else:
-            fit_mesh(keep_coloured(actor), mesh("SM_Flowers_White_03"), 160.0, -80.0)
+            from ls_dandelion_unlock import configure
+            configure(actor)
     elif kind == "block":
         name = entry.get("name", "Block")  # Extras are named apart, so rebuilding the hand-placed rocks never touches them.
         # Rocks side by side across the width, each kept close to its own proportions, solid as their own shape.

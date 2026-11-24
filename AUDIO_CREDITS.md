@@ -20,6 +20,7 @@ The 42-second opening mix uses excerpts of the music and field recordings below.
 - “Leaves rustle in the wind” by Cinetony and “Forest Bird Sounds” by Snudio_Records, both [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/). Excerpts from the public HQ previews were filtered, faded, and mixed for the Life Note tree restoration cue in Wildwood. [Forest breeze](https://freesound.org/people/Cinetony/sounds/575380/) · [Forest birdsong](https://freesound.org/people/Snudio_Records/sounds/267491/)
 - “wind_forest_08_strong_l_01.wav” by teadrinker, [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/). A gust excerpt from the recorded trees was filtered and faded to follow the Trail 2 obstacle cycle. [Freesound recording](https://freesound.org/people/teadrinker/sounds/403051/)
 - “Water splash” by nilbul, [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/). The recorded rock splash was trimmed and level-adjusted for player contact with the Wildwood river. [Freesound recording](https://freesound.org/people/nilbul/sounds/404829/)
+- “Wind_Chimes_single.wav” by jcdecha, [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/). The Dandelion unlock uses a 0.31–2.13 second excerpt of the mark tree recording, trimmed, faded, and peak-normalised to −11 dBFS. [Freesound recording](https://freesound.org/people/jcdecha/sounds/235463/)
 
 ## Player movement effects
 
