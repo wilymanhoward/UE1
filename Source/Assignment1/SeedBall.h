@@ -90,6 +90,8 @@ public:
 
 	// --- Death and checkpoints ---
 
+	static const FName LethalWaterTag;
+
 	/** Plays the death effect, disables control and schedules a respawn. Does nothing if already dead. */
 	UFUNCTION(BlueprintCallable, Category = "Seed|Death")
 	void Die();

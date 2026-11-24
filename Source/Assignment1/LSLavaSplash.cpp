@@ -5,6 +5,8 @@
 #include "Components/PointLightComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "LSDefaultMeshes.h"
+#include "Materials/MaterialInterface.h"
+#include "UObject/ConstructorHelpers.h"
 
 namespace
 {
@@ -24,12 +26,21 @@ ALSLavaSplash::ALSLavaSplash()
 	Flash->SetIntensity(0.f);
 
 	DropletMesh = LSDefaultMeshes::Sphere();
+	static ConstructorHelpers::FObjectFinder<UMaterialInterface> WaterMaterial(
+		TEXT("/Game/LastSeed/Materials/M_LS_WaterDroplet.M_LS_WaterDroplet"));
+	WaterDropletMaterial = WaterMaterial.Object;
 }
 
 void ALSLavaSplash::Burst(UMaterialInterface* DropletMaterial, float Size)
 {
+	Burst(DropletMaterial, Size, false);
+}
+
+void ALSLavaSplash::Burst(UMaterialInterface* DropletMaterial, float Size, bool bWater)
+{
 	Size = FMath::Max(Size, 0.1f);
-	FlashIntensity = 60000.f * Size;
+	Lifetime = bWater ? 1.0f : 1.4f;
+	FlashIntensity = bWater ? 0.f : 60000.f * Size;
 	Flash->SetIntensity(FlashIntensity);
 	SetLifeSpan(Lifetime + 0.1f);
 
@@ -44,13 +55,13 @@ void ALSLavaSplash::Burst(UMaterialInterface* DropletMaterial, float Size)
 
 		UStaticMeshComponent* Droplet = NewObject<UStaticMeshComponent>(this);
 		Droplet->SetStaticMesh(DropletMesh);
-		Droplet->SetMaterial(0, DropletMaterial);
+		Droplet->SetMaterial(0, bWater ? WaterDropletMaterial.Get() : DropletMaterial);
 		Droplet->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 		Droplet->SetCastShadow(false);
 		Droplet->SetupAttachment(Flash);
 		Droplet->SetUsingAbsoluteLocation(true);
 		Droplet->SetWorldLocation(GetActorLocation() + Direction * 20.f * Size);
-		const float Scale = FMath::FRandRange(0.12f, 0.3f) * Size;
+		const float Scale = (bWater ? FMath::FRandRange(0.075f, 0.19f) : FMath::FRandRange(0.12f, 0.3f)) * Size;
 		Droplet->SetWorldScale3D(FVector(Scale));
 		Droplet->RegisterComponent();
 
@@ -83,7 +94,7 @@ void ALSLavaSplash::Tick(float DeltaSeconds)
 		const float Stretch = 1.f + FMath::Min(Velocities[Index].Size() / 900.f, 1.2f);
 		Droplet->SetWorldRotation(Velocities[Index].Rotation() + FRotator(-90.f, 0.f, 0.f));
 		Droplet->SetWorldScale3D(FVector(1.f, 1.f, Stretch) * BaseScales[Index] * FMath::Sqrt(Left));
-		// Back into the lava it came from.
+		// Hide droplets when they fall below the surface.
 		if (Location.Z < SurfaceZ - 10.f && Velocities[Index].Z < 0.f)
 		{
 			Droplet->SetVisibility(false);

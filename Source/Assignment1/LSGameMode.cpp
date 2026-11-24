@@ -6,13 +6,16 @@
 #include "Camera/CameraActor.h"
 #include "Camera/CameraComponent.h"
 #include "Components/PrimitiveComponent.h"
+#include "Components/StaticMeshComponent.h"
 #include "Engine/GameViewportClient.h"
 #include "Engine/LocalPlayer.h"
+#include "Engine/StaticMeshActor.h"
 #include "Engine/World.h"
 #include "Engine/Texture2D.h"
 #include "EngineUtils.h"
 #include "GoldenPetal.h"
 #include "Kismet/GameplayStatics.h"
+#include "KillVolume.h"
 #include "LevelGoal.h"
 #include "LevelSequence.h"
 #include "LSGameInstance.h"
@@ -33,6 +36,36 @@
 
 namespace
 {
+	void EnableWildwoodRiverHazard(UWorld* World)
+	{
+		const UMaterialInterface* RiverMaterial = FindObject<UMaterialInterface>(nullptr,
+			TEXT("/Game/Wildwood/Material/MI_River_01.MI_River_01"));
+		if (!RiverMaterial)
+		{
+			return;
+		}
+
+		for (TActorIterator<AStaticMeshActor> River(World); River; ++River)
+		{
+			UStaticMeshComponent* Surface = River->GetStaticMeshComponent();
+			if (Surface->GetMaterial(0) != RiverMaterial)
+			{
+				continue;
+			}
+			Surface->ComponentTags.AddUnique(ASeedBall::LethalWaterTag);
+			// Replace the broad river fall triggers with contact at the surface.
+			const FBox RiverBounds = Surface->Bounds.GetBox();
+			for (TActorIterator<AKillVolume> Volume(World); Volume; ++Volume)
+			{
+				if (!Volume->LavaSurface && !Volume->SplashMaterial && Volume->BurnEffects.IsEmpty() && !Volume->BurnSound
+					&& Volume->GetComponentsBoundingBox().Intersect(RiverBounds))
+				{
+					Volume->SetActorEnableCollision(false);
+				}
+			}
+		}
+	}
+
 	struct FEndingCard
 	{
 		const TCHAR* Heading;
@@ -248,6 +281,7 @@ void ALSGameMode::BeginPlay()
 	}
 	else if (UGameplayStatics::GetCurrentLevelName(this) == TEXT("L_Level1_Wildwood"))
 	{
+		EnableWildwoodRiverHazard(GetWorld());
 		const FVector Trail2Crossing(-12450.0, -6860.0, 3170.0);
 		const FRotator TrailHeading(0.0, 22.0, 0.0);
 		const FName SoftTrailEdge(TEXT("LS_SoftTrailEdge"));

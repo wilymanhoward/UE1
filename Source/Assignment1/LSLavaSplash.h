@@ -1,4 +1,4 @@
-// Last Seed - a one-shot burst of molten droplets where the ball falls into lava.
+// Last Seed - a one-shot burst of droplets where the ball falls into lava or water.
 //
 // Purpose: makes a lava death read as a splash. Glowing blobs are thrown up in a crown, fall back under gravity
 // and shrink away, while an orange flash lights the spot. It removes itself when done.
@@ -28,6 +28,7 @@ public:
 
 	/** Spawns the droplets. Call once, right after spawning. */
 	void Burst(UMaterialInterface* DropletMaterial, float Size);
+	void Burst(UMaterialInterface* DropletMaterial, float Size, bool bWater);
 
 private:
 	UPROPERTY(VisibleAnywhere, Category = "Components")
@@ -35,6 +36,9 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<UStaticMesh> DropletMesh;
+
+	UPROPERTY()
+	TObjectPtr<UMaterialInterface> WaterDropletMaterial;
 
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<UStaticMeshComponent>> Droplets;

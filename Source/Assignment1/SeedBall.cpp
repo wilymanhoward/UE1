@@ -14,6 +14,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "LSGameInstance.h"
 #include "LSInteractable.h"
+#include "LSLavaSplash.h"
 #include "Materials/MaterialInterface.h"
 #include "NiagaraComponent.h"
 #include "NiagaraFunctionLibrary.h"
@@ -28,6 +29,8 @@ namespace
 	constexpr int32 MaxEmberwoodArcs = 6;
 	constexpr float EmberwoodPickupPulseSeconds = 0.32f;
 }
+
+const FName ASeedBall::LethalWaterTag(TEXT("LS_LethalWater"));
 
 ASeedBall::ASeedBall()
 {
@@ -187,6 +190,19 @@ void ASeedBall::HandleBeginOverlap(UPrimitiveComponent* OverlappedComponent, AAc
 void ASeedBall::HandleHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp,
 	FVector NormalImpulse, const FHitResult& Hit)
 {
+	if (bIsDead)
+	{
+		return;
+	}
+	if (OtherComp && OtherComp->ComponentHasTag(LethalWaterTag))
+	{
+		if (ALSLavaSplash* Splash = GetWorld()->SpawnActor<ALSLavaSplash>(Hit.ImpactPoint, FRotator::ZeroRotator))
+		{
+			Splash->Burst(nullptr, 0.8f, true);
+		}
+		Die();
+		return;
+	}
 	if (ILSInteractable* Interactable = Cast<ILSInteractable>(OtherActor))
 	{
 		Interactable->OnBallHit(this, PreImpactVelocity);
