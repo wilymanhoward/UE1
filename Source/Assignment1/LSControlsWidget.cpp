@@ -8,21 +8,54 @@
 #include "Components/TextBlock.h"
 #include "Input/Events.h"
 #include "LSGameInstance.h"
+#include "Rendering/DrawElements.h"
 #include "Widgets/Layout/SBorder.h"
 #include "Widgets/Layout/SBox.h"
 #include "Widgets/Layout/SScaleBox.h"
 #include "Widgets/SBoxPanel.h"
+#include "Widgets/SCanvas.h"
+#include "Widgets/SLeafWidget.h"
+#include "Widgets/SOverlay.h"
 #include "Widgets/Text/STextBlock.h"
 
 namespace
 {
-	const FLinearColor Gold(.94f, .77f, .36f);
-	const FLinearColor Ivory(.92f, .91f, .84f);
-	const FLinearColor Muted(.54f, .59f, .54f);
-	const FSlateRoundedBoxBrush KeyboardCase(FLinearColor(.025f, .038f, .03f), 14.f, FLinearColor(.26f, .31f, .24f), 1.f);
-	const FSlateRoundedBoxBrush QuietKey(FLinearColor(.034f, .05f, .04f), 6.f, FLinearColor(.19f, .24f, .19f), 1.f);
-	const FSlateRoundedBoxBrush ActiveKey(FLinearColor(.13f, .10f, .04f), 6.f, FLinearColor(.64f, .50f, .23f), 1.f);
-	const FSlateRoundedBoxBrush MouseBody(FLinearColor(.025f, .038f, .03f), 38.f, FLinearColor(.53f, .51f, .35f), 1.f);
+	const FLinearColor ControlWhite = FLinearColor::White;
+	const FLinearColor Muted(1.f, 1.f, 1.f, .52f);
+	const FVector2D KeyboardOrigin(185, 126);
+
+	class SControlArrows : public SLeafWidget
+	{
+	public:
+		SLATE_BEGIN_ARGS(SControlArrows) {}
+		SLATE_END_ARGS()
+
+		void Construct(const FArguments& InArgs, TArray<TArray<FVector2f>> InPaths)
+		{
+			Paths = MoveTemp(InPaths);
+		}
+
+		virtual FVector2D ComputeDesiredSize(float) const override { return FVector2D::ZeroVector; }
+
+		virtual int32 OnPaint(const FPaintArgs&, const FGeometry& Geometry, const FSlateRect&,
+			FSlateWindowElementList& Elements, int32 Layer, const FWidgetStyle&, bool) const override
+		{
+			const FLinearColor LineColor(1.f, 1.f, 1.f, .76f);
+			for (const TArray<FVector2f>& Path : Paths)
+			{
+				const FVector2f Tip = Path.Last();
+				const FVector2f Back = (Path[Path.Num() - 2] - Tip).GetSafeNormal();
+				const FVector2f Wing(-Back.Y, Back.X);
+				const TArray<FVector2f> Head = { Tip + 10.f * Back + 4.f * Wing, Tip, Tip + 10.f * Back - 4.f * Wing };
+				FSlateDrawElement::MakeLines(Elements, Layer, Geometry.ToPaintGeometry(), Path, ESlateDrawEffect::None, LineColor, true, 1.5f);
+				FSlateDrawElement::MakeLines(Elements, Layer, Geometry.ToPaintGeometry(), Head, ESlateDrawEffect::None, LineColor, true, 1.5f);
+			}
+			return Layer;
+		}
+
+	private:
+		TArray<TArray<FVector2f>> Paths;
+	};
 
 	struct FKeyboardKey
 	{
@@ -38,15 +71,18 @@ namespace
 
 	TSharedRef<SWidget> DrawKey(const FText& Name, const FSlateFontInfo& Font, bool bActive, float Width, float Height)
 	{
+		static const FSlateRoundedBoxBrush KeyOutline(FLinearColor::Transparent, 5.f, FLinearColor(1.f, 1.f, 1.f, .52f), 1.15f);
+		static const FSlateRoundedBoxBrush BoundKeyOutline(FLinearColor::Transparent, 5.f, ControlWhite, 1.7f);
 		return SNew(SBox).WidthOverride(Width).HeightOverride(Height)
 			[
-				SNew(SBorder).BorderImage(bActive ? &ActiveKey : &QuietKey).HAlign(HAlign_Center).VAlign(VAlign_Center)
-				[SNew(STextBlock).Text(Name).Font(Font).ColorAndOpacity(bActive ? Gold : Muted)]
+				SNew(SBorder).BorderImage(bActive ? &BoundKeyOutline : &KeyOutline).HAlign(HAlign_Center).VAlign(VAlign_Center)
+				[SNew(STextBlock).Text(Name).Font(Font).ColorAndOpacity(bActive ? ControlWhite : Muted)]
 			];
 	}
 
-	TSharedRef<SWidget> DrawKeyboard(const FSlateFontInfo& Font, bool bStone, bool bDandelion)
+	TSharedRef<SWidget> DrawKeyboard(const FSlateFontInfo& Font, bool bStone, bool bDandelion, TMap<FString, FBox2D>& KeyBounds)
 	{
+		static const FSlateRoundedBoxBrush KeyboardOutline(FLinearColor::Transparent, 14.f, ControlWhite, 2.f);
 		const bool bForms = bStone || bDandelion;
 		const TSet<FString> BasicKeys = { TEXT("ESC"), TEXT("W"), TEXT("A"), TEXT("S"), TEXT("D"), TEXT("SPACE") };
 		const TArray<TArray<FKeyboardKey>> Rows = {
@@ -60,6 +96,7 @@ namespace
 		for (int32 Row = 0; Row < Rows.Num(); ++Row)
 		{
 			const TSharedRef<SHorizontalBox> Keys = SNew(SHorizontalBox);
+			float X = KeyboardOrigin.X + 18.f;
 			for (int32 Index = 0; Index < Rows[Row].Num(); ++Index)
 			{
 				const FKeyboardKey& Key = Rows[Row][Index];
@@ -68,55 +105,115 @@ namespace
 					|| (bForms && (Name == TEXT("1") || Name == TEXT("Q") || Name == TEXT("E")))
 					|| (bStone && (Name == TEXT("2") || (Row == 4 && Index == 0)))
 					|| (bDandelion && Name == TEXT("3"));
+				const float Width = 56.f * Key.Units - 6.f;
+				const FVector2D Corner(X, KeyboardOrigin.Y + 18.f + Row * 53.f);
+				if (!KeyBounds.Contains(Name))
+				{
+					KeyBounds.Add(Name, FBox2D(Corner, Corner + FVector2D(Width, 47.f)));
+				}
 				Keys->AddSlot().AutoWidth().Padding(3.f)
-					[DrawKey(FText::FromString(Name), Font, bActive, 56.f * Key.Units - 6.f, 47.f)];
+					[DrawKey(FText::FromString(Name), Font, bActive, Width, 47.f)];
+				X += Width + 6.f;
 			}
 			Keyboard->AddSlot().AutoHeight()[Keys];
 		}
 
-		return SNew(SHorizontalBox)
-			+ SHorizontalBox::Slot().AutoWidth()
-			[SNew(SBorder).BorderImage(&KeyboardCase).Padding(15.f)[Keyboard]]
-			+ SHorizontalBox::Slot().AutoWidth().Padding(32.f, 0.f, 0.f, 0.f).VAlign(VAlign_Center)
-			[
-				SNew(SBox).WidthOverride(130.f).HeightOverride(190.f)
-				[
-					SNew(SBorder).BorderImage(&MouseBody).Padding(11.f, 24.f)
-					[
-						SNew(SVerticalBox)
-						+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center)
-						[
-							SNew(SHorizontalBox)
-							+ SHorizontalBox::Slot().AutoWidth().Padding(0.f, 0.f, 4.f, 0.f)
-							[DrawKey(INVTEXT("LMB"), Font, bStone, 47.f, 57.f)]
-							+ SHorizontalBox::Slot().AutoWidth()
-							[DrawKey(INVTEXT("RMB"), Font, false, 47.f, 57.f)]
-						]
-						+ SVerticalBox::Slot().FillHeight(1.f).HAlign(HAlign_Center).VAlign(VAlign_Center)
-						[SNew(STextBlock).Text(INVTEXT("MOUSE")).Font(Font).ColorAndOpacity(Gold)]
-					]
-				]
-			];
+		return SNew(SBorder).BorderImage(&KeyboardOutline).Padding(15.f)[Keyboard];
 	}
 
-	TSharedRef<SWidget> BindingColumn(const FText& Title, const TArray<FControlBinding>& Bindings,
-		const FSlateFontInfo& HeadingFont, const FSlateFontInfo& BodyFont)
+	TSharedRef<SWidget> DrawControls(const FSlateFontInfo& KeyFont, const FSlateFontInfo& BodyFont, bool bStone, bool bDandelion)
 	{
-		const TSharedRef<SVerticalBox> Column = SNew(SVerticalBox)
-			+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 0.f, 0.f, 10.f)
-			[SNew(STextBlock).Text(Title).Font(HeadingFont).ColorAndOpacity(Gold)];
-		for (const FControlBinding& Binding : Bindings)
+		const TSharedRef<SCanvas> Canvas = SNew(SCanvas);
+		TMap<FString, FBox2D> KeyBounds;
+		Canvas->AddSlot().Position(KeyboardOrigin).Size(FVector2D(898, 295))
+			[DrawKeyboard(KeyFont, bStone, bDandelion, KeyBounds)];
+
+		const auto Label = [&](const FText& Text, FVector2D Position, FVector2D Size, EHorizontalAlignment Align = HAlign_Left)
 		{
-			Column->AddSlot().AutoHeight().Padding(0.f, 3.f)
+			Canvas->AddSlot().Position(Position).Size(Size)
+			[
+				SNew(SBox).HAlign(Align)
+				[SNew(STextBlock).Text(Text).Font(BodyFont).ColorAndOpacity(ControlWhite)]
+			];
+		};
+		TArray<TArray<FVector2f>> Paths;
+		const auto Above = [&](const TCHAR* Key, const FText& Text, float X)
+		{
+			const FBox2D& Bounds = KeyBounds.FindChecked(Key);
+			const float KeyX = Bounds.GetCenter().X;
+			Label(Text, FVector2D(X - 90, 32), FVector2D(180, 35), HAlign_Center);
+			Paths.Add({ {X, 69}, {X, 88}, {KeyX, 116}, {KeyX, float(Bounds.Min.Y)} });
+		};
+
+		Above(TEXT("ESC"), INVTEXT("Pause"), 170);
+		if (bStone || bDandelion)
+		{
+			Above(TEXT("1"), INVTEXT("Seed"), 324);
+			if (bStone)
+			{
+				Above(TEXT("2"), INVTEXT("Stone Shell"), 479);
+			}
+			if (bDandelion)
+			{
+				Above(TEXT("3"), INVTEXT("Dandelion"), 655);
+			}
+
+			Label(INVTEXT("Cycle forms"), FVector2D(9, 148), FVector2D(164, 36));
+			const FBox2D& Q = KeyBounds.FindChecked(TEXT("Q"));
+			const FBox2D& E = KeyBounds.FindChecked(TEXT("E"));
+			const float QX = Q.GetCenter().X;
+			const float EX = E.GetCenter().X;
+			const float Top = Q.Min.Y;
+			Paths.Add({ {114, 205}, {170, 205}, {183, 194}, {QX, 194}, {QX, Top} });
+			Paths.Add({ {QX, 194}, {EX, 194}, {EX, Top} });
+		}
+
+		Label(INVTEXT("Roll\nW A S D"), FVector2D(9, 248), FVector2D(150, 60));
+		const FBox2D& A = KeyBounds.FindChecked(TEXT("A"));
+		const float AY = A.GetCenter().Y;
+		Paths.Add({ {94, 280}, {170, 280}, {183, 246.5f}, {float(A.Min.X) - 7, 246.5f},
+			{float(A.Min.X) - 7, AY}, {float(A.Min.X), AY} });
+
+		const FBox2D& Space = KeyBounds.FindChecked(TEXT("SPACE"));
+		const float SpaceX = Space.GetCenter().X;
+		Label(bDandelion ? INVTEXT("Jump  /  Hold to glide as Dandelion") : INVTEXT("Jump"),
+			FVector2D(SpaceX - 260, 484), FVector2D(520, 37), HAlign_Center);
+		Paths.Add({ {SpaceX, 472}, {SpaceX, float(Space.Max.Y)} });
+
+		if (bStone)
+		{
+			const FBox2D& Ctrl = KeyBounds.FindChecked(TEXT("CTRL"));
+			const float CtrlX = Ctrl.GetCenter().X;
+			Label(INVTEXT("Stone Shell slam"), FVector2D(85, 484), FVector2D(250, 36), HAlign_Center);
+			Paths.Add({ {210, 472}, {210, 449}, {CtrlX, 431}, {CtrlX, float(Ctrl.Max.Y)} });
+		}
+
+		static const FSlateRoundedBoxBrush MouseOutline(FLinearColor::Transparent, 25.f, ControlWhite, 1.7f);
+		Canvas->AddSlot().Position(FVector2D(878, 448)).Size(FVector2D(100, 85))
+		[
+			SNew(SBorder).BorderImage(&MouseOutline).HAlign(HAlign_Center).VAlign(VAlign_Top).Padding(8.f, 11.f)
 			[
 				SNew(SHorizontalBox)
-				+ SHorizontalBox::Slot().AutoWidth().Padding(0.f, 0.f, 12.f, 0.f)
-				[DrawKey(Binding.Keys, HeadingFont, true, 126.f, 32.f)]
-				+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center)
-				[SNew(STextBlock).Text(Binding.Action).Font(BodyFont).ColorAndOpacity(Ivory)]
-			];
+				+ SHorizontalBox::Slot().AutoWidth().Padding(0.f, 0.f, 4.f, 0.f)
+				[DrawKey(INVTEXT("LMB"), KeyFont, bStone, 34.f, 33.f)]
+				+ SHorizontalBox::Slot().AutoWidth()
+				[DrawKey(INVTEXT("RMB"), KeyFont, false, 34.f, 33.f)]
+			]
+		];
+		Label(INVTEXT("Look around"), FVector2D(1015, 499), FVector2D(200, 32));
+		Paths.Add({ {1002, 514}, {978, 514} });
+		if (bStone)
+		{
+			Label(INVTEXT("Slam (alternate)"), FVector2D(1015, 439), FVector2D(248, 36));
+			Paths.Add({ {1002, 454}, {990, 435}, {909, 435}, {909, 459} });
 		}
-		return Column;
+
+		return SNew(SBox).WidthOverride(1268.f).HeightOverride(561.f)
+		[
+			SNew(SOverlay)
+			+ SOverlay::Slot()[Canvas]
+			+ SOverlay::Slot()[SNew(SControlArrows, MoveTemp(Paths)).Visibility(EVisibility::HitTestInvisible)]
+		];
 	}
 }
 
@@ -169,29 +266,12 @@ void ULSControlsWidget::Open()
 	if (UNativeWidgetHost* Layout = Cast<UNativeWidgetHost>(GetWidgetFromName(TEXT("KeyboardLayout"))))
 	{
 		FSlateFontInfo KeyFont = ControlsText->GetFont();
-		KeyFont.Size = 15.f;
+		KeyFont.Size = 16.f;
 		KeyFont.TypefaceFontName = TEXT("Heading");
 		FSlateFontInfo BodyFont = ControlsText->GetFont();
-		BodyFont.Size = 19.f;
-		FSlateFontInfo SectionFont = KeyFont;
-		SectionFont.Size = 18.f;
-		const TSharedRef<SHorizontalBox> Legend = SNew(SHorizontalBox)
-			+ SHorizontalBox::Slot().AutoWidth()
-			[BindingColumn(INVTEXT("MOVEMENT & MENU"), Basics, SectionFont, BodyFont)];
-		if (!Forms.IsEmpty())
-		{
-			Legend->AddSlot().AutoWidth().Padding(48.f, 0.f, 0.f, 0.f)
-				[BindingColumn(INVTEXT("FORMS"), Forms, SectionFont, BodyFont)];
-			Legend->AddSlot().AutoWidth().Padding(48.f, 0.f, 0.f, 0.f)
-				[BindingColumn(INVTEXT("ABILITIES"), Abilities, SectionFont, BodyFont)];
-		}
-		Layout->SetContent(
-			SNew(SScaleBox).Stretch(EStretch::ScaleToFit).StretchDirection(EStretchDirection::DownOnly)
-			[
-				SNew(SVerticalBox)
-				+ SVerticalBox::Slot().AutoHeight()[DrawKeyboard(KeyFont, bStone, bDandelion)]
-				+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 34.f, 0.f, 0.f)[Legend]
-			]);
+		BodyFont.Size = 24.f;
+		Layout->SetContent(SNew(SScaleBox).Stretch(EStretch::ScaleToFit)
+			[DrawControls(KeyFont, BodyFont, bStone, bDandelion)]);
 	}
 	SetVisibility(ESlateVisibility::Visible);
 	BackButton->SetFocus();

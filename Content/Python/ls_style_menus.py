@@ -237,12 +237,16 @@ def style_controls():
     w['PanelSize'].slot.set_horizontal_alignment(unreal.HorizontalAlignment.H_ALIGN_FILL)
     w['PanelSize'].slot.set_vertical_alignment(unreal.VerticalAlignment.V_ALIGN_FILL)
     w['PanelSize'].slot.set_padding(unreal.Margin(0))
-    w['Panel'].set_brush_color(unreal.LinearColor(.012, .021, .016, .92))
+    wood = unreal.load_asset(
+        '/Game/StyleHex_Studio/Free_Packs/FREE_Stylized_Forest_Sample/Textures/Trees/T_Tree_Trunk_Broadleaf_BC'
+    )
+    assert wood
+    w['Panel'].set_brush_color(unreal.LinearColor(.12, .085, .065, 1))
     brush=w['Panel'].get_editor_property('background')
     brush.set_editor_property('draw_as',unreal.SlateBrushDrawType.IMAGE)
-    brush.set_editor_property('resource_object',None)
+    brush.set_editor_property('resource_object',wood)
     w['Panel'].set_editor_property('background',brush)
-    w['Panel'].set_padding(unreal.Margin(72, 44, 72, 34))
+    w['Panel'].set_padding(unreal.Margin(52, 36, 52, 30))
     column = w['Column']
     column.clear_children()
     title, diagram, back = w['Title'], w['KeyboardLayout'], w['BackButton']
@@ -250,7 +254,7 @@ def style_controls():
         column.add_child_to_vertical_box(widget)
     title.set_text('KEYBOARD & MOUSE')
     font(w['Title'],34,True)
-    w['Title'].set_color_and_opacity(unreal.SlateColor(GOLD))
+    w['Title'].set_color_and_opacity(unreal.SlateColor(unreal.LinearColor(.94, .91, .85, 1)))
     title.set_editor_property('justification', unreal.TextJustify.LEFT)
     title.slot.set_padding(unreal.Margin(0, 0, 0, 22))
     diagram.slot.set_size(unreal.SlateChildSize(size_rule=unreal.SlateSizeRule.FILL))
