@@ -1,11 +1,13 @@
 """Blend the Wildwood trail banks into the live landscape."""
+import math
 from pathlib import Path
 import shutil
 import unreal
 from ls_generate_player_meshes import Mesh, smoothstep, write_obj
 
 RIVERBANK = 'SM_LS_WildwoodTrail_05'
-NAMES = ('SM_LS_WildwoodTrail_00', 'SM_LS_WildwoodTrail_01', 'SM_LS_WildwoodTrail_02', RIVERBANK)
+UPDRAFT_TRAIL = 'SM_LS_WildwoodTrail_04'
+NAMES = ('SM_LS_WildwoodTrail_00', 'SM_LS_WildwoodTrail_01', 'SM_LS_WildwoodTrail_02', RIVERBANK, UPDRAFT_TRAIL)
 
 
 def blend_source(name):
@@ -37,6 +39,7 @@ def blend_source(name):
     for start in range(0, len(vertices), width):
         row = vertices[start:start+width]
         u = uvs[start][0]
+        remaining = (uvs[-1][0] - u) * 400
         # Preserve the opening approach's shared seam and ease the new bank in past it.
         strength = smoothstep(0, 1.25, u) if name == NAMES[0] else 1
         row_start = len(mesh.points)
@@ -67,6 +70,8 @@ def blend_source(name):
                     # The river-facing shoulder settles into the bank while the landing and travel lane keep their height.
                     waterside = col > width // 2
                     blend = smoothstep(.80 if waterside else 1.02, 1.60 if waterside else 1.72, across)
+                elif name == UPDRAFT_TRAIL:
+                    blend = (1 - smoothstep(0, 1000, remaining)) * smoothstep(.90, 1.72, across)
                 if blend > 0:
                     ground = terrain_height(x, y)
                     z += (ground - 20 - z) * blend
@@ -77,6 +82,9 @@ def blend_source(name):
                 elif name == NAMES[2]:
                     fade = 1 - smoothstep(0, .5, u - uvs[0][0])
                     grass = across + max(0, 1.12 - across) * fade
+                elif name == UPDRAFT_TRAIL:
+                    # End the dirt in an oval before the crest of the launch bank.
+                    grass = math.hypot(across, max(0, (440 - remaining) / 380))
                 mesh.add_vertex((x,y,z), (u,grass))
         new_width = len(mesh.points)-row_start
         assert not row_width or new_width == row_width
@@ -112,6 +120,27 @@ def blend_source(name):
                     mesh.triangles += [(b,a,b+1),(b+1,a,a+1)]
                 else:
                     mesh.triangles += [(a,b,a+1),(a+1,b,b+1)]
+    if name == UPDRAFT_TRAIL:
+        end = mesh.points[-row_width:]
+        masks = mesh.uvs[-row_width:]
+        mid = row_width // 2
+        dx = end[mid][0] - mesh.points[-2*row_width+mid][0]
+        dy = end[mid][1] - mesh.points[-2*row_width+mid][1]
+        forward = math.hypot(dx, dy)
+        for step in range(1, 11):
+            f = step / 10
+            start = len(mesh.points)
+            for (x, y, z), (u, grass) in zip(end, masks):
+                # A deeper apron in the middle preserves the crest while the sides meet grass sooner.
+                distance = f * (100 + 340 * (1 - smoothstep(1.15, 2.1, grass)))
+                x += distance * dx / forward
+                y += distance * dy / forward
+                ground = terrain_height(x, y)
+                z += (ground - 20 - z) * smoothstep(0, 1, f)
+                mesh.add_vertex((x, y, z), (u + distance/400, grass))
+            for col in range(row_width - 1):
+                a, b = start - row_width + col, start + col
+                mesh.triangles += [(a,b,a+1),(a+1,b,b+1)]
     mesh.smooth_normals()
     output = work / 'BlendedBanks' / (name + '.obj')
     output.parent.mkdir(exist_ok=True)
