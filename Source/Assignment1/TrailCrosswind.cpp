@@ -89,14 +89,16 @@ void ATrailCrosswind::Tick(float DeltaSeconds)
 		// The early leaves lift first on the forest side, then accelerate across the same lane as the gust.
 		const float Sweep = bWarningLeaf ? Travel * Travel : Travel;
 		const float Size = FMath::SmoothStep(0.f, 0.14f, Travel) * (1.f - FMath::SmoothStep(0.78f, 1.f, Travel));
-		const float Along = static_cast<float>((Index * 263) % 780) - 390.f;
-		const float Height = -42.f + (Index % 6) * 25.f + (bLeaf ? 42.f * FMath::Sin(Travel * 6.f + Index) : 15.f);
+		const float Drift = FMath::Sin(Travel * 5.f + Index);
+		const float Along = static_cast<float>((Index * 263) % 780) - 390.f + Drift * (bLeaf ? 65.f : 24.f);
+		const float Height = -58.f + (Index % 6) * 29.f + (bLeaf ? 56.f * Drift : 24.f * Drift);
 		const float Across = FMath::Lerp(-690.f, 1030.f, Sweep);
 		Shape->SetRelativeLocationAndRotation(FVector(Along, Across, Height), bLeaf
 			? FRotator(Travel * 235.f + Index * 28.f, 90.f + Travel * 210.f, 35.f + Index * 21.f)
-			: FRotator(0.f, 90.f, 70.f));
-		Shape->SetRelativeScale3D(bLeaf ? FVector(0.28f * Size, 0.18f * Size, 1.f)
-			: FVector((3.15f + (Index % 3) * 0.55f) * Size, 0.35f * Size, 1.f));
+			: FRotator(4.f * Drift, 90.f, 62.f + 12.f * Drift));
+		const float LeafSize = (0.80f + (Index % 4) * 0.14f) * Size;
+		Shape->SetRelativeScale3D(bLeaf ? FVector(0.39f * LeafSize, 0.25f * LeafSize, 1.f)
+			: FVector((3.65f + (Index % 3) * 0.55f) * Size, (0.78f + (Index % 3) * 0.10f) * Size, 1.f));
 	}
 
 	const float GustAge = Age - CrosswindWarning;
