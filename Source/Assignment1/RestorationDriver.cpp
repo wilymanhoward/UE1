@@ -59,6 +59,10 @@ void ARestorationDriver::BeginPlay()
 
 	Restoration = GetWorld()->GetSubsystem<URestorationSubsystem>();
 	Restoration->OnNoteCollected.AddDynamic(this, &ARestorationDriver::HandleNoteCollected);
+	if (UGameplayStatics::GetCurrentLevelName(this) == TEXT("L_Level1_Wildwood"))
+	{
+		FullColourNoteCount = 7;
+	}
 	if (!LightningMeshes.IsEmpty() && LightningMeshes[0])
 	{
 		Bolts.Add(LightningBolt);
@@ -158,6 +162,11 @@ void ARestorationDriver::Tick(float DeltaSeconds)
 	Super::Tick(DeltaSeconds);
 
 	DisplayedRestoration = FMath::FInterpTo(DisplayedRestoration, Restoration->GetRestoration(), DeltaSeconds, BlendSpeed);
+	if (FullColourNoteCount > 0)
+	{
+		const float ColourTarget = FMath::Min(static_cast<float>(Restoration->GetNotesCollected()) / FullColourNoteCount, 1.f);
+		DisplayedColour = FMath::FInterpTo(DisplayedColour, ColourTarget, DeltaSeconds, BlendSpeed);
+	}
 
 	// With no note collected yet the radius stays at zero, so no location gets a local bloom.
 	const float TargetRadius = Restoration->GetNotesCollected() > 0 ? NoteBloomRadius : 0.f;
@@ -301,19 +310,20 @@ void ARestorationDriver::ApplyVisuals()
 	if (PostProcessVolume)
 	{
 		FPostProcessSettings& Settings = PostProcessVolume->Settings;
-		// At restoration 1 the volume's own grading is back exactly, so the healed forest looks as the level was made.
-		const float Saturation = FMath::Lerp(WitheredSaturation, RestoredSaturation, Alpha);
+		// Colour can return ahead of tree growth, weather and other restoration effects.
+		const float Colour = FullColourNoteCount > 0 ? DisplayedColour : Alpha;
+		const float Saturation = FMath::Lerp(WitheredSaturation, RestoredSaturation, Colour);
 		if (WitherPostInstance)
 		{
 			WitherPostInstance->SetScalarParameterValue(SaturationParameter, Saturation);
-			Settings.ColorSaturation = FMath::Lerp(FVector4(1.f, 1.f, 1.f, 1.f), ClearSaturation, Alpha);
+			Settings.ColorSaturation = FMath::Lerp(FVector4(1.f, 1.f, 1.f, 1.f), ClearSaturation, Colour);
 		}
 		else
 		{
 			Settings.ColorSaturation = ClearSaturation * FVector4(Saturation, Saturation, Saturation, 1.f);
 		}
-		Settings.ColorContrast = FMath::Lerp(FVector4(WitheredContrast, WitheredContrast, WitheredContrast, 1.f), ClearContrast, Alpha);
-		Settings.ColorGain = FMath::Lerp(FVector4(WitheredTint), ClearGain, Alpha);
+		Settings.ColorContrast = FMath::Lerp(FVector4(WitheredContrast, WitheredContrast, WitheredContrast, 1.f), ClearContrast, Colour);
+		Settings.ColorGain = FMath::Lerp(FVector4(WitheredTint), ClearGain, Colour);
 		if (bStormGrade)
 		{
 			const float Storm = GetStorm();

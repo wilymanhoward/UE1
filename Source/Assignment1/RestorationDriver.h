@@ -231,5 +231,7 @@ private:
 
 	// What is on screen now. It chases the real value, which jumps with each note.
 	float DisplayedRestoration = 0.f;
+	int32 FullColourNoteCount = 0;
+	float DisplayedColour = 0.f;
 	float CurrentBloomRadius = 0.f;
 };
