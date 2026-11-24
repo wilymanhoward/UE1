@@ -890,6 +890,29 @@ def block_physical_material():
     return physical
 
 
+def dress_block_as_boulder(block, size=(100.0, 100.0, 95.0)):
+    """Turns the pushable crate into one of Wildwood's own boulders (SM_Boulder_01), squeezed to the crate's size.
+    A box collider keeps it sliding flat like the crate, and its bottom stays where the crate's was."""
+    path = "/Game/LastSeed/Meshes/SM_LS_WildwoodBoulder"
+    if not unreal.EditorAssetLibrary.does_asset_exist(path):
+        unreal.EditorAssetLibrary.duplicate_asset("/Game/Wildwood/Model/Rocks/SM_Boulder_01", path)
+        meshes = unreal.get_editor_subsystem(unreal.StaticMeshEditorSubsystem)
+        meshes.remove_collisions(unreal.load_asset(path))
+        meshes.add_simple_collisions(unreal.load_asset(path), unreal.ScriptCollisionShapeType.BOX)
+        unreal.EditorAssetLibrary.save_asset(path)
+    mesh = unreal.load_asset(path)
+    component = block.get_component_by_class(unreal.StaticMeshComponent)
+    where = block.get_actor_location()
+    floor = where.z + component.static_mesh.get_bounding_box().min.z * block.get_actor_scale3d().z
+    component.set_static_mesh(mesh)
+    for slot in range(mesh.get_num_sections(0)):
+        component.set_material(slot, mesh.get_material(slot))
+    box = mesh.get_bounding_box()
+    extent = box.max - box.min
+    block.set_actor_scale3d(unreal.Vector(size[0] / extent.x, size[1] / extent.y, size[2] / extent.z))
+    block.set_actor_location(unreal.Vector(where.x, where.y, floor - box.min.z * size[2] / extent.z + 1.0), False, False)
+
+
 def add_challenges():
     """The gameplay added to the greybox. Every piece is an existing gameplay class."""
     # 1-1: the note that sat beside the road now rewards the island jumps.
@@ -945,7 +968,7 @@ def add_challenges():
     for actor in actors_of("TutorialTrigger"):
         if "pressure plate" in str(actor.get_editor_property("message")):
             place_on_road(actor, BLOCK_S - 700.0, 0.0, actor.get_actor_location().z)
-            actor.set_editor_property("message", unreal.Text("Push the block along the logs onto the glowing plate, then go around and through the gate."))
+            actor.set_editor_property("message", unreal.Text("Push the boulder along the logs onto the glowing plate, then go around and through the gate."))
 
     # The route is longer now, so the time to beat is too.
     actors_of("LevelGoal")[0].set_editor_property("par_time_seconds", 390.0)
@@ -1027,7 +1050,7 @@ def dress_actor(actor, materials, thorns, rng):
     elif class_name == "Gate":
         actor.get_component_by_class(unreal.StaticMeshComponent).set_material(0, materials["planks"])
     elif class_name == "PushableBlock":
-        actor.get_component_by_class(unreal.StaticMeshComponent).set_material(0, materials["planks"])
+        dress_block_as_boulder(actor)
     elif class_name == "PressurePlate":
         component = actor.get_component_by_class(unreal.StaticMeshComponent)
         component.set_material(0, materials["plate"])

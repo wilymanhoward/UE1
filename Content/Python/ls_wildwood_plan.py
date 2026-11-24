@@ -536,7 +536,7 @@ def place_pieces(trail, walk, floor, ground, high, halves, climbs):
     plate_s, block_s, gate_s = p.s("plates", 1100.0), p.s("plates", 750.0), p.s("plates", 2700.0)
     p.add("lever", plate_s, -350.0, z=p.z(plate_s), id="lever1")
     p.add("push_block", block_s, 350.0, z=p.z(block_s) + 60.0, mass=52.0)
-    tut(p.s("plates", 300.0), "Push the block up against the lever. While it leans there, the lever holds the gate open.", half=500.0)
+    tut(p.s("plates", 300.0), "Push the boulder up against the lever. While it leans there, the lever holds the gate open.", half=500.0)
     p.add("gate", gate_s, z=p.z(gate_s), width=2.0 * p.wall_half(gate_s) + 100.0, height=700.0, levers=["lever1"], solid=p.wall_half(gate_s))
     note(p.s("plates", 2000.0), 400.0)
     note(p.s("plates", 5500.0), -120.0)

@@ -290,7 +290,7 @@ def zone_1_2(x, z):
 
     # Heavy forms only: the plate needs 50 kg, and Seed is 20 kg.
     plate_a = spawn(PRESSURE_PLATE, next_x + 1000, -300, z - 10, "PressurePlate")
-    tutorial(next_x + 800, z, "Stone Shell is heavy enough to hold a pressure plate. Push the block onto it.")
+    tutorial(next_x + 800, z, "Stone Shell is heavy enough to hold a pressure plate. Push the boulder onto it.")
     spawn(PUSHABLE_BLOCK, next_x + 1000, 300, z + 60, "PushableBlock", mass_kg=52.0)
 
     gate_x = next_x + 2500
