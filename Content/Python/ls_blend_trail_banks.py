@@ -40,6 +40,7 @@ def blend_source(name):
         row = vertices[start:start+width]
         u = uvs[start][0]
         remaining = (uvs[-1][0] - u) * 400
+        from_landing = (u - uvs[0][0]) * 400
         # Preserve the opening approach's shared seam and ease the new bank in past it.
         strength = smoothstep(0, 1.25, u) if name == NAMES[0] else 1
         row_start = len(mesh.points)
@@ -70,6 +71,8 @@ def blend_source(name):
                     # The river-facing shoulder settles into the bank while the landing and travel lane keep their height.
                     waterside = col > width // 2
                     blend = smoothstep(.80 if waterside else 1.02, 1.60 if waterside else 1.72, across)
+                    at_landing = 1 - smoothstep(0, 630, from_landing)
+                    blend = max(blend, at_landing * smoothstep(.36, 1.22, across))
                 elif name == UPDRAFT_TRAIL:
                     blend = (1 - smoothstep(0, 1000, remaining)) * smoothstep(.90, 1.72, across)
                 if blend > 0:
@@ -85,6 +88,8 @@ def blend_source(name):
                 elif name == UPDRAFT_TRAIL:
                     # End the dirt in an oval before the crest of the launch bank.
                     grass = math.hypot(across, max(0, (440 - remaining) / 380))
+                elif name == RIVERBANK:
+                    grass = math.hypot(across, max(0, (410 - from_landing) / 345))
                 mesh.add_vertex((x,y,z), (u,grass))
         new_width = len(mesh.points)-row_start
         assert not row_width or new_width == row_width
@@ -120,27 +125,35 @@ def blend_source(name):
                     mesh.triangles += [(b,a,b+1),(b+1,a,a+1)]
                 else:
                     mesh.triangles += [(a,b,a+1),(a+1,b,b+1)]
-    if name == UPDRAFT_TRAIL:
-        end = mesh.points[-row_width:]
-        masks = mesh.uvs[-row_width:]
+    if name in (UPDRAFT_TRAIL, RIVERBANK):
+        at_start = name == RIVERBANK
+        end = mesh.points[:row_width] if at_start else mesh.points[-row_width:]
+        masks = mesh.uvs[:row_width] if at_start else mesh.uvs[-row_width:]
         mid = row_width // 2
-        dx = end[mid][0] - mesh.points[-2*row_width+mid][0]
-        dy = end[mid][1] - mesh.points[-2*row_width+mid][1]
+        inner = mesh.points[row_width+mid] if at_start else mesh.points[-2*row_width+mid]
+        dx = end[mid][0] - inner[0]
+        dy = end[mid][1] - inner[1]
         forward = math.hypot(dx, dy)
+        max_reach = 250 if at_start else 340
+        settle_by = .72 if at_start else 1
         for step in range(1, 11):
             f = step / 10
             start = len(mesh.points)
             for (x, y, z), (u, grass) in zip(end, masks):
-                # A deeper apron in the middle preserves the crest while the sides meet grass sooner.
-                distance = f * (100 + 340 * (1 - smoothstep(1.15, 2.1, grass)))
+                # Extend the centre farther so the shoulders round into the slope.
+                distance = f * (100 + max_reach * (1 - smoothstep(1.15, 2.1, grass)))
                 x += distance * dx / forward
                 y += distance * dy / forward
                 ground = terrain_height(x, y)
-                z += (ground - 20 - z) * smoothstep(0, 1, f)
-                mesh.add_vertex((x, y, z), (u + distance/400, grass))
+                z += (ground - 20 - z) * smoothstep(0, settle_by, f)
+                mesh.add_vertex((x, y, z), (u - distance/400 if at_start else u + distance/400, grass))
             for col in range(row_width - 1):
-                a, b = start - row_width + col, start + col
-                mesh.triangles += [(a,b,a+1),(a+1,b,b+1)]
+                a = col if at_start and step == 1 else start - row_width + col
+                b = start + col
+                if at_start:
+                    mesh.triangles += [(b,a,b+1),(b+1,a,a+1)]
+                else:
+                    mesh.triangles += [(a,b,a+1),(a+1,b,b+1)]
     mesh.smooth_normals()
     output = work / 'BlendedBanks' / (name + '.obj')
     output.parent.mkdir(exist_ok=True)
