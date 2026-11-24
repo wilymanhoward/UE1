@@ -25,6 +25,7 @@ class ASSIGNMENT1_API ULSMainMenuWidget : public UUserWidget
 protected:
 	virtual void NativeOnInitialized() override;
 	virtual void NativeConstruct() override;
+	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 
 	/** Holds the four main buttons. Hidden while another panel is open. */
 	UPROPERTY(meta = (BindWidget))

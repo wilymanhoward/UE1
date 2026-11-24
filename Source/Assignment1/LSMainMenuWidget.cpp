@@ -3,6 +3,7 @@
 #include "LSMainMenuWidget.h"
 
 #include "Components/Button.h"
+#include "Components/SizeBox.h"
 #include "Components/TextBlock.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
@@ -38,6 +39,28 @@ void ULSMainMenuWidget::NativeConstruct()
 	Level2Button->SetIsEnabled(IsLevel1Finished());
 
 	ShowMainPanel();
+}
+
+void ULSMainMenuWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
+{
+	Super::NativeTick(MyGeometry, InDeltaTime);
+	if (!MainPanel->IsVisible())
+	{
+		return;
+	}
+
+	for (UButton* Button : { PlayButton.Get(), LevelSelectButton.Get(), ControlsButton.Get(), QuitButton.Get() })
+	{
+		const bool bActive = Button->IsHovered() || Button->HasKeyboardFocus() || Button->HasUserFocus(GetOwningPlayer());
+		if (USizeBox* Size = Cast<USizeBox>(Button->GetContent()))
+		{
+			if (UTextBlock* Label = Cast<UTextBlock>(Size->GetContent()))
+			{
+				Label->SetColorAndOpacity(FSlateColor(bActive ? FLinearColor(1.f, .82f, .36f) : FLinearColor(.92f, .91f, .84f)));
+			}
+		}
+		Button->SetBackgroundColor(FLinearColor(1.f, 1.f, 1.f, bActive ? 1.f : 0.f));
+	}
 }
 
 bool ULSMainMenuWidget::IsLevel1Finished() const

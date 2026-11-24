@@ -41,6 +41,88 @@ def button(widget):
     if isinstance(child,unreal.TextBlock): font(child,28,True)
 
 
+def menu_image(widget, name, width=None):
+    texture = unreal.load_asset('/Game/UI/Textures/' + name)
+    native_width, native_height = texture.blueprint_get_size_x(), texture.blueprint_get_size_y()
+    width = width or native_width
+    widget.set_brush_from_texture(texture, False)
+    brush = widget.get_editor_property('brush')
+    size = brush.get_editor_property('image_size')
+    size.set_editor_properties({'x': width, 'y': width * native_height / native_width})
+    brush.set_editor_property('image_size', size)
+    widget.set_brush(brush)
+
+
+def style_title_menu():
+    bp = unreal.load_asset('/Game/UI/WBP_MainMenu')
+    w = widgets_for(bp)
+    root = w['Root']
+    bp.modify()
+    backdrop, shade = w['Backdrop'], w['Shade']
+    forest, logo_frame = w['ForestCover'], w['TitleArt']
+    logo = w['TitleDivider']
+    panels = [w[name] for name in ('MainPanel', 'LevelSelectPanel', 'ControlsPanel')]
+    slots = [panel.slot for panel in panels]
+    panel_layouts = [(s.get_editor_property('horizontal_alignment'), s.get_editor_property('vertical_alignment'),
+                      s.get_editor_property('padding')) for s in slots]
+    root.clear_children()
+    root.set_clipping(unreal.WidgetClipping.CLIP_TO_BOUNDS)
+    forest.clear_children()
+    forest.set_stretch(unreal.Stretch.SCALE_TO_FILL)
+    menu_image(backdrop, 'T_UI_MenuBackdrop')
+    forest.add_child(backdrop)
+    fill = root.add_child_to_overlay(forest)
+    fill.set_horizontal_alignment(unreal.HorizontalAlignment.H_ALIGN_FILL)
+    fill.set_vertical_alignment(unreal.VerticalAlignment.V_ALIGN_FILL)
+    fill = root.add_child_to_overlay(shade)
+    fill.set_horizontal_alignment(unreal.HorizontalAlignment.H_ALIGN_FILL)
+    fill.set_vertical_alignment(unreal.VerticalAlignment.V_ALIGN_FILL)
+    shade.set_render_opacity(0.28)
+
+    logo_frame.clear_children()
+    logo_frame.set_stretch(unreal.Stretch.SCALE_TO_FIT)
+    logo_frame.set_stretch_direction(unreal.StretchDirection.DOWN_ONLY)
+    menu_image(logo, 'T_UI_LastSeedLogo', 860)
+    logo.set_color_and_opacity(unreal.LinearColor(1, 1, 1, 1))
+    logo_frame.add_child(logo)
+    art = root.add_child_to_overlay(logo_frame)
+    art.set_horizontal_alignment(unreal.HorizontalAlignment.H_ALIGN_CENTER)
+    art.set_vertical_alignment(unreal.VerticalAlignment.V_ALIGN_CENTER)
+    art.set_padding(unreal.Margin(130, 0, 54, 220))
+    logo_frame.set_visibility(unreal.SlateVisibility.HIT_TEST_INVISIBLE)
+
+    for panel, (horizontal, vertical, padding) in zip(panels, panel_layouts):
+        slot = root.add_child_to_overlay(panel)
+        slot.set_horizontal_alignment(horizontal)
+        slot.set_vertical_alignment(vertical)
+        slot.set_padding(padding)
+
+    main = w['MainPanel']
+    main.slot.set_horizontal_alignment(unreal.HorizontalAlignment.H_ALIGN_LEFT)
+    main.slot.set_vertical_alignment(unreal.VerticalAlignment.V_ALIGN_BOTTOM)
+    main.slot.set_padding(unreal.Margin(90, 0, 24, 92))
+    for name in ('GameTitle', 'Tagline'):
+        w[name].set_visibility(unreal.SlateVisibility.COLLAPSED)
+    for name in ('Play', 'LevelSelect', 'Controls', 'Quit'):
+        button(w[name + 'Button'])
+        w[name + 'Size'].set_width_override(315)
+        w[name + 'Size'].set_height_override(44)
+        label = w[name + 'Label']
+        font(label, 28, True)
+        label.set_editor_property('justification', unreal.TextJustify.LEFT)
+        label.slot.set_vertical_alignment(unreal.VerticalAlignment.V_ALIGN_TOP)
+        label.slot.set_horizontal_alignment(unreal.HorizontalAlignment.H_ALIGN_FILL)
+        label.slot.set_padding(unreal.Margin(12, 0, 0, 0))
+        w[name + 'Button'].slot.set_padding(unreal.Margin(0, 0, 0, 5))
+    w['PlayLabel'].set_text('PLAY')
+    w['Level1Name'].set_text('I  ·  WILDWOOD')
+    w['Level2Name'].set_text('II  ·  EMBERWOOD')
+    w['PetalTotal'].slot.set_padding(unreal.Margin(0, 17, 0, 0))
+    font(w['TotalPetalsText'], 16)
+    unreal.BlueprintEditorLibrary.compile_blueprint(bp)
+    assert unreal.EditorAssetLibrary.save_loaded_asset(bp, False)
+
+
 def build():
     for name in ['WBP_PauseMenu','WBP_Controls','WBP_MainMenu','WBP_Results','WBP_StoryCard']:
         bp=unreal.load_asset('/Game/UI/'+name)
@@ -123,6 +205,7 @@ def build():
     w['BackButton'].slot.set_padding(unreal.Margin(0,24,0,0))
     unreal.BlueprintEditorLibrary.compile_blueprint(bp)
     assert unreal.EditorAssetLibrary.save_loaded_asset(bp,False)
+    style_title_menu()
     print('Saved new font across UI, pause layout and progression-aware controls presentation.')
 
 

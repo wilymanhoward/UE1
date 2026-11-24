@@ -31,6 +31,7 @@
 #include "UObject/ConstructorHelpers.h"
 #include "Widgets/Layout/SBorder.h"
 #include "Widgets/Layout/SBox.h"
+#include "Widgets/Layout/SScrollBox.h"
 #include "Widgets/SOverlay.h"
 #include "Widgets/SBoxPanel.h"
 #include "Widgets/Text/STextBlock.h"
@@ -67,22 +68,20 @@ namespace
 		}
 	}
 
-	struct FEndingCard
+	struct FCreditSection
 	{
 		const TCHAR* Heading;
 		const TCHAR* Text;
-		float Seconds;
 	};
 
-	const FEndingCard EndingCards[] = {
-		{ TEXT("Game Over"), TEXT(""), 3.5f },
-		{ TEXT("Last Seed"), TEXT("Design and development\nHoward Wilyman"), 5.f },
-		{ TEXT("Music"), TEXT("Scott Buckley · A Dragon’s Lullaby, Juggernaut\nKevin MacLeod · Heartwarming, Dark Standoff\nCreative Commons Attribution 4.0"), 7.f },
-		{ TEXT("Recorded sound"), TEXT("Barracuda1983 · Fission9 · Bini_trns\nmvVoiceActing · o_ciz · InspectorJ\nOldome · oscaraudiogeek · Kinoton\nAnthousai · dichardson · rykenn"), 7.f },
-		{ TEXT("Recorded sound"), TEXT("kingsrow · WavJunction.com · HOGGanimation\nK-Forces · DanJFilms · michelcik\nmyLoop · follytowers · SamsterBirdies\nFull recording and license details in AUDIO_CREDITS.md"), 7.f },
-		{ TEXT("Environment and effects"), TEXT("Wildwood · Lava Environments · Rocks Pack Demo\nAdditional assets · Polytope Studio, StyleHex Studio, SoftTofu"), 7.f },
-		{ TEXT("Illustrations and voices"), TEXT("Cutscene illustrations · OpenAI\nHeart Tree · Adam    /    Witch · Kristen (ElevenLabs)\nMade with Unreal Engine"), 7.f },
-		{ TEXT("Thank you for playing"), TEXT(""), 3.f },
+	const FCreditSection CreditSections[] = {
+		{ TEXT("Design and development"), TEXT("Howard Wilyman") },
+		{ TEXT("Music"), TEXT("Scott Buckley\nA Dragon’s Lullaby · Juggernaut\n\nKevin MacLeod\nHeartwarming · Dark Standoff\n\nCreative Commons Attribution 4.0") },
+		{ TEXT("Recorded sound"), TEXT("Barracuda1983 · Fission9 · Bini_trns\nmvVoiceActing · o_ciz · InspectorJ\nOldome · oscaraudiogeek · Kinoton\nAnthousai · dichardson · rykenn\nkingsrow · WavJunction.com\nHOGGanimation · K-Forces\nDanJFilms · michelcik\nmyLoop · follytowers · SamsterBirdies\nCinetony · Snudio_Records\nteadrinker · nilbul\n\nRecording credits and licenses\nAUDIO_CREDITS.md") },
+		{ TEXT("Environment and effects"), TEXT("Wildwood · Lava Environments\nRocks Pack Demo\nPolytope Studio · StyleHex Studio\nSoftTofu") },
+		{ TEXT("Illustrations"), TEXT("OpenAI") },
+		{ TEXT("Voice performances"), TEXT("Heart Tree · Adam\nWitch · Kristen\nElevenLabs") },
+		{ TEXT("Engine"), TEXT("Unreal Engine") },
 	};
 
 	struct FWildwoodEnding
@@ -100,6 +99,27 @@ namespace
 			Player = LocalPlayer;
 			Viewport = GameViewport;
 			const FSlateBrush* White = FCoreStyle::Get().GetBrush("WhiteBrush");
+			const UObject* Font = LoadObject<UObject>(nullptr, TEXT("/Game/UI/Fonts/F_Wildwood.F_Wildwood"));
+			const FSlateFontInfo TitleFont = Font ? FSlateFontInfo(Font, 56, TEXT("Heading")) : FCoreStyle::GetDefaultFontStyle("Bold", 56);
+			const FSlateFontInfo RoleFont = Font ? FSlateFontInfo(Font, 24, TEXT("Heading")) : FCoreStyle::GetDefaultFontStyle("Bold", 24);
+			const FSlateFontInfo NameFont = Font ? FSlateFontInfo(Font, 23, TEXT("Regular")) : FCoreStyle::GetDefaultFontStyle("Regular", 23);
+			const FLinearColor Accent(0.91f, 0.78f, 0.52f);
+			const TSharedRef<SVerticalBox> Roll = SNew(SVerticalBox)
+				+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 44.f, 0.f, 70.f)
+				[SNew(STextBlock).Text(INVTEXT("LAST SEED")).Font(TitleFont).ColorAndOpacity(Accent)];
+			for (const FCreditSection& Section : CreditSections)
+			{
+				Roll->AddSlot().AutoHeight().Padding(0.f, 0.f, 0.f, 48.f)
+				[
+					SNew(SHorizontalBox)
+					+ SHorizontalBox::Slot().FillWidth(0.34f).VAlign(VAlign_Top).Padding(0.f, 0.f, 30.f, 0.f)
+					[SNew(STextBlock).Text(FText::FromString(Section.Heading)).Font(RoleFont).ColorAndOpacity(Accent).AutoWrapText(true)]
+					+ SHorizontalBox::Slot().FillWidth(0.66f).VAlign(VAlign_Top)
+					[SNew(STextBlock).Text(FText::FromString(Section.Text)).Font(NameFont).AutoWrapText(true).LineHeightPercentage(1.35f)]
+				];
+			}
+			Roll->AddSlot().AutoHeight().Padding(0.f, 48.f, 0.f, 150.f)
+			[SNew(STextBlock).Text(INVTEXT("Thank you for playing")).Font(RoleFont).ColorAndOpacity(Accent)];
 			SAssignNew(Overlay, SOverlay).Visibility(EVisibility::HitTestInvisible)
 				+ SOverlay::Slot().VAlign(VAlign_Top)
 				[
@@ -122,27 +142,23 @@ namespace
 				]
 				+ SOverlay::Slot()
 				[SAssignNew(Black, SBorder).BorderImage(White).BorderBackgroundColor(FLinearColor::Black)]
-				+ SOverlay::Slot().VAlign(VAlign_Center).Padding(24.f)
+				+ SOverlay::Slot().HAlign(HAlign_Center).VAlign(VAlign_Center)
 				[
-					SAssignNew(Credits, SVerticalBox)
-					+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center)
+					SAssignNew(GameOver, STextBlock).Text(INVTEXT("GAME OVER")).Font(TitleFont).ColorAndOpacity(Accent)
+				]
+				+ SOverlay::Slot().HAlign(HAlign_Center).Padding(40.f, 55.f)
+				[
+					SNew(SBox).WidthOverride(900.f)
 					[
-						SAssignNew(Heading, STextBlock)
-						.Font(FCoreStyle::GetDefaultFontStyle("Bold", 40))
-						.ColorAndOpacity(FLinearColor(0.95f, 0.82f, 0.56f))
-						.Justification(ETextJustify::Center)
-					]
-					+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 14.f, 0.f, 0.f)
-					[
-						SAssignNew(Body, STextBlock)
-						.Font(FCoreStyle::GetDefaultFontStyle("Regular", 19))
-						.Justification(ETextJustify::Center)
-						.AutoWrapText(true)
-						.LineHeightPercentage(1.35f)
+						SAssignNew(Credits, SScrollBox)
+						.Clipping(EWidgetClipping::ClipToBounds)
+						.ScrollBarVisibility(EVisibility::Collapsed)
+						+ SScrollBox::Slot()[Roll]
 					]
 				];
 			Subtitle->SetRenderOpacity(0.f);
 			Black->SetRenderOpacity(0.f);
+			GameOver->SetRenderOpacity(0.f);
 			Credits->SetRenderOpacity(0.f);
 			GameViewport->AddViewportWidgetForPlayer(LocalPlayer, Overlay.ToSharedRef(), 100);
 		}
@@ -157,36 +173,30 @@ namespace
 
 		bool ShowCredits(float Elapsed)
 		{
-			for (int32 Index = 0; Index < UE_ARRAY_COUNT(EndingCards); ++Index)
+			constexpr float CardSeconds = 3.5f;
+			constexpr float RollSeconds = 36.f;
+			constexpr float EndHold = 3.f;
+			if (Elapsed < CardSeconds)
 			{
-				const FEndingCard& Card = EndingCards[Index];
-				if (Elapsed < Card.Seconds)
-				{
-					if (Index != ActiveCard)
-					{
-						Heading->SetText(FText::FromString(Card.Heading));
-						Body->SetText(FText::FromString(Card.Text));
-						Body->SetVisibility(*Card.Text ? EVisibility::HitTestInvisible : EVisibility::Collapsed);
-						ActiveCard = Index;
-					}
-					Credits->SetRenderOpacity(FMath::SmoothStep(0.f, 0.5f,
-						FMath::Min(Elapsed, Card.Seconds - Elapsed)));
-					return true;
-				}
-				Elapsed -= Card.Seconds;
+				GameOver->SetRenderOpacity(FMath::SmoothStep(0.f, 0.6f, FMath::Min(Elapsed, CardSeconds - Elapsed)));
+				return true;
 			}
-			return false;
+			GameOver->SetRenderOpacity(0.f);
+			const float Time = Elapsed - CardSeconds;
+			const float Alpha = FMath::Clamp((Time - 2.f) / RollSeconds, 0.f, 1.f);
+			const float EndTime = 2.f + RollSeconds + EndHold;
+			Credits->SetScrollOffset(Credits->GetScrollOffsetOfEnd() * Alpha);
+			Credits->SetRenderOpacity(FMath::SmoothStep(0.f, 0.8f, FMath::Min(Time, EndTime - Time)));
+			return Time < EndTime;
 		}
 
 		TWeakObjectPtr<ULocalPlayer> Player;
 		TWeakObjectPtr<UGameViewportClient> Viewport;
 		TSharedPtr<SOverlay> Overlay;
 		TSharedPtr<SBorder> Black;
-		TSharedPtr<SVerticalBox> Credits;
-		TSharedPtr<STextBlock> Heading;
-		TSharedPtr<STextBlock> Body;
+		TSharedPtr<SScrollBox> Credits;
+		TSharedPtr<STextBlock> GameOver;
 		TSharedPtr<STextBlock> Subtitle;
-		int32 ActiveCard = INDEX_NONE;
 		bool bVoiceStarted = false;
 	};
 }
