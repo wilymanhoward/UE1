@@ -183,7 +183,7 @@ private:
 	void UpdateWeather(float DeltaSeconds);
 	void Strike(float Storm);
 	void PlayThunder(float Volume, float Pitch);
-	/** 1 while the world is withered, fading to 0 by 75% restoration. */
+	/** Storm strength fades with Wildwood's colour recovery, or by 75% restoration on other maps. */
 	float GetStorm() const;
 
 	/** The world's restoration rules. Read each frame. */

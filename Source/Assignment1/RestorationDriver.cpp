@@ -33,6 +33,9 @@ namespace
 	const FName SaturationParameter(TEXT("Saturation"));
 	const FName CloudAlbedoParameter(TEXT("Cloud_AlbedoColor"));
 	const FName CloudCoverageParameter(TEXT("Cloud_GlobalCoverage"));
+	// Clear-day values from /Game/Wildwood/Map/Wildwood.
+	constexpr float OriginalWildwoodExposureBias = 2.f;
+	constexpr float OriginalWildwoodSkyIntensity = 2.f;
 }
 
 ARestorationDriver::ARestorationDriver()
@@ -112,7 +115,7 @@ void ARestorationDriver::BeginPlay()
 		if (bStormGrade)
 		{
 			// Read before the overrides go on, so the storm fades back to the level's own look (or the engine default).
-			ClearExposureBias = Settings.AutoExposureBias;
+			ClearExposureBias = FullColourNoteCount > 0 ? OriginalWildwoodExposureBias : Settings.AutoExposureBias;
 			ClearVignette = Settings.VignetteIntensity;
 			ClearGrain = Settings.bOverride_FilmGrainIntensity ? Settings.FilmGrainIntensity : 0.f;
 			ClearFringe = Settings.SceneFringeIntensity;
@@ -217,7 +220,12 @@ void ARestorationDriver::UpdateWeather(float DeltaSeconds)
 	if (bStormGrade)
 	{
 		if (Sun) Sun->GetLightComponent()->SetIntensity(ClearSunIntensity * FMath::Lerp(1.f, StormSunScale, Storm) + FlashSunIntensity * Flash);
-		if (SkyLight) SkyLight->GetLightComponent()->SetIntensity(ClearSkyIntensity * FMath::Lerp(1.f, StormSkyScale, Storm) + FlashSkyIntensity * Flash);
+		if (SkyLight)
+		{
+			const float ClearIntensity = FullColourNoteCount > 0 ? OriginalWildwoodSkyIntensity : ClearSkyIntensity;
+			const float SkyIntensity = FMath::Lerp(ClearIntensity, ClearSkyIntensity * StormSkyScale, Storm);
+			SkyLight->GetLightComponent()->SetIntensity(SkyIntensity + FlashSkyIntensity * Flash);
+		}
 
 		// Rain and leaves follow the camera. Deactivating lets the drops already falling land, so the rain eases off.
 		if (const APlayerCameraManager* Camera = UGameplayStatics::GetPlayerCameraManager(this, 0))
@@ -300,6 +308,7 @@ void ARestorationDriver::PlayThunder(float Volume, float Pitch)
 void ARestorationDriver::ApplyVisuals()
 {
 	const float Alpha = DisplayedRestoration;
+	const float Colour = FullColourNoteCount > 0 ? DisplayedColour : Alpha;
 
 	if (ParameterCollection)
 	{
@@ -310,8 +319,7 @@ void ARestorationDriver::ApplyVisuals()
 	if (PostProcessVolume)
 	{
 		FPostProcessSettings& Settings = PostProcessVolume->Settings;
-		// Colour can return ahead of tree growth, weather and other restoration effects.
-		const float Colour = FullColourNoteCount > 0 ? DisplayedColour : Alpha;
+		// The colour and lighting can return ahead of tree growth.
 		const float Saturation = FMath::Lerp(WitheredSaturation, RestoredSaturation, Colour);
 		if (WitherPostInstance)
 		{
@@ -336,7 +344,7 @@ void ARestorationDriver::ApplyVisuals()
 
 	if (HeightFog)
 	{
-		HeightFog->GetComponent()->SetFogDensity(FMath::Lerp(WitheredFogDensity, RestoredFogDensity, Alpha));
+		HeightFog->GetComponent()->SetFogDensity(FMath::Lerp(WitheredFogDensity, RestoredFogDensity, Colour));
 		if (bStormGrade)
 		{
 			HeightFog->GetComponent()->SetFogInscatteringColor(FMath::Lerp(ClearFogColor, StormFogColor, GetStorm()));
@@ -346,5 +354,9 @@ void ARestorationDriver::ApplyVisuals()
 
 float ARestorationDriver::GetStorm() const
 {
+	if (FullColourNoteCount > 0)
+	{
+		return 1.f - FMath::SmoothStep(0.f, 1.f, DisplayedColour);
+	}
 	return 1.f - FMath::SmoothStep(0.f, 0.75f, DisplayedRestoration);
 }
