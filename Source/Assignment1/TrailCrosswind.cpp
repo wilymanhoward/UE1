@@ -23,7 +23,7 @@ namespace
 ATrailCrosswind::ATrailCrosswind()
 {
 	PrimaryActorTick.bCanEverTick = true;
-	Box->SetBoxExtent(FVector(680.0, 1500.0, 1150.0));
+	Box->SetBoxExtent(FVector(420.0, 1500.0, 1150.0));
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> Plane(TEXT("/Engine/BasicShapes/Plane.Plane"));
 	static ConstructorHelpers::FObjectFinder<UMaterialInterface> WindMaterial(
 		TEXT("/Game/LastSeed/Materials/M_LS_TrailCrosswind.M_LS_TrailCrosswind"));
@@ -48,16 +48,18 @@ void ATrailCrosswind::BeginPlay()
 {
 	Super::BeginPlay();
 
+	// The gust angles downhill. Follow the trail heading when identifying its river-side barriers.
+	const FRotator TrailHeading(0.0, 22.0, 0.0);
 	for (TActorIterator<AActor> It(GetWorld()); It; ++It)
 	{
 		if (!It->ActorHasTag(CrosswindSoftTrailEdge) || !It->GetActorEnableCollision())
 		{
 			continue;
 		}
-		const FVector Local = GetActorTransform().InverseTransformPositionNoScale(It->GetActorLocation());
-		if (FMath::Abs(Local.X) < 960.f && Local.Y > 160.f && Local.Y < 1150.f)
+		const FVector Local = TrailHeading.UnrotateVector(It->GetActorLocation() - GetActorLocation());
+		if (FMath::Abs(Local.X) < 1420.f && Local.Y > 275.f && Local.Y < 1150.f)
 		{
-			RiverEdges.Add(*It);
+			It->SetActorEnableCollision(false);
 		}
 	}
 
@@ -67,28 +69,6 @@ void ATrailCrosswind::BeginPlay()
 		for (int32 Index = 1; Index < CrosswindLeafCount; ++Index)
 		{
 			WindShapes[Index]->SetMaterial(0, LeafMaterial);
-		}
-	}
-}
-
-void ATrailCrosswind::EndPlay(const EEndPlayReason::Type Reason)
-{
-	SetRiverEdgeOpen(false);
-	Super::EndPlay(Reason);
-}
-
-void ATrailCrosswind::SetRiverEdgeOpen(bool bOpen)
-{
-	if (bRiverEdgeOpen == bOpen)
-	{
-		return;
-	}
-	bRiverEdgeOpen = bOpen;
-	for (const TWeakObjectPtr<AActor>& Edge : RiverEdges)
-	{
-		if (Edge.IsValid())
-		{
-			Edge->SetActorEnableCollision(!bOpen);
 		}
 	}
 }
@@ -116,7 +96,7 @@ void ATrailCrosswind::Tick(float DeltaSeconds)
 		// The early leaves lift first on the forest side, then accelerate across the same lane as the gust.
 		const float Sweep = bWarningLeaf ? Travel * Travel : Travel;
 		const float Size = FMath::SmoothStep(0.f, 0.14f, Travel) * (1.f - FMath::SmoothStep(0.78f, 1.f, Travel));
-		const float Along = static_cast<float>((Index * 263) % 1220) - 610.f;
+		const float Along = static_cast<float>((Index * 263) % 780) - 390.f;
 		const float Height = -42.f + (Index % 6) * 25.f + (bLeaf ? 42.f * FMath::Sin(Travel * 6.f + Index) : 15.f);
 		const float Across = FMath::Lerp(-690.f, 1030.f, Sweep);
 		Shape->SetRelativeLocationAndRotation(FVector(Along, Across, Height), bLeaf
@@ -128,10 +108,7 @@ void ATrailCrosswind::Tick(float DeltaSeconds)
 
 	const float GustAge = Age - CrosswindWarning;
 	ASeedBall* Ball = GustAge > 0.f && GustAge < CrosswindGust ? GetBallInside() : nullptr;
-	const bool bCanBlowOffTrail = Ball && Ball->GetCurrentForm() == ESeedForm::Seed;
-	// Open only the river side while a gust is carrying Seed, so the soft trail boundary can't catch it.
-	SetRiverEdgeOpen(bCanBlowOffTrail);
-	if (bCanBlowOffTrail)
+	if (Ball && Ball->GetCurrentForm() == ESeedForm::Seed)
 	{
 		const float Push = FMath::SmoothStep(0.f, 0.18f, GustAge)
 			* (1.f - FMath::SmoothStep(CrosswindGust - 0.28f, CrosswindGust, GustAge));

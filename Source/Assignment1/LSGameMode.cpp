@@ -245,7 +245,7 @@ void ALSGameMode::BeginPlay()
 	else if (UGameplayStatics::GetCurrentLevelName(this) == TEXT("L_Level1_Wildwood"))
 	{
 		// This stretch of Trail 2 is before the Stone Shell pickup, with the river to the trail's right.
-		GetWorld()->SpawnActor<ATrailCrosswind>(FVector(-13230.0, -6970.0, 3170.0), FRotator(0.0, 55.0, 0.0));
+		GetWorld()->SpawnActor<ATrailCrosswind>(FVector(-12450.0, -6860.0, 3170.0), FRotator(0.0, 70.0, 0.0));
 	}
 }
 
