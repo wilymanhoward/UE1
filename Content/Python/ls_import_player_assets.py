@@ -192,7 +192,7 @@ def build_core_material():
 
 
 def build_wither_post_material():
-    """Greys the screen by the Saturation parameter, except pixels showing something marked with stencil 1. ARestorationDriver loads this.
+    """Greys the screen and lifts shadow detail while withered, except pixels showing something marked with stencil 1. ARestorationDriver loads this.
     Custom depth holds the nearest marked object even when something else stands in front of it, so the two depths are compared to find what is really on screen."""
     material = fresh_material("M_LS_WitherPost")
     material.set_editor_property("material_domain", unreal.MaterialDomain.MD_POST_PROCESS)
@@ -208,7 +208,9 @@ def build_wither_post_material():
     grey.set_editor_property("code",
         "float Luminance = dot(Scene.rgb, float3(0.2126, 0.7152, 0.0722));\n"
         "bool Marked = Stencil.r > 0.5 && CustomDepth.r <= SceneDepth.r * 1.002 + 2.0;\n"
-        "return Marked ? Scene.rgb : lerp(Luminance.xxx, Scene.rgb, Saturation);")
+        "float ShadowLift = 0.095 * Luminance / (Luminance + 0.035) * (1.0 - smoothstep(0.07, 0.40, Luminance));\n"
+        "float LiftedLuminance = Luminance + ShadowLift;\n"
+        "return Marked ? Scene.rgb : lerp(LiftedLuminance.xxx, Scene.rgb, Saturation);")
     inputs = []
     for name in ("Scene", "Stencil", "SceneDepth", "CustomDepth", "Saturation"):
         custom_input = unreal.CustomInput()
