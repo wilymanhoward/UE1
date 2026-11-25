@@ -83,7 +83,16 @@ Each comes from the public HQ preview, converted to mono 48 kHz PCM, with its DC
 
 ## Narration
 
-- The riverbank witch dialogue uses the user-supplied ElevenLabs v4 Kristen “Cold Evil Queen Villain” take from 18 November 2026. The original MP3 is retained as `VO_LS_WitchKristen.mp3`. The recording plays at its original speed, starting 1.70 seconds into the ambush. It was filtered, level-adjusted and mixed with the river ambience and recorded scream into `SFX_LS_RiverAmbush.wav`. The scream starts at 6.95 seconds, after the dialogue. The final mix peaks at or below −3 dBFS.
+- The riverbank witch dialogue uses the user-supplied ElevenLabs v4 Kristen “Cold Evil Queen Villain” take from 18 November 2026. The original MP3 is retained as `VO_LS_WitchKristen.mp3`. The recording plays at its original speed, starting 1.70 seconds into the ambush. `Content/Python/ls_river_ambush_mix.py` mixes it with the recorded scream, with no river ambience, into `SFX_LS_RiverAmbush.wav`. The scream starts at 6.95 seconds, after the dialogue. The voice peaks at −3 dBFS and the scream at about −10 dBFS.
 - The witch's six Emberwood taunts (`VO_LS_EmberWitch_1`–`6`) use the user-supplied ElevenLabs v4 Kristen "Cold Evil Queen Villain" takes from 22 November 2026, kept as `SourceSounds/EmberWitch/VO_LS_EmberWitch_<n>_take.mp3`. The lines are in `WITCH_EMBERWOOD_LINES.md`. `Content/Python/ls_ember_witch_voice.py` puts her in a big stone hall while keeping her words clear. The voice is band-limited to 120–7000 Hz and stays in front. Two faint echoes come back at 0.42 and 0.84 seconds, and a synthetic 2.4-second hall reverb with a 45 ms pre-delay sits about 6 dB under the voice. A 3:1 compressor and a look-ahead limiter bring her speech up to about −14 dBFS, so she carries over the lava ambience. Each file is mono 48 kHz PCM, peaking at −1 dBFS, with 2.5 seconds of reverb tail.
 - The Heart Tree narration uses the supplied ElevenLabs v4 take with the Adam voice. The take was split into phrases and timed to the Wildwood captions. It plays on a separate track over the recorded soundtrack.
 - The Heart Tree’s final line in the Wildwood epilogue uses the supplied 23 November 2026 Adam take. A high-pass filter and peak limiter were applied before import as `VO_LS_HeartTreeEnding`.
+
+## Title menu buttons
+
+`Content/Python/ls_menu_sounds.py` cuts both from the public HQ previews of these Freesound recordings, as mono 48 kHz PCM. All three are recorded sounds, not synthesised or AI-generated.
+
+- `SFX_LS_MenuHover.wav` plays when a menu button is hovered: “Woodblock-soft.wav” by hollandm, [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/). One soft hit of a wooden stick on a woodblock, recorded with an AKG P220 condenser mic. The first 0.2 seconds, at −16 dBFS. [Freesound recording](https://freesound.org/people/hollandm/sounds/692828/)
+- `SFX_LS_MenuClick.wav` plays when a menu button is pressed. It layers two recordings, mixed to −9 dBFS:
+  - “User Interface Elegant Wooden Confirmation Sound” by qubodup, [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/). Handling sound from a Canon EOS M50 camera. The whole 0.26-second clip. [Freesound recording](https://freesound.org/people/qubodup/sounds/822568/)
+  - “Wind_Chimes_single.wav” by jcdecha, [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/). One run of a mark tree. The 0.25–1.55 second excerpt, faded in over 150 ms and out over 0.5 seconds, about 10 dB under the click. [Freesound recording](https://freesound.org/people/jcdecha/sounds/235463/)

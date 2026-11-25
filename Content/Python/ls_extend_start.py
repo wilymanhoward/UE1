@@ -83,9 +83,12 @@ def build():
             z = max(heights[row]-crown,terrain[col]+8)
             # Run the grass skirt below the landscape so there is no exposed mesh lip.
             rear = 1-smoothstep(0, 620, s+LENGTH)
-            shoulder = smoothstep(380, 730, abs(d))*smoothstep(0, 250, -s)
+            shoulder = smoothstep(380, 730, abs(d))
             taper = max(rear, shoulder)
             z += (terrain[col]-18-z)*taper
+            # Ease into the next trail piece's own cross-section over the last 6 m. Lifting the sunk edges to the
+            # path height here instead left a sharp fold where they dropped back to that piece's low edge.
+            z += (vertices[col][2]-z)*smoothstep(-600, 0, s)
             if row == row_count-1: x,y,z = vertices[col]
             # An elliptical blend makes the visible dirt fade earlier toward the sides.
             rear_blend = max(0, (900 - (s + LENGTH)) / 450)

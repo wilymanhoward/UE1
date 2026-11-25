@@ -63,15 +63,21 @@ def outer_edges(points, triangles):
     return edges
 
 
-def build():
+def build(only=None):
+    """Rebuilds every trail piece's bank, or just the piece named only (e.g. "SM_LS_WildwoodTrail_Approach")."""
     world = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_editor_world()
     actors = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
-    old = [a for a in actors.get_all_level_actors() if a.get_actor_label().endswith("_Bank")]
+    old = [a for a in actors.get_all_level_actors() if a.get_actor_label().endswith("_Bank")
+           and (only is None or a.get_actor_label() == only + "_Bank")]
     if old:
         actors.destroy_actors(old)
+    # Every piece is left out of the ground traces, so a bank never rests on a trail. Banks have no collision anyway.
     trails = [a for a in actors.get_all_level_actors()
-              if isinstance(a, unreal.StaticMeshActor) and a.get_actor_label().startswith("SM_LS_WildwoodTrail")]
+              if isinstance(a, unreal.StaticMeshActor) and a.get_actor_label().startswith("SM_LS_WildwoodTrail")
+              and not a.get_actor_label().endswith("_Bank")]
     assert trails, "Open Wildwood first"
+    rebuild = [t for t in trails if only is None or t.get_actor_label() == only]
+    assert rebuild, only
 
     def ground(x, y, top):
         hit = unreal.SystemLibrary.line_trace_single(world, unreal.Vector(x, y, top + 300.0), unreal.Vector(x, y, top - 3000.0),
@@ -80,7 +86,7 @@ def build():
         data = hit.to_tuple() if hit else None
         return data[4].z if data and data[0] else None
 
-    for trail in trails:
+    for trail in rebuild:
         name = trail.get_actor_label()
         description = trail.static_mesh_component.static_mesh.get_static_mesh_description(0)
         points, triangles = read_obj(source_obj(name))

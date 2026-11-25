@@ -266,6 +266,12 @@ void ALSGameMode::InitGame(const FString& MapName, const FString& Options, FStri
 	{
 		bRestoredArrival = GameInstance->bRestoredArrival;
 		GameInstance->bRestoredArrival = false;
+		// Level 1 starts with Seed alone; its flowers unlock the rest, which then travel on to Level 2.
+		// The restored epilogue back in Wildwood is the end of a run, so it keeps the forms.
+		if (!bRestoredArrival && UGameplayStatics::GetCurrentLevelName(this) == TEXT("L_Level1_Wildwood"))
+		{
+			GameInstance->ResetFormsForNewRun();
+		}
 	}
 }
 

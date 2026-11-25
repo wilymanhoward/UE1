@@ -42,6 +42,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Forms")
 	void UnlockAllForms();
 
+	/** A new run of Level 1: only Seed until its flowers are found again. Whatever they unlock carries into Level 2.
+	 *  The save file keeps every form ever unlocked (SaveProgress merges), so Level 2 opened from the menu has them. */
+	void ResetFormsForNewRun() { UnlockedForms = { ESeedForm::Seed }; }
+
 	/** Keeps the best of this run and any earlier runs, then saves. */
 	void RecordLevelResult(FName LevelName, const FLSLevelResult& Result);
 

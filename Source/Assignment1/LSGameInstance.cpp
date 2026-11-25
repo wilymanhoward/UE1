@@ -51,6 +51,11 @@ void ULSGameInstance::SaveProgress()
 {
 	ULSSaveGame* Save = Cast<ULSSaveGame>(UGameplayStatics::CreateSaveGameObject(ULSSaveGame::StaticClass()));
 	Save->UnlockedForms = UnlockedForms;
+	// A new Level 1 run starts from Seed again; keep the forms earlier runs saved.
+	if (const ULSSaveGame* Previous = Cast<ULSSaveGame>(UGameplayStatics::LoadGameFromSlot(SaveSlotName, SaveUserIndex)))
+	{
+		Save->UnlockedForms.Append(Previous->UnlockedForms);
+	}
 	Save->LevelRecords = LevelRecords;
 	Save->MusicVolume = MusicVolume;
 	Save->SfxVolume = SfxVolume;
